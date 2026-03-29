@@ -1,6 +1,9 @@
-import { Trash2 } from "lucide-react";
+import { Trash2, ShoppingCart, Plus, Minus } from "lucide-react";
 import type { WishlistItem } from "../types";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
+import { Button } from "./ui/button";
 
 interface WishlistCardProps {
     item: WishlistItem;
@@ -8,12 +11,17 @@ interface WishlistCardProps {
 }
 
 export function WishlistCard({ item, onRemove }: WishlistCardProps) {
-    const formattedPrice = item.basePrice.toLocaleString("uz-UZ");
+    const navigate = useNavigate();
+    const { addToCart, updateQuantity, getItemQuantity } = useCart();
+
+    const formattedPrice = item.basePrice?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") || "0";
+    const quantity = getItemQuantity(item.productId);
 
     return (
         <motion.div
             layout
-            className="group flex flex-col bg-white p-3 rounded-2xl border border-slate-200 relative hover:border-red-200 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 h-full"
+            onClick={() => navigate(`/product/${item.productId}`)}
+            className="group flex flex-col bg-white p-3 rounded-2xl border border-slate-200 relative hover:border-[#007AFF]/30 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 h-full cursor-pointer"
         >
             {/* Image */}
             <div className="relative w-full aspect-square bg-[#F1F5F9] rounded-xl overflow-hidden mb-3 shrink-0 transition-colors duration-300 flex items-center justify-center p-3">
@@ -45,14 +53,14 @@ export function WishlistCard({ item, onRemove }: WishlistCardProps) {
                     </div>
                 )}
 
-                {/* Trash / Remove Button */}
+                {/* Persistent Trash / Remove Button */}
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                         onRemove(item.productId);
                     }}
-                    className="absolute top-2 right-2 z-10 p-2 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition-all duration-200 active:scale-90 opacity-0 group-hover:opacity-100"
+                    className="absolute top-2 right-2 z-10 p-2 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition-all duration-200 active:scale-90 opacity-100"
                     aria-label="O'chirish"
                 >
                     <Trash2 className="w-4 h-4" strokeWidth={2} />
@@ -65,9 +73,79 @@ export function WishlistCard({ item, onRemove }: WishlistCardProps) {
                     {item.productNameUz}
                 </h3>
 
-                <span className="text-[16px] font-bold text-[#007AFF] mt-auto pt-2 whitespace-nowrap">
+                <span className="text-[16px] font-bold text-[#007AFF] mt-1 pt-1 whitespace-nowrap">
                     {formattedPrice} so'm
                 </span>
+
+                {/* Action Area (Add to Cart / Counter) */}
+                <div className="mt-3 h-10 w-full mt-auto">
+                    <AnimatePresence mode="wait" initial={false}>
+                        {quantity === 0 ? (
+                            <motion.div
+                                key="add-btn"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                            >
+                                <Button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        addToCart({
+                                            id: item.productId,
+                                            nameUz: item.productNameUz,
+                                            name: item.productNameUz,
+                                            basePrice: item.basePrice || 0,
+                                            price: `${item.basePrice || 0} so'm`,
+                                            images: [{ url: item.primaryImageUrl || "", isPrimary: true }],
+                                            image: item.primaryImageUrl || ""
+                                        } as any);
+                                    }}
+                                    className="h-10 w-full bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all p-0 shadow-sm"
+                                >
+                                    <ShoppingCart className="w-4 h-4" strokeWidth={2.5} />
+                                    Savatga
+                                </Button>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="stepper"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                                className="h-10 w-full rounded-xl flex items-center justify-between p-1 bg-white border border-slate-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                            >
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        updateQuantity(item.productId, Math.max(0, quantity - 1));
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors active:scale-95 shrink-0"
+                                >
+                                    <Minus className="h-4 w-4" strokeWidth={2.5} />
+                                </button>
+
+                                <span className="text-[13px] font-black text-slate-900 px-1 truncate tracking-widest">
+                                    {quantity}
+                                </span>
+
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        updateQuantity(item.productId, quantity + 1);
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-lg transition-colors active:scale-95 shrink-0"
+                                >
+                                    <Plus className="h-4 w-4" strokeWidth={2.5} />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
         </motion.div>
     );
