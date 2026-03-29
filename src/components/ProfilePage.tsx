@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Phone, User, Lock, Edit2, Globe, History } from 'lucide-react';
+import { ArrowLeft, Phone, User, Lock, Edit2, Globe, History, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OrderHistory } from './OrderHistory';
 import { useAuthContext } from '../context/AuthContext';
@@ -165,13 +165,19 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
                                 </div>
 
                                 {/* Order History Shortcut */}
-                                <div className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => setIsHistoryOpen(true)}>
-                                    <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0 group-hover:text-[#007AFF] group-hover:bg-[#007AFF]/5 transition-colors">
+                                <div
+                                    className="p-4 flex items-center gap-4 bg-slate-50/50 border-t border-slate-100 hover:bg-slate-50 active:bg-slate-100 active:scale-[0.99] transition-all cursor-pointer group select-none"
+                                    onClick={() => setIsHistoryOpen(true)}
+                                >
+                                    <div className="w-10 h-10 rounded-full bg-white border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-center text-[#007AFF] shrink-0 group-hover:bg-[#007AFF]/5 transition-colors">
                                         <History className="w-5 h-5" strokeWidth={1.5} />
                                     </div>
                                     <div className="flex-1 flex flex-col justify-center">
                                         <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Sotuvlar</span>
-                                        <span className="text-[15px] font-semibold text-slate-900">Buyurtmalar tarixi</span>
+                                        <span className="text-[15px] font-semibold text-slate-900 group-hover:text-[#007AFF] transition-colors">Buyurtmalar tarixi</span>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-slate-100/50 group-hover:bg-[#007AFF]/10 flex items-center justify-center text-slate-400 group-hover:text-[#007AFF] transition-colors shrink-0">
+                                        <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
                                     </div>
                                 </div>
 
