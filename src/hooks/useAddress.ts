@@ -49,16 +49,34 @@ export const useAddress = (userId?: string) => {
     // Create Address
     const createAddressMutation = useMutation({
         mutationFn: async (payload: AddressPayload) => {
-            console.log("=== ADDRESS DEBUG === Sending dto:", payload);
-            const res = await api.post(`/api/addresses`, { dto: payload });
+            const body = {
+                dto: {
+                    userId: payload.userId,
+                    label: payload.label,
+                    region: Number(payload.region),
+                    city: payload.city,
+                    street: payload.street,
+                    isDefault: payload.isDefault,
+                }
+            };
+            console.log("=== ADDRESS DEBUG === Sending body:", JSON.stringify(body));
+            const res = await api.post(`/api/addresses`, JSON.stringify(body), {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                }
+            });
             return res.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["addresses", userId] });
             toast.success("Manzil muvaffaqiyatli saqlandi!");
         },
-        onError: (err) => {
+        onError: (err: any) => {
             console.error("Failed to save address:", err);
+            console.error("=== ADDRESS ERROR CONFIG ===", err?.config);
+            console.error("=== ADDRESS ERROR REQUEST ===", err?.request);
+            console.error("=== ADDRESS ERROR RESPONSE ===", err?.response);
             toast.error("Manzilni saqlashda xatolik yuz berdi.");
         }
     });
