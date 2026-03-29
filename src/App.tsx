@@ -12,6 +12,7 @@ import { useAuth } from './hooks/useAuth';
 import { AuthProvider, useAuthContext } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { OrderDetails } from './components/OrderDetails';
 
 // Telegram WebApp e'lon qilinishi (TypeScript uchun)
 declare global {
@@ -186,7 +187,8 @@ export default function App() {
           <AuthProvider>
             <Toaster
               richColors
-              position="top-center"
+              position="top-right"
+              duration={2000}
               toastOptions={{
                 className: 'font-[Inter] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100',
                 style: { background: '#ffffff', color: '#0f172a' }
@@ -198,6 +200,7 @@ export default function App() {
               {/* Catch-all to Home if Product Details isn't ready yet or just fallback */}
               <Route path="*" element={<AppContent />} />
             </Routes>
+            <OrderDetails />
           </AuthProvider>
         </ErrorBoundary>
       </QueryClientProvider>

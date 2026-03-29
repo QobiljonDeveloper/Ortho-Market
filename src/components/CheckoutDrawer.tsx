@@ -126,12 +126,11 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            toast.success("Savat yangilandi");
+            toast.success("Savat yangilandi", { duration: 2000, position: 'top-right' });
             clearCart();
             onOpenChange(false);
 
-            // Redirect to history naturally (by emitting custom event if the app listens to it)
-            window.dispatchEvent(new CustomEvent('open-order-history'));
+            window.dispatchEvent(new CustomEvent('open-order-details', { detail: payload }));
         } catch (error: any) {
             console.error("Order submission failed:", error);
             const errMsgs = error?.response?.data?.message || "Buyurtmani rasmiylashtirishda xatolik yuz berdi.";
