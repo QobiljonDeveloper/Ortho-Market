@@ -14,6 +14,8 @@ export interface AddressPayload {
     region: number;
     city: string;
     street: string;
+    latitude?: number;
+    longitude?: number;
     isDefault: boolean;
 }
 
@@ -50,14 +52,14 @@ export const useAddress = (userId?: string) => {
     const createAddressMutation = useMutation({
         mutationFn: async (payload: AddressPayload) => {
             const data = {
-                dto: {
-                    userId: payload.userId,
-                    label: payload.label,
-                    region: Number(payload.region),
-                    city: payload.city,
-                    street: payload.street,
-                    isDefault: payload.isDefault,
-                }
+                userId: payload.userId,
+                label: payload.label,
+                region: Number(payload.region),
+                city: payload.city,
+                street: payload.street,
+                latitude: payload.latitude ?? 41.2995,
+                longitude: payload.longitude ?? 69.2401,
+                isDefault: payload.isDefault,
             };
 
             console.log("=== ADDRESS DEBUG === Sending POST to /api/addresses with body:", JSON.stringify(data));
@@ -70,7 +72,8 @@ export const useAddress = (userId?: string) => {
                 withCredentials: false,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 }
             });
             return res.data;
