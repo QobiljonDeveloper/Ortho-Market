@@ -94,14 +94,39 @@ export const useCartApi = (userId: string | undefined | null) => {
     const updateQuantityMutation = useMutation({
         mutationFn: async ({ cartItemId, quantity }: { cartItemId: string, quantity: number }) => {
             if (!safeUserId) throw new Error("User not logged in");
-            console.log(`Updating cart item ${cartItemId} to quantity: ${quantity}`);
+
+            let finalCartItemId = cartItemId;
+
+            if (cartItemId.startsWith('temp-')) {
+                console.log(`Cart item ID is temporary (${cartItemId}), waiting for real ID from server...`);
+                // Lookup local cache to map temp ID to actual product ID
+                const cachedCart = queryClient.getQueryData<any>(['cart', safeUserId]);
+                const items = Array.isArray(cachedCart) ? cachedCart : (cachedCart?.items || []);
+                const tempItem = items.find((i: CartItem) => i.id === cartItemId);
+
+                if (tempItem && tempItem.productId) {
+                    // Refetch cart quietly to extract generated server UUID
+                    const freshData = await queryClient.fetchQuery({ queryKey: ['cart', safeUserId] });
+                    const freshItems: CartItem[] = Array.isArray(freshData) ? freshData : (freshData as any)?.items || [];
+                    const realItem = freshItems.find((i: CartItem) => i.productId === tempItem.productId);
+
+                    if (realItem && !realItem.id.startsWith('temp-')) {
+                        finalCartItemId = realItem.id;
+                    } else {
+                        throw new Error("Tizim sinxronlashmoqda, iltimos biroz kuting va qayta urining.");
+                    }
+                } else {
+                    throw new Error("Tarmoq ma'lumotlari yangilanmadi.");
+                }
+            }
+
+            console.log(`Updating cart item ${finalCartItemId} to quantity: ${quantity}`);
             try {
-                const data = await cartService.updateQuantity(safeUserId, cartItemId, quantity);
+                const data = await cartService.updateQuantity(safeUserId, finalCartItemId, quantity);
                 console.log("Update quantity success:", data);
                 return data;
             } catch (error: any) {
                 console.error("Error updating cart item quantity:", error);
-                alert(`Cart update xatoligi: ${error?.message || error}`);
                 throw error;
             }
         },
@@ -141,14 +166,39 @@ export const useCartApi = (userId: string | undefined | null) => {
     const removeCartItemMutation = useMutation({
         mutationFn: async (cartItemId: string) => {
             if (!safeUserId) throw new Error("User not logged in");
-            console.log(`Removing item ${cartItemId} from cart...`);
+
+            let finalCartItemId = cartItemId;
+
+            if (cartItemId.startsWith('temp-')) {
+                console.log(`Cart item ID is temporary (${cartItemId}), waiting for real ID from server...`);
+                // Lookup local cache to map temp ID to actual product ID
+                const cachedCart = queryClient.getQueryData<any>(['cart', safeUserId]);
+                const items = Array.isArray(cachedCart) ? cachedCart : (cachedCart?.items || []);
+                const tempItem = items.find((i: CartItem) => i.id === cartItemId);
+
+                if (tempItem && tempItem.productId) {
+                    const freshData = await queryClient.fetchQuery({ queryKey: ['cart', safeUserId] });
+                    const freshItems: CartItem[] = Array.isArray(freshData) ? freshData : (freshData as any)?.items || [];
+                    const realItem = freshItems.find((i: CartItem) => i.productId === tempItem.productId);
+
+                    if (realItem && !realItem.id.startsWith('temp-')) {
+                        finalCartItemId = realItem.id;
+                    } else {
+                        // Avoid crashing if they try deleting an item that hasn't saved yet
+                        return { status: "deleted_locally_before_sync" };
+                    }
+                } else {
+                    return { status: "deleted_locally_before_sync" };
+                }
+            }
+
+            console.log(`Removing item ${finalCartItemId} from cart...`);
             try {
-                const data = await cartService.removeCartItem(safeUserId, cartItemId);
+                const data = await cartService.removeCartItem(safeUserId, finalCartItemId);
                 console.log("Remove cart item success:", data);
                 return data;
             } catch (error: any) {
                 console.error("Error removing cart item:", error);
-                alert(`Cart remove xatoligi: ${error?.message || error}`);
                 throw error;
             }
         },
