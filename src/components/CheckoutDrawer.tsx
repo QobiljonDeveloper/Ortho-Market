@@ -16,6 +16,8 @@ import { Textarea } from "./ui/textarea";
 import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store, ShieldCheck } from "lucide-react";
 import { AddressPopup } from "./AddressPopup";
 import { useAddress } from "../hooks/useAddress";
+import { api } from "../services/api";
+import { toast } from "sonner";
 
 const REGION_MAP: Record<number, string> = {
     0: "Toshkent",
@@ -40,9 +42,10 @@ interface CheckoutDrawerProps {
 }
 
 export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
-    const { cartTotal, clearCart } = useCart();
+    const { cartTotal, clearCart, cart } = useCart();
     const { user } = useAuthContext();
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [paymentMethod, setPaymentMethod] = useState("online");
     const [deliveryMethod, setDeliveryMethod] = useState("delivery");
@@ -91,9 +94,51 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
     };
 
-    const handleConfirm = () => {
-        clearCart();
-        onOpenChange(false);
+    const handleConfirm = async () => {
+        if (!user?.id) {
+            toast.error("Iltimos, avval tizimga kiring.");
+            return;
+        }
+        if (deliveryMethod === "delivery" && !selectedAddressId) {
+            toast.error("Iltimos, yetkazib berish manzilini tanlang.");
+            return;
+        }
+        if (!cart || cart.length === 0) {
+            toast.error("Savatingiz bo'sh.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                userId: user.id,
+                telegramId: (user as any).telegramId || "",
+                addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
+                paymentMethod: 1, // Card/Onlayn-o'tkazma
+                deliveryMethod: deliveryMethod === "delivery" ? 1 : 0,
+                items: cart.map((item: any) => ({
+                    productId: item.productId,
+                    quantity: item.quantity
+                }))
+            };
+
+            await api.post("/api/orders", payload, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            toast.success("Savat yangilandi");
+            clearCart();
+            onOpenChange(false);
+
+            // Redirect to history naturally (by emitting custom event if the app listens to it)
+            window.dispatchEvent(new CustomEvent('open-order-history'));
+        } catch (error: any) {
+            console.error("Order submission failed:", error);
+            const errMsgs = error?.response?.data?.message || "Buyurtmani rasmiylashtirishda xatolik yuz berdi.";
+            toast.error(typeof errMsgs === 'string' ? errMsgs : errMsgs[0] || "Xatolik yuz berdi");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -254,8 +299,8 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                                                         key={address.id}
                                                         onClick={() => setSelectedAddressId(address.id)}
                                                         className={`relative p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-4 shadow-sm group ${isSelected
-                                                                ? "border-[#007AFF] bg-[#007AFF]/5"
-                                                                : "border-slate-200 bg-white hover:border-[#007AFF]/50 hover:bg-slate-50"
+                                                            ? "border-[#007AFF] bg-[#007AFF]/5"
+                                                            : "border-slate-200 bg-white hover:border-[#007AFF]/50 hover:bg-slate-50"
                                                             }`}
                                                     >
                                                         <div className={`mt-0.5 ${isSelected ? 'text-[#007AFF]' : 'text-slate-400 group-hover:text-[#007AFF]/70'}`}>
@@ -334,10 +379,11 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
 
                 <div className="p-6 bg-white border-t border-slate-100 mt-auto shadow-[0_-10px_30px_rgba(0,0,0,0.03)] rounded-t-[2.5rem] relative">
                     <Button
-                        className="w-full rounded-full h-14 text-base font-black bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.25)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.35)] transition-all flex items-center justify-center gap-2"
+                        disabled={isSubmitting}
+                        className="w-full rounded-full h-14 text-base font-black bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.25)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.35)] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                         onClick={handleConfirm}
                     >
-                        Buyurtmani tasdiqlash
+                        {isSubmitting ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Buyurtmani tasdiqlash"}
                     </Button>
                 </div>
             </SheetContent>

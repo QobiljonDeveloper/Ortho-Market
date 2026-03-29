@@ -6,31 +6,23 @@ interface OrderHistoryProps {
     onClose: () => void;
 }
 
-const MOCK_ORDERS = [
-    {
-        id: "4092",
-        date: "24 Okt 2024",
-        status: "Yetkazib berildi",
-        total: "1 250 000 so'm",
-        items: "3 ta mahsulot"
-    },
-    {
-        id: "3841",
-        date: "12 Okt 2024",
-        status: "Yo'lda",
-        total: "450 000 so'm",
-        items: "1 ta mahsulot"
-    },
-    {
-        id: "3720",
-        date: "01 Sen 2024",
-        status: "Yetkazib berildi",
-        total: "3 800 000 so'm",
-        items: "12 ta mahsulot"
-    }
-];
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../services/api';
+import { useAuthContext } from '../context/AuthContext';
 
 export function OrderHistory({ open, onClose }: OrderHistoryProps) {
+    const { user } = useAuthContext();
+    const { data: orders = [], isLoading } = useQuery({
+        queryKey: ["orders", user?.id],
+        queryFn: async () => {
+            if (!user?.id) return [];
+            const res = await api.get(`/api/orders/user/${user.id}`);
+            // Assuming response is an array or has an items array
+            return Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        },
+        enabled: !!user?.id && open,
+    });
+
     return (
         <AnimatePresence>
             {open && (
@@ -58,45 +50,59 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                     </div>
 
                     <div className="px-5 pb-8 pt-6 flex-1 flex flex-col max-w-lg mx-auto w-full space-y-4">
-                        {MOCK_ORDERS.map((order) => {
-                            const isDelivered = order.status === "Yetkazib berildi";
-                            return (
-                                <div key={order.id} className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 relative overflow-hidden group">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
-                                                BUYURTMA RAQAMI
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-lg font-bold text-slate-900">
-                                                    #{order.id}
+                        {isLoading ? (
+                            <div className="flex justify-center items-center py-10">
+                                <div className="w-8 h-8 border-4 border-[#007AFF] border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : orders.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                                <Package className="w-12 h-12 mb-3 opacity-50" />
+                                <p className="font-medium">Buyurtmalar topilmadi</p>
+                            </div>
+                        ) : (
+                            orders.map((order: any) => {
+                                const isDelivered = order.status === 2 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
+                                const statusText = order.status === 0 ? "Yangi" : order.status === 1 ? "Yo'lda" : order.status === 2 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
+                                const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
+                                const totalStr = order.totalAmount ? `${order.totalAmount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, " ")} UZS` : "Hisoblanmoqda";
+
+                                return (
+                                    <div key={order.id} className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 relative overflow-hidden group">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                                                    BUYURTMA RAQAMI
                                                 </span>
-                                                <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                    <Clock className="w-3 h-3" />
-                                                    {order.date}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-lg font-bold text-slate-900">
+                                                        #{String(order.id).slice(0, 8)}
+                                                    </span>
+                                                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        {formattedDate}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${isDelivered
+                                                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                                : "bg-[#007AFF]/5 text-[#007AFF] border-[#007AFF]/20"
+                                                }`}>
+                                                {isDelivered ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
+                                                {statusText}
+                                            </div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Jami summa</span>
+                                                <span className="text-lg font-black text-slate-900 tracking-tight">
+                                                    {totalStr}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${isDelivered
-                                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                                            : "bg-[#007AFF]/5 text-[#007AFF] border-[#007AFF]/20"
-                                            }`}>
-                                            {isDelivered ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
-                                            {order.status}
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Jami summa</span>
-                                            <span className="text-lg font-black text-slate-900 tracking-tight">
-                                                {order.total}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            }))}
 
                         <p className="text-center text-xs text-slate-400 mt-6 font-medium px-4 italic">
                             Faqat so'nggi buyurtmalar ko'rsatilmoqda
