@@ -49,7 +49,7 @@ export const useAddress = (userId?: string) => {
     // Create Address
     const createAddressMutation = useMutation({
         mutationFn: async (payload: AddressPayload) => {
-            const body = {
+            const data = {
                 dto: {
                     userId: payload.userId,
                     label: payload.label,
@@ -59,11 +59,18 @@ export const useAddress = (userId?: string) => {
                     isDefault: payload.isDefault,
                 }
             };
-            console.log("=== ADDRESS DEBUG === Sending body:", JSON.stringify(body));
-            const res = await api.post(`/api/addresses`, JSON.stringify(body), {
+
+            console.log("=== ADDRESS DEBUG === Sending POST to /api/addresses with body:", JSON.stringify(data));
+
+            // Bypass potential interceptor issues by using a explicit config
+            const res = await api({
+                method: 'post',
+                url: '/api/addresses',
+                data: JSON.stringify(data),
+                withCredentials: false,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
+                    'Accept': 'application/json'
                 }
             });
             return res.data;
@@ -73,10 +80,12 @@ export const useAddress = (userId?: string) => {
             toast.success("Manzil muvaffaqiyatli saqlandi!");
         },
         onError: (err: any) => {
-            console.error("Failed to save address:", err);
-            console.error("=== ADDRESS ERROR CONFIG ===", err?.config);
-            console.error("=== ADDRESS ERROR REQUEST ===", err?.request);
-            console.error("=== ADDRESS ERROR RESPONSE ===", err?.response);
+            console.error("=== ADDRESS POST FAILED ===");
+            console.error("Error Message:", err?.message);
+            console.error("Status:", err?.response?.status);
+            console.error("Config URL:", err?.config?.url);
+            console.error("Config Data:", err?.config?.data);
+            console.error("Full Error:", err);
             toast.error("Manzilni saqlashda xatolik yuz berdi.");
         }
     });
