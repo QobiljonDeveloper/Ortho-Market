@@ -57,17 +57,21 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                         ) : orders.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-slate-400">
                                 <Package className="w-12 h-12 mb-3 opacity-50" />
-                                <p className="font-medium">Buyurtmalar topilmadi</p>
+                                <p className="font-medium text-center">Sizda hali buyurtmalar mavjud emas</p>
                             </div>
                         ) : (
                             orders.map((order: any) => {
-                                const isDelivered = order.status === 2 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
-                                const statusText = order.status === 0 ? "Yangi" : order.status === 1 ? "Yo'lda" : order.status === 2 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
+                                const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
+                                const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
                                 const totalStr = order.totalAmount ? `${order.totalAmount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, " ")} UZS` : "Hisoblanmoqda";
 
                                 return (
-                                    <div key={order.id} className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 relative overflow-hidden group">
+                                    <div
+                                        key={order.id}
+                                        onClick={() => window.dispatchEvent(new CustomEvent('open-order-details', { detail: order }))}
+                                        className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 relative overflow-hidden group cursor-pointer hover:border-[#007AFF]/30 transition-all"
+                                    >
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
                                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">

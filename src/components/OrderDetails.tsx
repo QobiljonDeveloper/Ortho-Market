@@ -46,7 +46,8 @@ export function OrderDetails() {
     const fullAddress = order.address ? `${regionName}, ${order.address.city || ""}, ${order.address.street || ""}` : "Samarqand (O'zi olib ketish)";
 
     // Status mapping
-    const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Yo'lda" : order.status === 2 ? "Yetkazib berildi" : order.status || "Qabul qilindi";
+    const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Qabul qilindi";
+    const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' }) : "";
 
     const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + (i.quantity * (i.unitPrice || i.price || 0)), 0) || order.totalAmount || 0;
 
@@ -80,6 +81,7 @@ export function OrderDetails() {
                         <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center text-center gap-1 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-2xl pointer-events-none" />
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest break-all">Order Number: {order.id && String(order.id).includes('ORD-') ? order.id : `ORD-20260329-${String(order.id).slice(-4)}`}</span>
+                            {formattedDate && <span className="text-xs font-bold text-slate-500 mb-1">{formattedDate}</span>}
                             <span className="text-xl font-black text-emerald-600">Status: {statusText}</span>
                         </div>
 
@@ -128,6 +130,10 @@ export function OrderDetails() {
                                 <CreditCard className="w-4 h-4 text-[#007AFF]" /> To'lov
                             </h3>
                             <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-3">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium text-slate-500">To'lov turi</span>
+                                    <span className="font-bold text-slate-900">{order.paymentMethod === 1 ? "Onlayn-o'tkazma (Card)" : "Naqd (Qabul qilinganda)"}</span>
+                                </div>
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="font-medium text-slate-500">Oraliq summa</span>
                                     <span className="font-bold text-slate-900">{formatPrice(subTotal)}</span>
