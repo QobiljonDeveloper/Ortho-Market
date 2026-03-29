@@ -122,7 +122,7 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                 }))
             };
 
-            await api.post("/api/orders", payload, {
+            const res = await api.post("/api/orders", payload, {
                 headers: { 'Content-Type': 'application/json' }
             });
 
@@ -130,7 +130,7 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
             clearCart();
             onOpenChange(false);
 
-            window.dispatchEvent(new CustomEvent('open-order-details', { detail: payload }));
+            window.dispatchEvent(new CustomEvent('open-order-details', { detail: res?.data || payload }));
         } catch (error: any) {
             console.error("Order submission failed:", error);
             const errMsgs = error?.response?.data?.message || "Buyurtmani rasmiylashtirishda xatolik yuz berdi.";

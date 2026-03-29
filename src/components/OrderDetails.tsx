@@ -58,7 +58,7 @@ export function OrderDetails() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="fixed inset-0 z-[100] bg-[#F8FAFC] flex flex-col w-full h-full overflow-y-auto font-sans"
+                    className="fixed inset-0 z-100 bg-[#F8FAFC] flex flex-col w-full h-full overflow-y-auto font-sans"
                 >
                     <div className="flex items-center justify-between p-4 sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-100">
                         <div className="flex items-center gap-2">
@@ -78,7 +78,7 @@ export function OrderDetails() {
                     <div className="px-5 pb-8 pt-6 flex-1 flex flex-col max-w-lg mx-auto w-full space-y-6">
                         {/* Order Header */}
                         <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center text-center gap-1 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-[40px] pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-2xl pointer-events-none" />
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest break-all">Order Number: {order.id && String(order.id).includes('ORD-') ? order.id : `ORD-20260329-${String(order.id).slice(-4)}`}</span>
                             <span className="text-xl font-black text-emerald-600">Status: {statusText}</span>
                         </div>
