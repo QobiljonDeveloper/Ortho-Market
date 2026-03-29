@@ -16,7 +16,16 @@ export const cartService = {
     },
 
     updateQuantity: async (userId: string, cartItemId: string, quantity: number) => {
-        const { data } = await api.patch(`/api/cart/${userId}/items/${cartItemId}?quantity=${quantity}`);
+        const validQty = Math.floor(Number(quantity));
+        const { data } = await api.patch(
+            `/api/cart/${userId}/items/${cartItemId}?quantity=${validQty}`,
+            {},
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
         return data;
     },
 

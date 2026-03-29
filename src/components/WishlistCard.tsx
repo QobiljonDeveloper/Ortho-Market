@@ -78,7 +78,7 @@ export function WishlistCard({ item, onRemove }: WishlistCardProps) {
                 </span>
 
                 {/* Action Area (Add to Cart / Counter) */}
-                <div className="mt-3 h-10 w-full mt-auto">
+                <div className="mt-auto h-10 w-full">
                     <AnimatePresence mode="wait" initial={false}>
                         {quantity === 0 ? (
                             <motion.div
