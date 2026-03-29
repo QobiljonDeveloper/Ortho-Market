@@ -17,6 +17,23 @@ import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store
 import { AddressPopup } from "./AddressPopup";
 import { useAddress } from "../hooks/useAddress";
 
+const REGION_MAP: Record<number, string> = {
+    0: "Toshkent",
+    1: "Toshkent viloyati",
+    2: "Samarqand",
+    3: "Buxoro",
+    4: "Andijon",
+    5: "Farg'ona",
+    6: "Namangan",
+    7: "Qashqadaryo",
+    8: "Surxondaryo",
+    9: "Xorazm",
+    10: "Navoiy",
+    11: "Jizzax",
+    12: "Sirdaryo",
+    13: "Qoraqalpog'iston"
+};
+
 interface CheckoutDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -226,30 +243,53 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
 
                                     {isLoadingAddresses ? (
                                         <div className="h-16 w-full rounded-xl bg-slate-50 border border-slate-100 animate-pulse"></div>
-                                    ) : selectedAddressId && addresses.find((a: any) => a.id === selectedAddressId) ? (
-                                        <div className="space-y-2">
-                                            <div className="relative p-3.5 rounded-xl border border-[#007AFF]/20 bg-[#007AFF]/5 flex items-start gap-3 shadow-sm group">
-                                                <div className="mt-0.5 text-[#007AFF]">
-                                                    <MapPin className="w-4 h-4" strokeWidth={2.5} />
-                                                </div>
-                                                <div className="flex-1 flex flex-col pr-2">
-                                                    <span className="text-xs font-bold text-slate-900 leading-tight">
-                                                        {(() => {
-                                                            const addr = addresses.find((a: any) => a.id === selectedAddressId);
-                                                            return `${addr?.region}, ${addr?.city}`;
-                                                        })()}
-                                                    </span>
-                                                    <span className="text-xs font-medium text-slate-500 mt-1 line-clamp-2">
-                                                        {addresses.find((a: any) => a.id === selectedAddressId)?.street}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                    ) : addresses.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {addresses.map((address: any) => {
+                                                const isSelected = selectedAddressId === address.id;
+                                                const regionName = REGION_MAP[address.region as number] || address.region;
+
+                                                return (
+                                                    <div
+                                                        key={address.id}
+                                                        onClick={() => setSelectedAddressId(address.id)}
+                                                        className={`relative p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-4 shadow-sm group ${isSelected
+                                                                ? "border-[#007AFF] bg-[#007AFF]/5"
+                                                                : "border-slate-200 bg-white hover:border-[#007AFF]/50 hover:bg-slate-50"
+                                                            }`}
+                                                    >
+                                                        <div className={`mt-0.5 ${isSelected ? 'text-[#007AFF]' : 'text-slate-400 group-hover:text-[#007AFF]/70'}`}>
+                                                            <MapPin className="w-5 h-5" strokeWidth={2.5} />
+                                                        </div>
+                                                        <div className="flex-1 flex flex-col pr-2">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="text-sm font-bold text-slate-900 leading-tight">
+                                                                    {address.label || "Uy"}
+                                                                </span>
+                                                                {address.isDefault && (
+                                                                    <span className="px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF] text-[10px] font-bold uppercase tracking-wide">
+                                                                        Asosiy
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-xs font-medium text-slate-500 leading-relaxed">
+                                                                {regionName}, {address.city}, {address.street}
+                                                            </span>
+                                                        </div>
+                                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-[#007AFF] bg-white' : 'border-slate-200 bg-transparent'
+                                                            }`}>
+                                                            <div className={`w-2 h-2 rounded-full bg-[#007AFF] transition-all ${isSelected ? 'scale-100' : 'scale-0'
+                                                                }`} />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                             <button
                                                 onClick={() => setIsAddressPopupOpen(true)}
-                                                className="w-full flex items-center justify-center gap-2 h-10 rounded-lg border border-dashed border-[#007AFF]/30 bg-[#007AFF]/5 text-[#007AFF] hover:bg-[#007AFF]/10 hover:border-[#007AFF]/50 transition-all font-bold text-xs mt-1"
+                                                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-[#007AFF]/30 bg-[#007AFF]/5 text-[#007AFF] hover:bg-[#007AFF]/10 hover:border-[#007AFF]/50 transition-all font-bold text-xs"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                                                Boshqa manzil qo'shish
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                                                Yangi manzil qo'shish
                                             </button>
                                         </div>
                                     ) : (
