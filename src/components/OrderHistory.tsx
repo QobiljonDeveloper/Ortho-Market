@@ -1,4 +1,4 @@
-import { X, Package, Clock, CheckCircle2, Truck } from 'lucide-react';
+import { X, Package, Clock, CheckCircle2, Truck, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface OrderHistoryProps {
@@ -66,11 +66,21 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
                                 const totalStr = order.totalAmount ? `${order.totalAmount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, " ")} UZS` : "Hisoblanmoqda";
 
+                                const paymentStatus = order.paymentStatus || 0;
+                                let paymentBadge = null;
+                                if (paymentStatus === 0) {
+                                    paymentBadge = <span className="bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">To'lanmagan</span>;
+                                } else if (paymentStatus === 1) {
+                                    paymentBadge = <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">To'langan</span>;
+                                } else if (paymentStatus === 2) {
+                                    paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">Qaytarilgan</span>;
+                                }
+
                                 return (
                                     <div
                                         key={order.id}
                                         onClick={() => window.dispatchEvent(new CustomEvent('open-order-details', { detail: order }))}
-                                        className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 relative overflow-hidden group cursor-pointer hover:border-[#007AFF]/30 transition-all"
+                                        className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 relative overflow-hidden group cursor-pointer hover:border-[#007AFF]/30 hover:bg-slate-50/50 active:scale-[0.98] transition-all"
                                     >
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
@@ -87,6 +97,9 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                                     </span>
                                                 </div>
                                             </div>
+                                            <div className="flex flex-col items-end gap-2">
+                                                {paymentBadge}
+                                            </div>
                                         </div>
 
                                         <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
@@ -97,10 +110,13 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                                 {isDelivered ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
                                                 {statusText}
                                             </div>
-                                            <div className="flex flex-col items-end">
-                                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Jami summa</span>
-                                                <span className="text-lg font-black text-slate-900 tracking-tight">
+                                            <div className="flex flex-col items-end gap-1 text-right">
+                                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Jami summa</span>
+                                                <span className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
                                                     {totalStr}
+                                                    <div className="w-6 h-6 rounded-full bg-slate-50 group-hover:bg-[#007AFF]/10 flex items-center justify-center text-slate-400 group-hover:text-[#007AFF] transition-colors -translate-y-px">
+                                                        <ChevronRight className="w-4 h-4" />
+                                                    </div>
                                                 </span>
                                             </div>
                                         </div>

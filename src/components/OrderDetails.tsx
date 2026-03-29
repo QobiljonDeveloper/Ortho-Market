@@ -49,6 +49,16 @@ export function OrderDetails() {
     const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Qabul qilindi";
     const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' }) : "";
 
+    const paymentStatus = order.paymentStatus || 0;
+    let paymentBadge = null;
+    if (paymentStatus === 0) {
+        paymentBadge = <span className="bg-red-50 text-red-600 border border-red-100 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">To'lanmagan</span>;
+    } else if (paymentStatus === 1) {
+        paymentBadge = <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">To'langan</span>;
+    } else if (paymentStatus === 2) {
+        paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">Qaytarilgan</span>;
+    }
+
     const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + (i.quantity * (i.unitPrice || i.price || 0)), 0) || order.totalAmount || 0;
 
     return (
@@ -82,7 +92,8 @@ export function OrderDetails() {
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-2xl pointer-events-none" />
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest break-all">Order Number: {order.id && String(order.id).includes('ORD-') ? order.id : `ORD-20260329-${String(order.id).slice(-4)}`}</span>
                             {formattedDate && <span className="text-xs font-bold text-slate-500 mb-1">{formattedDate}</span>}
-                            <span className="text-xl font-black text-emerald-600">Status: {statusText}</span>
+                            <span className="text-xl font-black text-slate-800">Status: <span className="text-emerald-600">{statusText}</span></span>
+                            {paymentBadge}
                         </div>
 
                         {/* Items List */}
@@ -92,19 +103,32 @@ export function OrderDetails() {
                             </h3>
                             <div className="bg-white rounded-3xl border border-slate-100 p-2 shadow-sm space-y-2">
                                 {order.items?.map((item: any, idx: number) => {
-                                    const prodName = item.product?.name || item.name || "Ortodontik mahsulot";
+                                    const prodName = item.product?.name || item.product?.nameUz || item.name || "Ortodontik mahsulot";
                                     const sku = item.product?.sku || item.sku || "OM-002";
+                                    const imgUrl = item.product?.images?.[0]?.url || item.product?.image || item.image || item.primaryImageUrl || null;
                                     const qty = item.quantity || 1;
                                     const unitPrice = item.unitPrice || item.price || 0;
                                     const itemTotal = qty * unitPrice;
                                     return (
                                         <div key={idx} className="flex gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-100/50">
-                                            <div className="flex-1">
+                                            {imgUrl ? (
+                                                <div className="w-16 h-16 shrink-0 bg-white rounded-xl flex items-center justify-center p-1.5 border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                                                    <img src={imgUrl} alt={prodName} className="w-full h-full object-contain" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-16 h-16 shrink-0 bg-slate-200/50 rounded-xl flex items-center justify-center border border-slate-100">
+                                                    <Package className="w-6 h-6 text-slate-400" />
+                                                </div>
+                                            )}
+                                            <div className="flex-1 flex flex-col justify-center">
                                                 <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{prodName}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">SKU: {sku}</p>
-                                                <p className="text-xs font-medium text-slate-500 mt-2">{qty} x {formatPrice(unitPrice)}</p>
+                                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">SKU: {sku}</p>
+                                                    <div className="w-1 rounded-full h-1 bg-slate-300"></div>
+                                                    <p className="text-[10px] font-bold text-slate-500 tracking-wide">{qty} x {formatPrice(unitPrice)}</p>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col items-end justify-center">
+                                            <div className="flex flex-col items-end justify-center shrink-0">
                                                 <span className="text-sm font-black text-[#007AFF]">{itemTotal > 0 ? formatPrice(itemTotal) : "Hisoblanmoqda"}</span>
                                             </div>
                                         </div>
