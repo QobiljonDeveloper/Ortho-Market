@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { api } from "../services/api";
 import { toast } from "sonner";
 import { useAuthContext } from "../context/AuthContext";
-
-const API_BASE = "https://ortadant-markert-api.kubesec.uz/api";
 
 export interface Region {
     value: number;
@@ -31,7 +29,7 @@ export const useAddress = (userId?: string) => {
     const { data: regions = [], isLoading: isLoadingRegions } = useQuery<Region[]>({
         queryKey: ["regions"],
         queryFn: async () => {
-            const res = await axios.get(`${API_BASE}/enums/Region`);
+            const res = await api.get(`/api/enums/Region`);
             return res.data;
         },
         enabled: !!token,
@@ -42,7 +40,7 @@ export const useAddress = (userId?: string) => {
         queryKey: ["addresses", userId],
         queryFn: async () => {
             if (!userId) return [];
-            const res = await axios.get(`${API_BASE}/addresses/user/${userId}`);
+            const res = await api.get(`/api/addresses/user/${userId}`);
             return res.data;
         },
         enabled: !!userId,
@@ -52,9 +50,7 @@ export const useAddress = (userId?: string) => {
     const createAddressMutation = useMutation({
         mutationFn: async (payload: AddressPayload) => {
             console.log("=== ADDRESS DEBUG === Sending dto:", payload);
-            const res = await axios.post(`${API_BASE}/addresses`, { dto: payload }, {
-                headers: { 'Content-Type': 'application/json' }
-            });
+            const res = await api.post(`/api/addresses`, { dto: payload });
             return res.data;
         },
         onSuccess: () => {
