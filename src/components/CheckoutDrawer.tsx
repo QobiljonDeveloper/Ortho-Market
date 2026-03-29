@@ -43,7 +43,7 @@ interface CheckoutDrawerProps {
 
 export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
     const { cartTotal, clearCart, cart } = useCart();
-    const { user } = useAuthContext();
+    const { user, token } = useAuthContext();
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -123,8 +123,19 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
             };
 
             const res = await api.post("/api/orders", payload, {
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                }
             });
+
+            try {
+                await api.delete(`/api/cart/${user.id}`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                });
+            } catch (err) {
+                console.error("Failed to clear server cart:", err);
+            }
 
             toast.success("Savat yangilandi", { duration: 2000, position: 'top-right' });
             clearCart();
