@@ -4,6 +4,10 @@ import axios from 'axios'
 import './index.css'
 import App from './App.tsx'
 
+console.log("--- TELEGRAM WEBAPP DEBUG ---");
+console.log("Full InitData Raw:", window.Telegram?.WebApp?.initData);
+console.log("User Data from Telegram:", window.Telegram?.WebApp?.initDataUnsafe?.user);
+
 // Global Axios Logging Interceptor for Raw Queries
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');

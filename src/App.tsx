@@ -58,7 +58,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center z-[100] relative">
         <div className="w-12 h-12 border-4 border-slate-200 border-t-[#007AFF] rounded-full animate-spin mb-4 shadow-sm"></div>
-        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs animate-pulse">Bog'lanmoqda...</p>
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs animate-pulse">Yuklanmoqda...</p>
       </div>
     );
   }
