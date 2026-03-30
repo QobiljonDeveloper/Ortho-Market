@@ -15,6 +15,7 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
     const { user, setUser } = useAuthContext();
     const [isEditingPhone, setIsEditingPhone] = useState(false);
     const [editPhoneValue, setEditPhoneValue] = useState("");
+    const [isSavingPhone, setIsSavingPhone] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [imageError, setImageError] = useState(false);
 
@@ -46,6 +47,7 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
             return;
         }
 
+        setIsSavingPhone(true);
         try {
             const payload = {
                 telegramId: user.telegramId || "0",
@@ -64,6 +66,8 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
         } catch (error) {
             console.error("Phone update failed", error);
             toast.error("Telefon raqamni saqlashda xatolik yuz berdi");
+        } finally {
+            setIsSavingPhone(false);
         }
     };
 
@@ -150,20 +154,26 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
                                         <span className="text-[11px] font-bold uppercase text-[#007AFF] tracking-wider mb-0.5">Telefon raqam</span>
 
                                         {isEditingPhone ? (
-                                            <div className="flex items-center gap-2 w-full mt-1">
+                                            <div className="flex flex-row items-center gap-2 w-full mt-1">
                                                 <input
                                                     type="tel"
                                                     value={editPhoneValue}
                                                     onChange={handlePhoneChange}
-                                                    className="flex-1 min-w-0 bg-white border border-[#007AFF]/50 rounded-xl px-3 py-2 outline-none text-sm font-semibold text-slate-900 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all shadow-sm"
+                                                    disabled={isSavingPhone}
+                                                    className="flex-1 min-w-0 bg-white border border-[#007AFF]/50 rounded-xl px-3 py-2 outline-none text-sm font-semibold text-slate-900 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all shadow-sm disabled:opacity-70 disabled:bg-slate-50"
                                                     placeholder="+998"
                                                     autoFocus
                                                 />
                                                 <button
                                                     onClick={handleSavePhone}
-                                                    className="px-3 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#005bb5] transition-colors shrink-0"
+                                                    disabled={isSavingPhone}
+                                                    className="px-3 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#005bb5] transition-colors shrink-0 min-w-[80px] flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                                                 >
-                                                    Saqlash
+                                                    {isSavingPhone ? (
+                                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    ) : (
+                                                        "Saqlash"
+                                                    )}
                                                 </button>
                                             </div>
                                         ) : (
