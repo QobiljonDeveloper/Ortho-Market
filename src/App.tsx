@@ -32,43 +32,29 @@ const queryClient = new QueryClient({
   },
 });
 
-function AppContent() {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [selectedCategoryName, setSelectedCategoryName] = useState<string>("Barchasi");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
+function AuthWrapper({ children }: { children: React.ReactNode }) {
   const { token } = useAuthContext();
   const { mutate: syncUser, isPending } = useAuth();
+  const [initDataError, setInitDataError] = useState(false);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
-    if (tg?.initData) {
-      console.log("Telegram InitData:", window.Telegram?.WebApp?.initData);
+    if (tg) {
       tg.ready();
-      if (!token) {
-        syncUser(tg.initData);
-      }
     }
-  }, [syncUser, token]);
 
-  // Debounce search input
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
+    const initData = tg?.initData;
+    console.log("System InitData found:", !!initData);
 
-  const { data: products = [], isLoading: isLoadingProducts } = useProducts(
-    selectedCategoryId || undefined,
-    debouncedSearch || undefined
-  );
-
-  const filteredProducts = useMemo(() => products, [products]);
+    if (!initData && !DEV_MODE) {
+      setInitDataError(true);
+    } else if (initData && !token) {
+      syncUser(initData);
+    }
+  }, []); // Run ONLY once on mount
 
   // Full-screen loader while authenticating
-  if (isPending) {
+  if (isPending || (!token && !initDataError && !DEV_MODE)) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center z-[100] relative">
         <div className="w-12 h-12 border-4 border-slate-200 border-t-[#007AFF] rounded-full animate-spin mb-4 shadow-sm"></div>
@@ -77,8 +63,7 @@ function AppContent() {
     );
   }
 
-  // Strict Fallback / Redirect equivalent for Telegram Web App
-  if (!token && !DEV_MODE) {
+  if (initDataError && !DEV_MODE) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center">
         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-slate-200 shadow-sm">
@@ -86,11 +71,28 @@ function AppContent() {
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Tizimga kiring</h1>
         <p className="text-slate-500 max-w-sm mb-8 leading-relaxed font-medium">
-          Iltimos, avtorizatsiya uchun ilovani Telegram orqali kiring.
+          Ilovani Telegram orqali oching
         </p>
       </div>
     );
   }
+
+  return <>{children}</>;
+}
+
+function AppContent() {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string>("Barchasi");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   return (
     <CartProvider>
@@ -195,13 +197,15 @@ export default function App() {
                 style: { background: '#ffffff', color: '#0f172a' }
               }}
             />
-            <Routes>
-              {/* Home Catalog Route */}
-              <Route path="/" element={<AppContent />} />
-              {/* Catch-all to Home if Product Details isn't ready yet or just fallback */}
-              <Route path="*" element={<AppContent />} />
-            </Routes>
-            <OrderDetails />
+            <AuthWrapper>
+              <Routes>
+                {/* Home Catalog Route */}
+                <Route path="/" element={<AppContent />} />
+                {/* Catch-all to Home if Product Details isn't ready yet or just fallback */}
+                <Route path="*" element={<AppContent />} />
+              </Routes>
+              <OrderDetails />
+            </AuthWrapper>
           </AuthProvider>
         </ErrorBoundary>
       </QueryClientProvider>

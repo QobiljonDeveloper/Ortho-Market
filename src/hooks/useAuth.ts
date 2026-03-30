@@ -18,6 +18,7 @@ export const useAuth = () => {
         },
         onSuccess: (data) => {
             console.log("Auth Success:", data);
+            api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
             setToken(data.token);
             setUser(data.user);
             toast.success("Tizimga muvaffaqiyatli kirildi! ✅");

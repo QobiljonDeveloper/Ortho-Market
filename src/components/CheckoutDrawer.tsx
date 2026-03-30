@@ -95,7 +95,7 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
     };
 
     const handleConfirm = async () => {
-        if (!user?.id) {
+        if (!user?.id || !token) {
             toast.error("Iltimos, avval tizimga kiring.");
             return;
         }

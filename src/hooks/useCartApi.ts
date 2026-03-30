@@ -21,7 +21,6 @@ export const useCartApi = (userId: string | undefined | null) => {
                 return items;
             } catch (error: any) {
                 console.error("Error fetching cart data:", error);
-                alert(`Cart fetch xatoligi: ${error?.message || error}`);
                 throw error;
             }
         },
@@ -39,7 +38,6 @@ export const useCartApi = (userId: string | undefined | null) => {
                 return data;
             } catch (error: any) {
                 console.error("Error adding product to cart:", error);
-                alert(`Cart add xatoligi: ${error?.message || error}`);
                 throw error;
             }
         },

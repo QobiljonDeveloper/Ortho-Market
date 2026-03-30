@@ -60,6 +60,11 @@ api.interceptors.response.use(
             toast.error("Server xatoligi (500). Keyinroq urinib ko'ring.");
         } else if (status === 401) {
             toast.error("Avtorizatsiya muddati tugadi. Qayta kiring.");
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         } else if (status === 403) {
             toast.error("Ruxsat berilmagan so'rov (403).");
         } else if (!error.response) {
