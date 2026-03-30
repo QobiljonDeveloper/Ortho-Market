@@ -44,6 +44,7 @@ function AppContent() {
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (tg?.initData) {
+      console.log("Telegram InitData:", window.Telegram?.WebApp?.initData);
       tg.ready();
       if (!token) {
         syncUser(tg.initData);

@@ -11,7 +11,7 @@ export const useCartApi = (userId: string | undefined | null) => {
     const { data: cart = [], isLoading, refetch } = useQuery({
         queryKey: ['cart', safeUserId],
         queryFn: async (): Promise<CartItem[]> => {
-            if (!safeUserId) return [];
+            if (!safeUserId || safeUserId === 'undefined' || safeUserId === 'null') return [];
             console.log(`Fetching cart for user: ${safeUserId}`);
             try {
                 const data = await cartService.getCart(safeUserId);
@@ -25,7 +25,7 @@ export const useCartApi = (userId: string | undefined | null) => {
                 throw error;
             }
         },
-        enabled: !!safeUserId,
+        enabled: !!safeUserId && safeUserId !== 'undefined' && safeUserId !== 'null' && !!localStorage.getItem('token'),
     });
 
     // Add to cart mutation

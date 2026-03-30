@@ -24,8 +24,7 @@ export const useAuth = () => {
         },
         onError: (error: any) => {
             console.error("API Error:", error);
-            // Ignore 404s if it's expected during dev, else show error
-            toast.error("Avtorizatsiyada xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.");
+            toast.error("Avtorizatsiyadan o'tishda xatolik yuz berdi");
         }
     });
 };
