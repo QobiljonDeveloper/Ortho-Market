@@ -94,6 +94,13 @@ function AppContent() {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
+  const { data: products = [], isLoading: isLoadingProducts } = useProducts(
+    selectedCategoryId || undefined,
+    debouncedSearch || undefined
+  );
+
+  const filteredProducts = useMemo(() => products, [products]);
+
   return (
     <CartProvider>
 
