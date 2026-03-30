@@ -150,24 +150,24 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
                                         <Phone className="w-5 h-5" strokeWidth={1.5} />
                                     </div>
 
-                                    <div className="flex-1 flex flex-col justify-center min-h-[40px]">
+                                    <div className="flex-1 flex flex-col justify-center min-w-0 min-h-[40px]">
                                         <span className="text-[11px] font-bold uppercase text-[#007AFF] tracking-wider mb-0.5">Telefon raqam</span>
 
                                         {isEditingPhone ? (
-                                            <div className="flex flex-row items-center gap-2 w-full mt-1">
+                                            <div className="flex flex-row items-center gap-x-3 w-full mt-1">
                                                 <input
                                                     type="tel"
                                                     value={editPhoneValue}
                                                     onChange={handlePhoneChange}
                                                     disabled={isSavingPhone}
-                                                    className="flex-1 min-w-0 bg-white border border-[#007AFF]/50 rounded-xl px-3 py-2 outline-none text-sm font-semibold text-slate-900 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all shadow-sm disabled:opacity-70 disabled:bg-slate-50"
+                                                    className="grow shrink min-w-0 bg-white border border-[#007AFF]/50 rounded-xl px-3 py-2 outline-none text-sm font-semibold text-slate-900 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all shadow-sm disabled:opacity-70 disabled:bg-slate-50"
                                                     placeholder="+998"
                                                     autoFocus
                                                 />
                                                 <button
                                                     onClick={handleSavePhone}
                                                     disabled={isSavingPhone}
-                                                    className="px-3 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#005bb5] transition-colors shrink-0 min-w-[80px] flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                                                    className="shrink-0 px-3 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#005bb5] transition-colors min-w-[80px] flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                                                 >
                                                     {isSavingPhone ? (
                                                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -177,12 +177,12 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center justify-between">
-                                                <span className={`text-[15px] font-semibold ${!user?.phone ? "text-slate-400 italic" : "text-slate-900"}`}>
+                                            <div className="flex flex-row items-center gap-x-3 w-full mt-1">
+                                                <span className={`block grow shrink min-w-0 truncate text-[15px] font-semibold ${!user?.phone ? "text-slate-400 italic" : "text-slate-900"}`}>
                                                     {user?.phone || "Kiritilmagan"}
                                                 </span>
                                                 <button
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-xs font-bold transition-colors shrink-0"
+                                                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-xs font-bold transition-colors"
                                                     onClick={() => {
                                                         setEditPhoneValue(user?.phone || "+998");
                                                         setIsEditingPhone(true);
