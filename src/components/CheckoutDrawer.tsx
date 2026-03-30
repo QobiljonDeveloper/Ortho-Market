@@ -61,6 +61,7 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
     useEffect(() => {
         if (open) {
             setFullName(user?.fullName || "");
+            setPhone(user?.phone || "+998");
         }
     }, [open, user]);
 

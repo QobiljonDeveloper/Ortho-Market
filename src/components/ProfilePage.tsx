@@ -3,6 +3,8 @@ import { ArrowLeft, Phone, User, Lock, Edit2, Globe, History, ChevronRight } fro
 import { motion, AnimatePresence } from 'framer-motion';
 import { OrderHistory } from './OrderHistory';
 import { useAuthContext } from '../context/AuthContext';
+import { updateUserProfile } from '../services/api';
+import { toast } from 'sonner';
 
 interface ProfilePageProps {
     open: boolean;
@@ -10,8 +12,7 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ open, onClose }: ProfilePageProps) {
-    const { user } = useAuthContext();
-    const [phoneNumber, setPhoneNumber] = useState("");
+    const { user, setUser } = useAuthContext();
     const [isEditingPhone, setIsEditingPhone] = useState(false);
     const [editPhoneValue, setEditPhoneValue] = useState("");
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -26,9 +27,44 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
         .slice(0, 2)
         .toUpperCase() || "U";
 
-    const handleSavePhone = () => {
-        setPhoneNumber(editPhoneValue);
-        setIsEditingPhone(false);
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let val = e.target.value.replace(/[^\d+]/g, '');
+        if (!val.startsWith('+998')) {
+            val = '+998';
+        }
+        if (val.length > 13) {
+            val = val.slice(0, 13);
+        }
+        setEditPhoneValue(val);
+    };
+
+    const handleSavePhone = async () => {
+        if (!user) return;
+
+        if (editPhoneValue.length < 13) {
+            toast.error("Telefon raqamni to'liq kiriting");
+            return;
+        }
+
+        try {
+            const payload = {
+                telegramId: user.telegramId || "0",
+                fullName: user.fullName,
+                username: user.username,
+                phone: editPhoneValue,
+                email: user.email || null,
+                language: user.language,
+                photoUrl: user.photoUrl
+            };
+            await updateUserProfile(payload);
+
+            setUser({ ...user, phone: editPhoneValue });
+            setIsEditingPhone(false);
+            toast.success("Telefon raqam muvaffaqiyatli saqlandi! ✅");
+        } catch (error) {
+            console.error("Phone update failed", error);
+            toast.error("Telefon raqamni saqlashda xatolik yuz berdi");
+        }
     };
 
     return (
@@ -118,9 +154,9 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
                                                 <input
                                                     type="tel"
                                                     value={editPhoneValue}
-                                                    onChange={(e) => setEditPhoneValue(e.target.value)}
+                                                    onChange={handlePhoneChange}
                                                     className="flex-1 min-w-0 bg-white border border-[#007AFF]/50 rounded-xl px-3 py-2 outline-none text-sm font-semibold text-slate-900 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all shadow-sm"
-                                                    placeholder="+998 90 123 45 67"
+                                                    placeholder="+998"
                                                     autoFocus
                                                 />
                                                 <button
@@ -132,13 +168,13 @@ export function ProfilePage({ open, onClose }: ProfilePageProps) {
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-between">
-                                                <span className={`text-[15px] font-semibold ${!phoneNumber ? "text-slate-400 italic" : "text-slate-900"}`}>
-                                                    {phoneNumber || "Kiritilmagan"}
+                                                <span className={`text-[15px] font-semibold ${!user?.phone ? "text-slate-400 italic" : "text-slate-900"}`}>
+                                                    {user?.phone || "Kiritilmagan"}
                                                 </span>
                                                 <button
                                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-xs font-bold transition-colors shrink-0"
                                                     onClick={() => {
-                                                        setEditPhoneValue(phoneNumber);
+                                                        setEditPhoneValue(user?.phone || "+998");
                                                         setIsEditingPhone(true);
                                                     }}
                                                 >

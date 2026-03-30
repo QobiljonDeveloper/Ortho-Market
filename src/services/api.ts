@@ -82,3 +82,18 @@ export const getUserAvatar = async (telegramId: number) => {
         responseType: 'blob'
     });
 };
+
+export interface UpdateUserProfilePayload {
+    telegramId: string | number;
+    fullName: string;
+    username: string;
+    phone: string;
+    email: string | null;
+    language: number;
+    photoUrl?: string;
+}
+
+// Update the user's phone number and strictly forward all other state info
+export const updateUserProfile = async (payload: UpdateUserProfilePayload) => {
+    return await api.post('/api/users/create-or-update', payload);
+};

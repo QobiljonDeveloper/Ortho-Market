@@ -6,6 +6,9 @@ export interface User {
     username: string;
     photoUrl?: string;
     language: number;
+    phone?: string | null;
+    email?: string | null;
+    telegramId?: string | number;
 }
 
 interface AuthContextType {
