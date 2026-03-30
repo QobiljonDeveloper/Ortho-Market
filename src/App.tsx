@@ -9,7 +9,7 @@ import { useProducts } from './hooks/useProducts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TelegramAuthDebug } from './components/TelegramAuthDebug';
 import { useAuth } from './hooks/useAuth';
-import { AuthProvider, useAuthContext } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { OrderDetails } from './components/OrderDetails';
@@ -32,10 +32,13 @@ const queryClient = new QueryClient({
   },
 });
 
+// 1. Forced React Query Cache Clear on Startup
+queryClient.clear();
+
 function AuthWrapper({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthContext();
   const { mutate: syncUser, isPending } = useAuth();
   const [initDataError, setInitDataError] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -46,33 +49,44 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
     const initData = tg?.initData;
     console.log("System InitData found:", !!initData);
 
-    if (!initData && !DEV_MODE) {
-      setInitDataError(true);
-    } else if (initData && !token) {
-      syncUser(initData);
+    if (initData) {
+      // 3. Mandatory POST Auth Request: strictly first network request
+      syncUser(initData, {
+        onSuccess: () => setIsAuthenticated(true),
+        onError: () => {
+          if (DEV_MODE) setIsAuthenticated(true);
+        }
+      });
+    } else {
+      if (DEV_MODE) {
+        console.warn("DEV_MODE: By-passing Telegram auth due to missing initData");
+        setIsAuthenticated(true);
+      } else {
+        setInitDataError(true);
+      }
     }
   }, []); // Run ONLY once on mount
 
-  // Full-screen loader while authenticating
-  if (isPending || (!token && !initDataError && !DEV_MODE)) {
+  // 5. App-Level Guard: Lock UI and rendering until authentication finishes
+  if (isPending || !isAuthenticated) {
+    if (initDataError && !DEV_MODE) {
+      return (
+        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-slate-200 shadow-sm">
+            <span className="text-4xl text-slate-400">🔒</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Tizimga kiring</h1>
+          <p className="text-slate-500 max-w-sm mb-8 leading-relaxed font-medium">
+            Ilovani Telegram orqali oching
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center z-[100] relative">
         <div className="w-12 h-12 border-4 border-slate-200 border-t-[#007AFF] rounded-full animate-spin mb-4 shadow-sm"></div>
         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs animate-pulse">Yuklanmoqda...</p>
-      </div>
-    );
-  }
-
-  if (initDataError && !DEV_MODE) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-slate-200 shadow-sm">
-          <span className="text-4xl text-slate-400">🔒</span>
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Tizimga kiring</h1>
-        <p className="text-slate-500 max-w-sm mb-8 leading-relaxed font-medium">
-          Ilovani Telegram orqali oching
-        </p>
       </div>
     );
   }

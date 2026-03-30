@@ -4,8 +4,12 @@ import axios from 'axios'
 import './index.css'
 import App from './App.tsx'
 
+// 1. Forced Cache Clear on Startup
+localStorage.clear();
+sessionStorage.clear();
+
 console.log("--- TELEGRAM WEBAPP DEBUG ---");
-console.log("Full InitData Raw:", window.Telegram?.WebApp?.initData);
+console.log("Current Telegram InitData:", window.Telegram?.WebApp?.initData);
 console.log("User Data from Telegram:", window.Telegram?.WebApp?.initDataUnsafe?.user);
 
 // Global Axios Logging Interceptor for Raw Queries
