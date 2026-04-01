@@ -4,13 +4,13 @@ import {
     SheetTitle,
 } from "./ui/sheet";
 import { type Product } from "../types";
-import { Heart, ShieldCheck, Truck, ArrowLeft } from "lucide-react";
+import { Heart, ShieldCheck, Truck, ArrowLeft, Check, ShoppingCart, Minus, Plus } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
-import { ProductPageActions } from "./ProductPageActions";
+import { useCart } from "../context/CartContext";
 
 interface ProductDetailsDrawerProps {
     open: boolean;
@@ -23,8 +23,13 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
     const { isSaved, toggleWishlist } = useWishlist(user?.id);
 
     const saved = isSaved(product.id);
+    const { addToCart, getItemQuantity, updateQuantity } = useCart();
 
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [selectedSize, setSelectedSize] = useState<any>(null);
+    const [selectedColor, setSelectedColor] = useState<any>(null);
+
+    console.log("Variantlar consolega chiqarildi: ", product);
 
     // Reset default selected image when opened
     useEffect(() => {
@@ -148,10 +153,78 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                             </div>
                         </div>
 
-                        {/* Variant Selector + Actions */}
-                        <div className="pt-2">
-                            <ProductPageActions product={product} />
-                        </div>
+                        {/* Inline Variant Options per the exact requirement */}
+                        {((product?.colors && product.colors.length > 0) || (product?.sizes && product.sizes.length > 0)) && (
+                            <div className="bg-white border border-slate-100 rounded-[1.25rem] p-6 shadow-sm mb-4">
+                                {product?.colors && product.colors.length > 0 && (
+                                    <div className="mb-5 last:mb-0">
+                                        <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
+                                            Rangni tanlang
+                                            {selectedColor && (
+                                                <span className="text-[#007AFF] normal-case tracking-normal font-bold ml-1.5">
+                                                    — {selectedColor.name || selectedColor.label}
+                                                </span>
+                                            )}
+                                        </p>
+                                        <div className="flex flex-wrap gap-3">
+                                            {product.colors.map((color: any, index: number) => {
+                                                const isSelected = selectedColor?.hex === color.hex;
+                                                return (
+                                                    <button
+                                                        key={index}
+                                                        type="button"
+                                                        onClick={() => setSelectedColor(color)}
+                                                        className={cn(
+                                                            "relative w-10 h-10 rounded-full transition-all duration-200 outline-none active:scale-90",
+                                                            isSelected ? "ring-2 ring-[#007AFF] ring-offset-2" : "ring-1 ring-slate-200 hover:ring-slate-300"
+                                                        )}
+                                                        title={color.name || color.label}
+                                                    >
+                                                        <span
+                                                            className={cn("absolute inset-0.5 rounded-full", color.hex === "#FFFFFF" && "border border-slate-200")}
+                                                            style={{ backgroundColor: color.hex }}
+                                                        />
+                                                        {isSelected && (
+                                                            <span className="absolute inset-0 flex items-center justify-center">
+                                                                <Check className="w-5 h-5 drop-shadow-sm text-white mix-blend-difference" strokeWidth={3} />
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {product?.sizes && product.sizes.length > 0 && (
+                                    <div>
+                                        <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
+                                            O'lcham / Model
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {product.sizes.map((size: any, index: number) => {
+                                                const isSelected = selectedSize?.value === size.value;
+                                                return (
+                                                    <button
+                                                        key={index}
+                                                        type="button"
+                                                        onClick={() => setSelectedSize(size)}
+                                                        className={cn(
+                                                            "h-11 px-5 rounded-xl text-sm font-semibold transition-all duration-200 outline-none active:scale-95 border",
+                                                            isSelected
+                                                                ? "bg-[#007AFF] border-[#007AFF] text-white shadow-sm"
+                                                                : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                                                        )}
+                                                    >
+                                                        {size.label || size.value}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Description */}
                         {(product.descriptionUz || product.description) && (
@@ -196,8 +269,42 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                     </div>
 
                     {/* Padding for sticky footer */}
-                    <div className="h-6"></div>
+                    <div className="h-[80px]"></div>
                 </ScrollArea>
+
+                {/* Sticky CTA Footer */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 rounded-b-[2.5rem] sm:rounded-b-none z-50">
+                    {(() => {
+                        const quantity = getItemQuantity(product.id);
+                        return quantity === 0 ? (
+                            <button
+                                onClick={() => addToCart(product)}
+                                className="w-full h-[52px] bg-[#007AFF] text-white rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#0062cc] active:scale-[0.98] transition-all shadow-sm"
+                            >
+                                <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
+                                Savatga
+                            </button>
+                        ) : (
+                            <div className="w-full h-[52px] bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between p-1.5 shadow-inner">
+                                <button
+                                    onClick={() => updateQuantity(product.id, Math.max(0, quantity - 1))}
+                                    className="w-12 h-10 flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-slate-200"
+                                >
+                                    <Minus className="h-5 w-5" strokeWidth={2} />
+                                </button>
+                                <span className="text-lg font-black text-slate-900 tracking-wider">
+                                    {quantity}
+                                </span>
+                                <button
+                                    onClick={() => updateQuantity(product.id, quantity + 1)}
+                                    className="w-12 h-10 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-[#007AFF]/20"
+                                >
+                                    <Plus className="h-5 w-5" strokeWidth={2} />
+                                </button>
+                            </div>
+                        );
+                    })()}
+                </div>
             </SheetContent>
         </Sheet>
     );
