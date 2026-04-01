@@ -3,15 +3,13 @@ import {
     SheetContent,
 } from "./ui/sheet";
 import { type Product } from "../types";
-import { useCart } from "../context/CartContext";
-import { Heart, ShoppingCart, Minus, Plus, ShieldCheck, Truck, ArrowLeft } from "lucide-react";
-import { Button } from "./ui/button";
+import { Heart, ShieldCheck, Truck, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
-import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
+import { ProductPageActions } from "./ProductPageActions";
 
 interface ProductDetailsDrawerProps {
     open: boolean;
@@ -20,11 +18,9 @@ interface ProductDetailsDrawerProps {
 }
 
 export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDetailsDrawerProps) {
-    const { addToCart, getItemQuantity, updateQuantity } = useCart();
     const { user } = useAuthContext();
     const { isSaved, toggleWishlist } = useWishlist(user?.id);
 
-    const quantity = getItemQuantity(product.id);
     const saved = isSaved(product.id);
 
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -189,59 +185,15 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                             </div>
                         </div>
                     </div>
+
+                    {/* Variant Selector + Actions */}
+                    <div className="px-6 pb-4">
+                        <ProductPageActions product={product} />
+                    </div>
+
                     {/* Padding for sticky footer */}
-                    <div className="h-28"></div>
+                    <div className="h-6"></div>
                 </ScrollArea>
-
-                {/* Sticky Action Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-5 bg-white/90 backdrop-blur-2xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
-                    <AnimatePresence mode="wait" initial={false}>
-                        {quantity === 0 ? (
-                            <motion.div
-                                key="add"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                            >
-                                <Button
-                                    onClick={() => addToCart(product)}
-                                    className="w-full h-14 bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.25)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.35)] rounded-full text-base font-bold tracking-wide flex items-center justify-center gap-2 transition-all"
-                                >
-                                    <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
-                                    Savatga
-                                </Button>
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key="stepper"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="w-full h-14 bg-[#F8FAFC] border border-slate-200 shadow-inner rounded-full flex items-center justify-between p-1.5"
-                            >
-                                <button
-                                    onClick={() => updateQuantity(product.id, Math.max(0, quantity - 1))}
-                                    className="w-12 h-11 flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 rounded-full shadow-sm transition-colors active:scale-95 border border-slate-200"
-                                >
-                                    <Minus className="h-5 w-5" strokeWidth={2} />
-                                </button>
-
-                                <div className="flex flex-col items-center justify-center">
-                                    <span className="text-xl font-black text-slate-900 tracking-widest">
-                                        {quantity}
-                                    </span>
-                                </div>
-
-                                <button
-                                    onClick={() => updateQuantity(product.id, quantity + 1)}
-                                    className="w-12 h-11 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-full shadow-sm transition-colors active:scale-95 border border-[#007AFF]/20"
-                                >
-                                    <Plus className="h-5 w-5" strokeWidth={2} />
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
             </SheetContent>
         </Sheet>
     );

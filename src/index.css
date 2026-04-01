@@ -12,6 +12,38 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* ── Glassmorphism Keyframes ─────────────────────────────── */
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10%,
+    50%,
+    90% {
+        transform: translateX(-3px);
+    }
+
+    30%,
+    70% {
+        transform: translateX(3px);
+    }
+}
+
+@keyframes neon-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px 2px rgba(0, 122, 255, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 16px 4px rgba(0, 122, 255, 0.6);
+    }
+}
+
 @layer utilities {
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
@@ -20,5 +52,24 @@ body {
     .scrollbar-hide {
         -ms-overflow-style: none;
         scrollbar-width: none;
+    }
+
+    .animate-shake {
+        animation: shake 0.5s ease-in-out;
+    }
+
+    .animate-neon-pulse {
+        animation: neon-pulse 1.5s ease-in-out infinite;
+    }
+
+    .glass-surface {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-dark-bg {
+        background: linear-gradient(145deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
     }
 }

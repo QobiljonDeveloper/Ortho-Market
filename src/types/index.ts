@@ -19,6 +19,22 @@ export interface Category {
     children: Category[];
 }
 
+// ── Variant Types ──────────────────────────────────────────
+export interface ProductVariantColor {
+    name: string;   // e.g. "Oq", "Qora", "Ko'k"
+    hex: string;    // e.g. "#FFFFFF", "#000000"
+}
+
+export interface ProductVariantSize {
+    label: string;  // e.g. "S", "M", "L", "42", "128GB"
+    value: string;
+}
+
+export interface SelectedVariants {
+    color?: ProductVariantColor | null;
+    size?: ProductVariantSize | null;
+}
+
 export interface Product {
     id: string;
 
@@ -31,6 +47,10 @@ export interface Product {
     unit?: string;
     sku?: string;
     stock?: string;
+
+    // Variant fields
+    colors?: ProductVariantColor[];
+    sizes?: ProductVariantSize[];
 
     // Existing / Optional fields
     name?: string;

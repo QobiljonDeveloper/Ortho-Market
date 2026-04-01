@@ -5,6 +5,7 @@ import type { Product } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ProductDetailsDrawer } from "./ProductDetailsDrawer";
+import { AddToCartBottomSheet } from "./AddToCartBottomSheet";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
@@ -26,6 +27,8 @@ export function ProductCard({ product }: ProductCardProps) {
     const saved = isSaved(product.id);
     const quantity = getItemQuantity(product.id);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+    const hasVariants = (product.colors && product.colors.length > 0) || (product.sizes && product.sizes.length > 0);
 
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
 
@@ -114,8 +117,12 @@ export function ProductCard({ product }: ProductCardProps) {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             e.preventDefault();
-                                            console.log(`ProductCard: Triggering addToCart for product ${product.id}`);
-                                            addToCart(product);
+                                            if (hasVariants) {
+                                                setIsBottomSheetOpen(true);
+                                            } else {
+                                                console.log(`ProductCard: Triggering addToCart for product ${product.id}`);
+                                                addToCart(product);
+                                            }
                                         }}
                                         className="h-10 w-full bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all p-0 shadow-sm"
                                     >
@@ -171,6 +178,12 @@ export function ProductCard({ product }: ProductCardProps) {
             <ProductDetailsDrawer
                 open={isDetailsOpen}
                 onOpenChange={setIsDetailsOpen}
+                product={product}
+            />
+
+            <AddToCartBottomSheet
+                open={isBottomSheetOpen}
+                onOpenChange={setIsBottomSheetOpen}
                 product={product}
             />
         </>
