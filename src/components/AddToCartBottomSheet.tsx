@@ -8,7 +8,7 @@ import { useCart } from "../context/CartContext";
 import { VariantSelector, type VariantValidationErrors } from "./VariantSelector";
 import type { Product, SelectedVariants } from "../types";
 
-interface AddToCartBottomSheetProps {
+interface AddToCartDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     product: Product;
@@ -23,19 +23,19 @@ const sheetVariants = {
     hidden: { y: "100%" },
     visible: {
         y: 0,
-        transition: { type: "spring" as const, damping: 30, stiffness: 350 },
+        transition: { type: "spring" as const, damping: 32, stiffness: 380 },
     },
     exit: {
         y: "100%",
-        transition: { type: "spring" as const, damping: 30, stiffness: 350 },
+        transition: { type: "spring" as const, damping: 32, stiffness: 380 },
     },
 };
 
-export function AddToCartBottomSheet({
+export function AddToCartDrawer({
     open,
     onOpenChange,
     product,
-}: AddToCartBottomSheetProps) {
+}: AddToCartDrawerProps) {
     const { addToCart } = useCart();
     const [selected, setSelected] = useState<SelectedVariants>({});
     const [errors, setErrors] = useState<VariantValidationErrors>({});
@@ -56,7 +56,7 @@ export function AddToCartBottomSheet({
         product.images?.[0]?.url ||
         product.image;
 
-    const handleAddToCart = useCallback(() => {
+    const handleConfirm = useCallback(() => {
         const newErrors: VariantValidationErrors = {};
         let hasError = false;
 
@@ -71,7 +71,6 @@ export function AddToCartBottomSheet({
 
         if (hasError) {
             setErrors(newErrors);
-            // Clear shake after animation completes
             setTimeout(() => setErrors({}), 600);
             return;
         }
@@ -86,7 +85,7 @@ export function AddToCartBottomSheet({
         <AnimatePresence>
             {open && (
                 <div className="fixed inset-0 z-200">
-                    {/* Backdrop */}
+                    {/* ── Dark Overlay Backdrop ──────────────────── */}
                     <motion.div
                         variants={overlayVariants}
                         initial="hidden"
@@ -94,31 +93,31 @@ export function AddToCartBottomSheet({
                         exit="hidden"
                         transition={{ duration: 0.2 }}
                         onClick={close}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/30"
                     />
 
-                    {/* Sheet */}
+                    {/* ── Slide-up Drawer ────────────────────────── */}
                     <motion.div
                         variants={sheetVariants}
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="absolute bottom-0 left-0 right-0 max-h-[85vh] rounded-t-4xl glass-dark-bg overflow-hidden flex flex-col shadow-[0_-10px_60px_rgba(0,0,0,0.5)]"
+                        className="absolute bottom-0 left-0 right-0 max-h-[85vh] rounded-t-4xl bg-white overflow-hidden flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.1)]"
                     >
-                        {/* Handle + Close */}
-                        <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
-                            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
+                        {/* ── Handle Bar + Close ───────────────────── */}
+                        <div className="flex items-center justify-center px-5 pt-3 pb-1 shrink-0 relative">
+                            <div className="w-10 h-1 rounded-full bg-slate-200" />
                             <button
                                 onClick={close}
-                                className="absolute right-4 top-4 w-9 h-9 rounded-full glass-surface flex items-center justify-center text-white/60 hover:text-white transition-colors active:scale-90"
+                                className="absolute right-4 top-3 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors active:scale-90"
                             >
                                 <X className="w-4 h-4" strokeWidth={2.5} />
                             </button>
                         </div>
 
-                        {/* Product Summary */}
-                        <div className="flex items-center gap-4 px-5 pb-4 border-b border-white/5">
-                            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                        {/* ── Product Summary ──────────────────────── */}
+                        <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-100">
+                            <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                                 {primaryImageUrl ? (
                                     <img
                                         src={primaryImageUrl}
@@ -130,16 +129,16 @@ export function AddToCartBottomSheet({
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-white font-semibold text-[15px] leading-snug line-clamp-2">
+                                <h3 className="text-slate-800 font-semibold text-[15px] leading-snug line-clamp-2">
                                     {product.nameUz || product.name}
                                 </h3>
-                                <p className="text-[#007AFF] font-bold text-lg mt-0.5">
+                                <p className="text-blue-500 font-bold text-lg mt-0.5">
                                     {product.basePrice?.toLocaleString()} so'm
                                 </p>
                             </div>
                         </div>
 
-                        {/* Variant Selector */}
+                        {/* ── Variant Selector ─────────────────────── */}
                         <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-hide">
                             <VariantSelector
                                 colors={product.colors}
@@ -150,21 +149,20 @@ export function AddToCartBottomSheet({
                             />
                         </div>
 
-                        {/* Add to Cart CTA */}
-                        <div className="p-5 pt-3 shrink-0 border-t border-white/5">
-                            <motion.button
-                                whileTap={{ scale: 0.96 }}
-                                onClick={handleAddToCart}
+                        {/* ── Sticky Confirm Button ────────────────── */}
+                        <div className="p-5 pt-3 shrink-0 border-t border-slate-100 bg-white">
+                            <button
+                                onClick={handleConfirm}
                                 className={cn(
-                                    "w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2.5 transition-all duration-200 outline-none",
-                                    "bg-[#007AFF] text-white shadow-[0_0_30px_rgba(0,122,255,0.3)]",
-                                    "hover:shadow-[0_0_40px_rgba(0,122,255,0.45)]",
+                                    "w-full h-[52px] rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all duration-200 outline-none",
+                                    "bg-blue-500 text-white shadow-sm",
+                                    "hover:bg-blue-600",
                                     "active:scale-[0.97]"
                                 )}
                             >
                                 <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
-                                Savatga qo'shish
-                            </motion.button>
+                                Tasdiqlash
+                            </button>
                         </div>
                     </motion.div>
                 </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -59,15 +58,16 @@ export function VariantSelector({
             {hasColors && (
                 <div
                     className={cn(
-                        "rounded-2xl p-4 transition-all duration-300",
-                        "glass-surface",
-                        validationErrors?.color && "animate-shake border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)]"
+                        "rounded-2xl bg-slate-50 p-4 transition-all duration-300 border",
+                        validationErrors?.color
+                            ? "animate-shake border-red-400"
+                            : "border-transparent"
                     )}
                 >
-                    <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 mb-3">
-                        Rang{" "}
+                    <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                        Rangni tanlang
                         {selected.color && (
-                            <span className="text-white/80 normal-case tracking-normal ml-1">
+                            <span className="text-slate-800 normal-case tracking-normal font-bold ml-1.5">
                                 — {selected.color.name}
                             </span>
                         )}
@@ -78,42 +78,34 @@ export function VariantSelector({
                                 selected.color?.hex === color.hex &&
                                 selected.color?.name === color.name;
                             return (
-                                <motion.button
+                                <button
                                     key={`${color.name}-${color.hex}`}
                                     type="button"
-                                    whileTap={{ scale: 0.9 }}
                                     onClick={() => selectColor(color)}
                                     className={cn(
-                                        "relative w-10 h-10 rounded-full transition-all duration-200 outline-none",
-                                        "ring-2 ring-offset-2 ring-offset-[#1a1a2e]",
+                                        "relative w-10 h-10 rounded-full transition-all duration-200 outline-none active:scale-90",
                                         isSelected
-                                            ? "ring-[#007AFF] animate-neon-pulse"
-                                            : "ring-white/10 hover:ring-white/30"
+                                            ? "ring-2 ring-blue-500 ring-offset-2"
+                                            : "ring-1 ring-slate-200 hover:ring-slate-300"
                                     )}
                                     title={color.name}
                                 >
                                     <span
-                                        className="absolute inset-1 rounded-full border border-white/20"
+                                        className="absolute inset-0.5 rounded-full"
                                         style={{ backgroundColor: color.hex }}
                                     />
                                     {isSelected && (
-                                        <motion.span
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            className="absolute inset-0 flex items-center justify-center"
-                                        >
+                                        <span className="absolute inset-0 flex items-center justify-center">
                                             <Check
                                                 className={cn(
-                                                    "w-4 h-4 drop-shadow-lg",
-                                                    isLightColor(color.hex)
-                                                        ? "text-slate-900"
-                                                        : "text-white"
+                                                    "w-4 h-4 drop-shadow-sm",
+                                                    isLightColor(color.hex) ? "text-slate-800" : "text-white"
                                                 )}
                                                 strokeWidth={3}
                                             />
-                                        </motion.span>
+                                        </span>
                                     )}
-                                </motion.button>
+                                </button>
                             );
                         })}
                     </div>
@@ -124,32 +116,32 @@ export function VariantSelector({
             {hasSizes && (
                 <div
                     className={cn(
-                        "rounded-2xl p-4 transition-all duration-300",
-                        "glass-surface",
-                        validationErrors?.size && "animate-shake border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)]"
+                        "rounded-2xl bg-slate-50 p-4 transition-all duration-300 border",
+                        validationErrors?.size
+                            ? "animate-shake border-red-400"
+                            : "border-transparent"
                     )}
                 >
-                    <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 mb-3">
-                        O'lcham
+                    <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                        O'lcham / Model
                     </p>
                     <div className="flex flex-wrap gap-2">
                         {sizes.map((size) => {
                             const isSelected = selected.size?.value === size.value;
                             return (
-                                <motion.button
+                                <button
                                     key={size.value}
                                     type="button"
-                                    whileTap={{ scale: 0.92 }}
                                     onClick={() => selectSize(size)}
                                     className={cn(
-                                        "min-w-[48px] h-11 px-4 rounded-xl text-sm font-semibold transition-all duration-200 outline-none",
+                                        "min-w-[48px] h-11 px-4 rounded-xl text-sm font-semibold transition-all duration-200 outline-none active:scale-95 border",
                                         isSelected
-                                            ? "bg-[#007AFF] text-white shadow-[0_0_20px_rgba(0,122,255,0.35)]"
-                                            : "glass-surface text-white/70 hover:text-white hover:bg-white/10"
+                                            ? "bg-blue-50 border-blue-500 text-blue-600"
+                                            : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
                                     )}
                                 >
                                     {size.label}
-                                </motion.button>
+                                </button>
                             );
                         })}
                     </div>
