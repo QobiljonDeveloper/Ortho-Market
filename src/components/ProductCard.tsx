@@ -5,7 +5,7 @@ import type { Product } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ProductDetailsDrawer } from "./ProductDetailsDrawer";
-import { AddToCartBottomSheet } from "./AddToCartBottomSheet";
+import { AddToCartDrawer } from "./AddToCartBottomSheet";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
@@ -181,7 +181,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 product={product}
             />
 
-            <AddToCartBottomSheet
+            <AddToCartDrawer
                 open={isBottomSheetOpen}
                 onOpenChange={setIsBottomSheetOpen}
                 product={product}
