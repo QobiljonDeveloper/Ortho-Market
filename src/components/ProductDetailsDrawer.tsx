@@ -148,6 +148,11 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                             </div>
                         </div>
 
+                        {/* Variant Selector + Actions */}
+                        <div className="pt-2">
+                            <ProductPageActions product={product} />
+                        </div>
+
                         {/* Description */}
                         {(product.descriptionUz || product.description) && (
                             <div className="bg-[#F8FAFC] border border-slate-200 rounded-[1.25rem] p-6 shadow-sm">
@@ -188,11 +193,6 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                                 <span className="text-[11px] font-bold text-slate-700 uppercase tracking-widest leading-tight">Tezkor<br />Yetkazish</span>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Variant Selector + Actions */}
-                    <div className="px-6 pb-4">
-                        <ProductPageActions product={product} />
                     </div>
 
                     {/* Padding for sticky footer */}
