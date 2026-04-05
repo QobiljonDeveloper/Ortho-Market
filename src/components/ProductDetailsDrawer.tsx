@@ -18,6 +18,12 @@ interface ProductDetailsDrawerProps {
     product: Product;
 }
 
+const mockColors = [
+    { id: 1, name: 'Kumush', hex: '#C0C0C0' },
+    { id: 2, name: 'Ko\'k', hex: '#0070f3' }
+];
+const mockSizes = ['Standart', 'Kichik', 'Katta'];
+
 export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDetailsDrawerProps) {
     const { user } = useAuthContext();
     const { isSaved, toggleWishlist } = useWishlist(user?.id);
@@ -153,78 +159,74 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                             </div>
                         </div>
 
-                        {/* Inline Variant Options per the exact requirement */}
-                        {((product?.colors && product.colors.length > 0) || (product?.sizes && product.sizes.length > 0)) && (
-                            <div className="bg-white border border-slate-100 rounded-[1.25rem] p-6 shadow-sm mb-4">
-                                {product?.colors && product.colors.length > 0 && (
-                                    <div className="mb-5 last:mb-0">
-                                        <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
-                                            Rangni tanlang
-                                            {selectedColor && (
-                                                <span className="text-[#007AFF] normal-case tracking-normal font-bold ml-1.5">
-                                                    — {selectedColor.name || selectedColor.label}
-                                                </span>
-                                            )}
-                                        </p>
-                                        <div className="flex flex-wrap gap-3">
-                                            {product.colors.map((color: any, index: number) => {
-                                                const isSelected = selectedColor?.hex === color.hex;
-                                                return (
-                                                    <button
-                                                        key={index}
-                                                        type="button"
-                                                        onClick={() => setSelectedColor(color)}
-                                                        className={cn(
-                                                            "relative w-10 h-10 rounded-full transition-all duration-200 outline-none active:scale-90",
-                                                            isSelected ? "ring-2 ring-[#007AFF] ring-offset-2" : "ring-1 ring-slate-200 hover:ring-slate-300"
-                                                        )}
-                                                        title={color.name || color.label}
-                                                    >
-                                                        <span
-                                                            className={cn("absolute inset-0.5 rounded-full", color.hex === "#FFFFFF" && "border border-slate-200")}
-                                                            style={{ backgroundColor: color.hex }}
-                                                        />
-                                                        {isSelected && (
-                                                            <span className="absolute inset-0 flex items-center justify-center">
-                                                                <Check className="w-5 h-5 drop-shadow-sm text-white mix-blend-difference" strokeWidth={3} />
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {product?.sizes && product.sizes.length > 0 && (
-                                    <div>
-                                        <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
-                                            O'lcham / Model
-                                        </p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {product.sizes.map((size: any, index: number) => {
-                                                const isSelected = selectedSize?.value === size.value;
-                                                return (
-                                                    <button
-                                                        key={index}
-                                                        type="button"
-                                                        onClick={() => setSelectedSize(size)}
-                                                        className={cn(
-                                                            "h-11 px-5 rounded-xl text-sm font-semibold transition-all duration-200 outline-none active:scale-95 border",
-                                                            isSelected
-                                                                ? "bg-[#007AFF] border-[#007AFF] text-white shadow-sm"
-                                                                : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
-                                                        )}
-                                                    >
-                                                        {size.label || size.value}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
+                        {/* Inline Variant Options per the exact requirement (Mocked) */}
+                        <div className="bg-white border border-slate-100 rounded-[1.25rem] p-6 shadow-sm mb-4 space-y-6">
+                            {/* Colors */}
+                            <div>
+                                <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
+                                    Rangni tanlang
+                                    {selectedColor && (
+                                        <span className="text-[#007AFF] normal-case tracking-normal font-bold ml-1.5">
+                                            — {selectedColor.name}
+                                        </span>
+                                    )}
+                                </p>
+                                <div className="flex flex-wrap gap-3">
+                                    {mockColors.map((color) => {
+                                        const isSelected = selectedColor?.id === color.id;
+                                        return (
+                                            <button
+                                                key={color.id}
+                                                type="button"
+                                                onClick={() => setSelectedColor(color)}
+                                                className={cn(
+                                                    "relative w-12 h-12 rounded-xl transition-all duration-200 outline-none active:scale-95",
+                                                    isSelected ? "ring-2 ring-[#007AFF] ring-offset-2 scale-105" : "border border-slate-200 hover:border-slate-300"
+                                                )}
+                                                title={color.name}
+                                            >
+                                                <span
+                                                    className={cn("absolute inset-0.5 rounded-[10px]", color.hex === "#FFFFFF" && "border border-slate-200")}
+                                                    style={{ backgroundColor: color.hex }}
+                                                />
+                                                {isSelected && (
+                                                    <span className="absolute inset-0 flex items-center justify-center">
+                                                        <Check className="w-6 h-6 drop-shadow-sm text-white mix-blend-difference" strokeWidth={3} />
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        )}
+
+                            {/* Sizes */}
+                            <div>
+                                <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
+                                    O'lcham / Model
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {mockSizes.map((size, index) => {
+                                        const isSelected = selectedSize === size;
+                                        return (
+                                            <button
+                                                key={index}
+                                                type="button"
+                                                onClick={() => setSelectedSize(size)}
+                                                className={cn(
+                                                    "h-11 px-5 rounded-xl text-sm font-semibold transition-all duration-200 outline-none active:scale-95 border",
+                                                    isSelected
+                                                        ? "bg-[#007AFF] border-[#007AFF] text-white shadow-sm"
+                                                        : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                                                )}
+                                            >
+                                                {size}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Description */}
                         {(product.descriptionUz || product.description) && (
