@@ -19,8 +19,8 @@ interface ProductDetailsDrawerProps {
 }
 
 const mockColors = [
-    { id: 1, name: 'Kumush', hex: '#C0C0C0' },
-    { id: 2, name: 'Ko\'k', hex: '#0070f3' }
+    { id: 1, name: 'Kumush', hex: '#E2E8F0' },
+    { id: 2, name: 'Ko\'k', hex: '#007AFF' }
 ];
 const mockSizes = ['Standart', 'Kichik', 'Katta'];
 
@@ -159,19 +159,20 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                             </div>
                         </div>
 
-                        {/* Inline Variant Options per the exact requirement (Mocked) */}
-                        <div className="bg-white border border-slate-100 rounded-[1.25rem] p-6 shadow-sm mb-4 space-y-6">
+                        {/* Premium Variant Options UI */}
+                        <div className="bg-white rounded-[24px] p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-slate-100/60 mb-6 space-y-8">
                             {/* Colors */}
                             <div>
-                                <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
-                                    Rangni tanlang
+                                <p className="text-[15px] font-medium text-slate-500 mb-4 flex items-center gap-2">
+                                    Select Color
                                     {selectedColor && (
-                                        <span className="text-[#007AFF] normal-case tracking-normal font-bold ml-1.5">
-                                            — {selectedColor.name}
-                                        </span>
+                                        <>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                                            <span className="text-slate-900 font-semibold">{selectedColor.name}</span>
+                                        </>
                                     )}
                                 </p>
-                                <div className="flex flex-wrap gap-3">
+                                <div className="flex flex-wrap gap-4">
                                     {mockColors.map((color) => {
                                         const isSelected = selectedColor?.id === color.id;
                                         return (
@@ -180,20 +181,15 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                                                 type="button"
                                                 onClick={() => setSelectedColor(color)}
                                                 className={cn(
-                                                    "relative w-12 h-12 rounded-xl transition-all duration-200 outline-none active:scale-95",
-                                                    isSelected ? "ring-2 ring-[#007AFF] ring-offset-2 scale-105" : "border border-slate-200 hover:border-slate-300"
+                                                    "relative w-[52px] h-[52px] rounded-full transition-all duration-300 outline-none flex items-center justify-center group shrink-0",
+                                                    isSelected ? "ring-2 ring-[#007AFF] ring-offset-[4px] scale-105" : "hover:ring-2 hover:ring-slate-300 hover:ring-offset-[4px] hover:scale-105 active:scale-95"
                                                 )}
                                                 title={color.name}
                                             >
                                                 <span
-                                                    className={cn("absolute inset-0.5 rounded-[10px]", color.hex === "#FFFFFF" && "border border-slate-200")}
+                                                    className="absolute inset-0 rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] border border-black/5"
                                                     style={{ backgroundColor: color.hex }}
                                                 />
-                                                {isSelected && (
-                                                    <span className="absolute inset-0 flex items-center justify-center">
-                                                        <Check className="w-6 h-6 drop-shadow-sm text-white mix-blend-difference" strokeWidth={3} />
-                                                    </span>
-                                                )}
                                             </button>
                                         );
                                     })}
@@ -202,10 +198,16 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
 
                             {/* Sizes */}
                             <div>
-                                <p className="text-[12px] font-bold text-slate-900 mb-3 tracking-wide uppercase">
-                                    O'lcham / Model
+                                <p className="text-[15px] font-medium text-slate-500 mb-4 flex items-center gap-2">
+                                    Select Size
+                                    {selectedSize && (
+                                        <>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                                            <span className="text-slate-900 font-semibold">{selectedSize}</span>
+                                        </>
+                                    )}
                                 </p>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-3">
                                     {mockSizes.map((size, index) => {
                                         const isSelected = selectedSize === size;
                                         return (
@@ -214,10 +216,10 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                                                 type="button"
                                                 onClick={() => setSelectedSize(size)}
                                                 className={cn(
-                                                    "h-11 px-5 rounded-xl text-sm font-semibold transition-all duration-200 outline-none active:scale-95 border",
+                                                    "h-12 px-8 rounded-full text-[15px] font-medium transition-all duration-300 outline-none active:scale-95",
                                                     isSelected
-                                                        ? "bg-[#007AFF] border-[#007AFF] text-white shadow-sm"
-                                                        : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                                                        ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25 scale-105"
+                                                        : "bg-slate-50 border border-slate-200/60 text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 hover:border-slate-300 hover:scale-105"
                                                 )}
                                             >
                                                 {size}
