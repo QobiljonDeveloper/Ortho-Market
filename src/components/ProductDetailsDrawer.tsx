@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
 import { useCart } from "../context/CartContext";
-import { VariantSelector } from "./VariantSelector";
+import { ProductVariants } from "./ProductVariants";
+import { useProductVariants } from "../hooks/useProductVariants";
 
 interface ProductDetailsDrawerProps {
     open: boolean;
@@ -25,6 +26,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
 
     const saved = isSaved(product.id);
     const { addToCart, getItemQuantity, updateQuantity } = useCart();
+    const { data: variants } = useProductVariants(product.id);
 
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -156,15 +158,17 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-[24px] p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-slate-100/60 mb-6 space-y-8">
-                            <VariantSelector
-                                productId={product.id}
-                                selectedOptions={selectedOptions}
-                                onOptionChange={(category, option) =>
-                                    setSelectedOptions(prev => ({ ...prev, [category]: option }))
-                                }
-                            />
-                        </div>
+                        {variants && variants.length > 0 && (
+                            <div className="bg-white rounded-[24px] p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-slate-100/60 mb-6 space-y-8">
+                                <ProductVariants
+                                    variants={variants}
+                                    selectedOptions={selectedOptions}
+                                    onOptionChange={(category: string, option: string) =>
+                                        setSelectedOptions(prev => ({ ...prev, [category]: option }))
+                                    }
+                                />
+                            </div>
+                        )}
 
                         {/* Description */}
                         {(product.descriptionUz || product.description) && (

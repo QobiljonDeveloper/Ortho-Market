@@ -2,14 +2,11 @@
 
 import { useMemo } from "react";
 import { Check } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { getProductTypes } from "@/services/api";
 import { ProductType } from "../types";
 
-// ── Types ──────────────────────────────────────────
-interface VariantSelectorProps {
-    productId: string | number;
+interface ProductVariantsProps {
+    variants: ProductType[];
     selectedOptions: Record<string, string>;
     onOptionChange: (category: string, option: string) => void;
     className?: string;
@@ -20,19 +17,12 @@ interface GroupedProductType {
     options: ProductType[];
 }
 
-// ── Component ──────────────────────────────────────────────
-export function VariantSelector({
-    productId,
+export function ProductVariants({
+    variants,
     selectedOptions,
     onOptionChange,
     className,
-}: VariantSelectorProps) {
-    const { data: variants = [], isLoading } = useQuery<ProductType[]>({
-        queryKey: ["product-variants", productId],
-        queryFn: () => getProductTypes(productId),
-        enabled: !!productId,
-    });
-
+}: ProductVariantsProps) {
     // Mapping Logic: Group data by Main Type (typeId === null)
     const groupedVariants = useMemo(() => {
         const mainTypes = variants.filter((v) => v.typeId === null);
@@ -41,23 +31,6 @@ export function VariantSelector({
             options: variants.filter((v) => v.typeId === main.id),
         })) as GroupedProductType[];
     }, [variants]);
-
-    if (isLoading) {
-        return (
-            <div className={cn("space-y-8 animate-pulse", className)}>
-                {[1, 2].map((i) => (
-                    <div key={i} className="space-y-4">
-                        <div className="h-4 w-24 bg-slate-100 rounded" />
-                        <div className="flex gap-4">
-                            {[1, 2, 3].map((j) => (
-                                <div key={j} className="w-12 h-12 bg-slate-50 rounded-xl" />
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    }
 
     if (groupedVariants.length === 0) return null;
 
@@ -71,7 +44,7 @@ export function VariantSelector({
                             {group.mainType.name}
                         </h3>
                         {selectedOptions[group.mainType.name] && (
-                            <span className="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1 rounded-md">
+                            <span className="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1 rounded-md">
                                 {selectedOptions[group.mainType.name]}
                             </span>
                         )}
@@ -97,7 +70,7 @@ export function VariantSelector({
                                             isSelected
                                                 ? "ring-2 ring-blue-600 ring-offset-2 scale-105"
                                                 : "border border-slate-200 hover:border-slate-300 hover:scale-[1.02]",
-                                            isOutOfStock && "opacity-40 grayscale-80 cursor-not-allowed hover:scale-100"
+                                            isOutOfStock && "opacity-40 grayscale cursor-not-allowed hover:scale-100 ring-0"
                                         )}
                                         title={option.name}
                                     >
@@ -146,8 +119,8 @@ export function VariantSelector({
                                     className={cn(
                                         "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center active:scale-95 border",
                                         isSelected
-                                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-105 border-transparent"
-                                            : "bg-slate-50 border-slate-200/60 text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 hover:border-slate-300 hover:scale-105",
+                                            ? "bg-blue-50 border-blue-600 text-blue-600 shadow-sm"
+                                            : "bg-white border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600",
                                         isOutOfStock && "opacity-40 bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed overflow-hidden relative"
                                     )}
                                 >
