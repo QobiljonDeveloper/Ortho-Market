@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "../context/CartContext";
-import { VariantSelector, type VariantValidationErrors } from "./VariantSelector";
-import type { Product, SelectedVariants } from "../types";
+import { ProductVariants } from "./ProductVariants";
+import { useProductVariants } from "../hooks/useProductVariants";
+import type { Product } from "../types";
 
 interface AddToCartDrawerProps {
     open: boolean;
@@ -37,19 +38,17 @@ export function AddToCartDrawer({
     product,
 }: AddToCartDrawerProps) {
     const { addToCart } = useCart();
-    const [selected, setSelected] = useState<SelectedVariants>({});
-    const [errors, setErrors] = useState<VariantValidationErrors>({});
+    const { data: variants } = useProductVariants(product.id);
+    const [selected, setSelected] = useState<Record<string, string>>({});
+    const [showErrors, setShowErrors] = useState(false);
 
     // Reset state on open
     useEffect(() => {
         if (open) {
             setSelected({});
-            setErrors({});
+            setShowErrors(false);
         }
     }, [open]);
-
-    const hasColors = product.colors && product.colors.length > 0;
-    const hasSizes = product.sizes && product.sizes.length > 0;
 
     const primaryImageUrl =
         product.images?.find((img) => img.isPrimary)?.url ||
@@ -57,27 +56,19 @@ export function AddToCartDrawer({
         product.image;
 
     const handleConfirm = useCallback(() => {
-        const newErrors: VariantValidationErrors = {};
-        let hasError = false;
+        // Validation: Ensure all main types have a selection
+        const mainTypes = variants?.filter(v => v.typeId === null) || [];
+        const missingSelections = mainTypes.filter(m => !selected[m.name]);
 
-        if (hasColors && !selected.color) {
-            newErrors.color = true;
-            hasError = true;
-        }
-        if (hasSizes && !selected.size) {
-            newErrors.size = true;
-            hasError = true;
-        }
-
-        if (hasError) {
-            setErrors(newErrors);
-            setTimeout(() => setErrors({}), 600);
+        if (missingSelections.length > 0) {
+            setShowErrors(true);
+            setTimeout(() => setShowErrors(false), 2000);
             return;
         }
 
         addToCart(product);
         onOpenChange(false);
-    }, [hasColors, hasSizes, selected, addToCart, product, onOpenChange]);
+    }, [variants, selected, addToCart, product, onOpenChange]);
 
     const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -140,13 +131,20 @@ export function AddToCartDrawer({
 
                         {/* ── Variant Selector ─────────────────────── */}
                         <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-hide">
-                            <VariantSelector
-                                colors={product.colors}
-                                sizes={product.sizes}
-                                selected={selected}
-                                onChange={setSelected}
-                                validationErrors={errors}
-                            />
+                            {variants && variants.length > 0 && (
+                                <ProductVariants
+                                    variants={variants}
+                                    selectedOptions={selected}
+                                    onOptionChange={(category, option) =>
+                                        setSelected(prev => ({ ...prev, [category]: option }))
+                                    }
+                                />
+                            )}
+                            {showErrors && (
+                                <p className="text-red-500 text-sm font-medium mt-4 animate-in fade-in slide-in-from-top-1">
+                                    Iltimos, barcha variantlarni tanlang
+                                </p>
+                            )}
                         </div>
 
                         {/* ── Sticky Confirm Button ────────────────── */}

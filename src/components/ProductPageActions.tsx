@@ -4,8 +4,9 @@ import { useState, useCallback } from "react";
 import { ShoppingCart, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "../context/CartContext";
-import { VariantSelector, type VariantValidationErrors } from "./VariantSelector";
-import type { Product, SelectedVariants } from "../types";
+import { ProductVariants } from "./ProductVariants";
+import { useProductVariants } from "../hooks/useProductVariants";
+import type { Product } from "../types";
 
 interface ProductPageActionsProps {
     product: Product;
@@ -13,50 +14,43 @@ interface ProductPageActionsProps {
 
 export function ProductPageActions({ product }: ProductPageActionsProps) {
     const { addToCart, getItemQuantity, updateQuantity } = useCart();
-    const [selected, setSelected] = useState<SelectedVariants>({});
-    const [errors, setErrors] = useState<VariantValidationErrors>({});
+    const { data: variants } = useProductVariants(product.id);
+    const [selected, setSelected] = useState<Record<string, string>>({});
+    const [showErrors, setShowErrors] = useState(false);
 
     const quantity = getItemQuantity(product.id);
-    const hasColors = product.colors && product.colors.length > 0;
-    const hasSizes = product.sizes && product.sizes.length > 0;
-    const hasVariants = hasColors || hasSizes;
 
     const handleAddToCart = useCallback(() => {
-        if (hasVariants) {
-            const newErrors: VariantValidationErrors = {};
-            let hasError = false;
+        // Validation: Ensure all main types have a selection
+        const mainTypes = variants?.filter(v => v.typeId === null) || [];
+        const missingSelections = mainTypes.filter(m => !selected[m.name]);
 
-            if (hasColors && !selected.color) {
-                newErrors.color = true;
-                hasError = true;
-            }
-            if (hasSizes && !selected.size) {
-                newErrors.size = true;
-                hasError = true;
-            }
-
-            if (hasError) {
-                setErrors(newErrors);
-                setTimeout(() => setErrors({}), 600);
-                return;
-            }
+        if (missingSelections.length > 0) {
+            setShowErrors(true);
+            setTimeout(() => setShowErrors(false), 2000);
+            return;
         }
 
         addToCart(product);
-    }, [hasVariants, hasColors, hasSizes, selected, addToCart, product]);
+    }, [variants, selected, addToCart, product]);
 
     return (
         <>
             {/* ── Inline Variant Selector ──────────────────── */}
-            {hasVariants && (
+            {variants && variants.length > 0 && (
                 <div className="bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm mb-4">
-                    <VariantSelector
-                        colors={product.colors}
-                        sizes={product.sizes}
-                        selected={selected}
-                        onChange={setSelected}
-                        validationErrors={errors}
+                    <ProductVariants
+                        variants={variants}
+                        selectedOptions={selected}
+                        onOptionChange={(category, option) =>
+                            setSelected(prev => ({ ...prev, [category]: option }))
+                        }
                     />
+                    {showErrors && (
+                        <p className="text-red-500 text-sm font-medium mt-4 animate-in fade-in slide-in-from-top-1 px-1">
+                            Iltimos, barcha variantlarni tanlang
+                        </p>
+                    )}
                 </div>
             )}
 
