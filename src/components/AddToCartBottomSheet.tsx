@@ -56,14 +56,25 @@ export function AddToCartDrawer({
         product.image;
 
     const handleConfirm = useCallback(() => {
-        // Validation: Ensure all main types have a selection
+        // Validation: Ensure all categories are selected
         const mainTypes = variants?.filter((v: any) => v.typeId === null) || [];
-        const missingSelections = mainTypes.filter((m: any) => !selected[m.name]);
+        const isFlat = mainTypes.length > 0 && mainTypes.every(m => !variants?.some(v => v.typeId === m.id));
 
-        if (missingSelections.length > 0) {
-            setShowErrors(true);
-            setTimeout(() => setShowErrors(false), 2000);
-            return;
+        if (isFlat) {
+            if (!selected["type"]) {
+                setShowErrors(true);
+                setTimeout(() => setShowErrors(false), 2000);
+                return;
+            }
+        } else {
+            const requiredTypes = mainTypes.filter(m => variants?.some(v => v.typeId === m.id));
+            const missingSelections = requiredTypes.filter(m => !selected[m.name]);
+
+            if (missingSelections.length > 0) {
+                setShowErrors(true);
+                setTimeout(() => setShowErrors(false), 2000);
+                return;
+            }
         }
 
         addToCart(product);

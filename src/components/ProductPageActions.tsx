@@ -17,15 +17,22 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
     const { data: variants } = useProductVariants(product.id);
     const [selected, setSelected] = useState<Record<string, string>>({});
     const [showErrors, setShowErrors] = useState(false);
-
     const quantity = getItemQuantity(product.id);
 
     const handleAddToCart = useCallback(() => {
-        // Validation: Ensure all main types have a selection
+        // Validation: Ensure selections are complete
         const mainTypes = variants?.filter((v: any) => v.typeId === null) || [];
-        const missingSelections = mainTypes.filter((m: any) => !selected[m.name]);
+        const isFlat = mainTypes.length > 0 && mainTypes.every(m => !variants?.some(v => v.typeId === m.id));
 
-        if (missingSelections.length > 0) {
+        let hasError = false;
+        if (isFlat) {
+            if (!selected["type"]) hasError = true;
+        } else {
+            const requiredTypes = mainTypes.filter(m => variants?.some(v => v.typeId === m.id));
+            if (requiredTypes.some(m => !selected[m.name])) hasError = true;
+        }
+
+        if (hasError) {
             setShowErrors(true);
             setTimeout(() => setShowErrors(false), 2000);
             return;
@@ -38,18 +45,19 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
         <>
             {/* ── Inline Variant Selector ──────────────────── */}
             {variants && variants.length > 0 && (
-                <div className="bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm mb-4">
+                <>
                     <ProductVariants
                         productId={product.id}
                         onOptionChange={setSelected}
                         initialSelectedOptions={selected}
+                        className="mb-2"
                     />
                     {showErrors && (
-                        <p className="text-red-500 text-sm font-medium mt-4 animate-in fade-in slide-in-from-top-1 px-1">
-                            Iltimos, barcha variantlarni tanlang
+                        <p className="text-red-500 text-[13px] font-semibold mt-2 px-1 animate-in fade-in slide-in-from-top-1">
+                            Iltimos, variantni tanlang
                         </p>
                     )}
-                </div>
+                </>
             )}
 
             {/* ── Sticky Bottom CTA ──────────────────────── */}

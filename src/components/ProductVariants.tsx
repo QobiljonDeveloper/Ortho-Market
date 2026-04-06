@@ -27,14 +27,12 @@ export function ProductVariants({
     const { data: variants = [], isLoading } = useProductVariants(productId);
     const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(initialSelectedOptions);
 
-    // Update internal state if props change (optional, but good for sync)
     useEffect(() => {
         if (Object.keys(initialSelectedOptions).length > 0) {
             setSelectedOptions(initialSelectedOptions);
         }
     }, [initialSelectedOptions]);
 
-    // Mapping Logic: Group data by Main Type (typeId === null)
     const groupedVariants = useMemo(() => {
         const mainTypes = variants.filter((v) => v.typeId === null);
         return mainTypes.map((main) => ({
@@ -51,12 +49,10 @@ export function ProductVariants({
 
     if (isLoading) {
         return (
-            <div className="space-y-4 animate-pulse">
+            <div className="bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm space-y-4 animate-pulse">
                 <div className="h-4 w-24 bg-slate-100 rounded" />
                 <div className="flex gap-3">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="w-16 h-12 bg-slate-50 rounded-xl" />
-                    ))}
+                    {[1, 2, 3].map((i) => <div key={i} className="w-16 h-12 bg-slate-50 rounded-xl" />)}
                 </div>
             </div>
         );
@@ -64,69 +60,110 @@ export function ProductVariants({
 
     if (groupedVariants.length === 0) return null;
 
+    // Determine if we should show a flat list or grouped list
+    // If ALL main types have no options, it's a flat list (e.g. ['TES', 'TEZT'])
+    const isFlatList = groupedVariants.every(g => g.options.length === 0);
+
     return (
-        <div className={cn("space-y-8", className)}>
-            {groupedVariants.map((group) => {
-                // Skip groups with no options
-                if (group.options.length === 0) return null;
+        <div className={cn("bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm space-y-6", className)}>
+            {isFlatList ? (
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                        Variant tanlang
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                        {groupedVariants.map((group) => {
+                            const option = group.mainType;
+                            const isSelected = selectedOptions["type"] === option.name;
+                            const isOutOfStock = option.stock === 0;
 
-                return (
-                    <div key={group.mainType.id} className="space-y-4">
-                        {/* Main Type Label */}
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                                {group.mainType.name}
-                            </h3>
-                            {selectedOptions[group.mainType.name] && (
-                                <span className="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1 rounded-md">
-                                    {selectedOptions[group.mainType.name]}
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="flex flex-wrap gap-3">
-                            {group.options.map((option) => {
-                                const isSelected = selectedOptions[group.mainType.name] === option.name;
-                                const isOutOfStock = option.stock === 0;
-                                const isColorType = !!option.logoUrl;
-
-                                if (isColorType) {
-                                    return renderColorSwatch(
-                                        option,
-                                        isSelected,
-                                        isOutOfStock,
-                                        () => handleSelect(group.mainType.name, option.name)
-                                    );
-                                }
-
-                                // Selection Logic with requested classes
-                                return (
-                                    <button
-                                        key={option.id}
-                                        type="button"
-                                        disabled={isOutOfStock}
-                                        onClick={() => handleSelect(group.mainType.name, option.name)}
-                                        className={cn(
-                                            "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center border relative",
-                                            isSelected
-                                                ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                                                : "bg-white text-gray-900 border-gray-200 hover:border-blue-400",
-                                            isOutOfStock && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200 overflow-hidden"
-                                        )}
-                                    >
-                                        {option.name}
-                                        {isOutOfStock && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
-                                            </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    disabled={isOutOfStock}
+                                    onClick={() => handleSelect("type", option.name)}
+                                    className={cn(
+                                        "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center border relative",
+                                        isSelected
+                                            ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                            : "bg-white text-gray-900 border-gray-200 hover:border-blue-400",
+                                        isOutOfStock && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200 overflow-hidden"
+                                    )}
+                                >
+                                    {option.name}
+                                    {isOutOfStock && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
-                );
-            })}
+                </div>
+            ) : (
+                <div className="space-y-8">
+                    {groupedVariants.map((group) => {
+                        if (group.options.length === 0) return null;
+
+                        return (
+                            <div key={group.mainType.id} className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                                        {group.mainType.name}
+                                    </h3>
+                                    {selectedOptions[group.mainType.name] && (
+                                        <span className="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1 rounded-md">
+                                            {selectedOptions[group.mainType.name]}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                    {group.options.map((option) => {
+                                        const isSelected = selectedOptions[group.mainType.name] === option.name;
+                                        const isOutOfStock = option.stock === 0;
+                                        const isColorType = !!option.logoUrl;
+
+                                        if (isColorType) {
+                                            return renderColorSwatch(
+                                                option,
+                                                isSelected,
+                                                isOutOfStock,
+                                                () => handleSelect(group.mainType.name, option.name)
+                                            );
+                                        }
+
+                                        return (
+                                            <button
+                                                key={option.id}
+                                                type="button"
+                                                disabled={isOutOfStock}
+                                                onClick={() => handleSelect(group.mainType.name, option.name)}
+                                                className={cn(
+                                                    "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center border relative",
+                                                    isSelected
+                                                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                                        : "bg-white text-gray-900 border-gray-200 hover:border-blue-400",
+                                                    isOutOfStock && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200 overflow-hidden"
+                                                )}
+                                            >
+                                                {option.name}
+                                                {isOutOfStock && (
+                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                        <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
