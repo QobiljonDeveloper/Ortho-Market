@@ -47,21 +47,9 @@ export function ProductVariants({
         onOptionChange?.(next);
     };
 
-    if (isLoading) {
-        return (
-            <div className="bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm space-y-4 animate-pulse">
-                <div className="h-4 w-24 bg-slate-100 rounded" />
-                <div className="flex gap-3">
-                    {[1, 2, 3].map((i) => <div key={i} className="w-16 h-12 bg-slate-50 rounded-xl" />)}
-                </div>
-            </div>
-        );
-    }
+    // Hide entire section while loading or if no data
+    if (isLoading || groupedVariants.length === 0) return null;
 
-    if (groupedVariants.length === 0) return null;
-
-    // Determine if we should show a flat list or grouped list
-    // If ALL main types have no options, it's a flat list (e.g. ['TES', 'TEZT'])
     const isFlatList = groupedVariants.every(g => g.options.length === 0);
 
     return (
@@ -75,7 +63,7 @@ export function ProductVariants({
                         {groupedVariants.map((group) => {
                             const option = group.mainType;
                             const isSelected = selectedOptions["type"] === option.name;
-                            const isOutOfStock = option.stock === 0;
+                            const isOutOfStock = (option.stock ?? 0) === 0;
 
                             return (
                                 <button
@@ -84,14 +72,19 @@ export function ProductVariants({
                                     disabled={isOutOfStock}
                                     onClick={() => handleSelect("type", option.name)}
                                     className={cn(
-                                        "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center border relative",
+                                        "min-w-18 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex flex-col items-center justify-center border relative gap-0.5",
                                         isSelected
                                             ? "bg-blue-600 text-white border-blue-600 shadow-md"
                                             : "bg-white text-gray-900 border-gray-200 hover:border-blue-400",
                                         isOutOfStock && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200 overflow-hidden"
                                     )}
                                 >
-                                    {option.name}
+                                    <span>{option.name}</span>
+                                    {!isOutOfStock && option.stock !== undefined && (
+                                        <span className={cn("text-[10px] opacity-70 font-medium", isSelected ? "text-white" : "text-slate-500")}>
+                                            {option.stock} dona
+                                        </span>
+                                    )}
                                     {isOutOfStock && (
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                             <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
@@ -123,7 +116,7 @@ export function ProductVariants({
                                 <div className="flex flex-wrap gap-3">
                                     {group.options.map((option) => {
                                         const isSelected = selectedOptions[group.mainType.name] === option.name;
-                                        const isOutOfStock = option.stock === 0;
+                                        const isOutOfStock = (option.stock ?? 0) === 0;
                                         const isColorType = !!option.logoUrl;
 
                                         if (isColorType) {
@@ -142,14 +135,19 @@ export function ProductVariants({
                                                 disabled={isOutOfStock}
                                                 onClick={() => handleSelect(group.mainType.name, option.name)}
                                                 className={cn(
-                                                    "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center border relative",
+                                                    "min-w-18 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex flex-col items-center justify-center border relative gap-0.5",
                                                     isSelected
                                                         ? "bg-blue-600 text-white border-blue-600 shadow-md"
                                                         : "bg-white text-gray-900 border-gray-200 hover:border-blue-400",
                                                     isOutOfStock && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200 overflow-hidden"
                                                 )}
                                             >
-                                                {option.name}
+                                                <span>{option.name}</span>
+                                                {!isOutOfStock && option.stock !== undefined && (
+                                                    <span className={cn("text-[10px] opacity-70 font-medium", isSelected ? "text-white" : "text-slate-500")}>
+                                                        {option.stock} dona
+                                                    </span>
+                                                )}
                                                 {isOutOfStock && (
                                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                         <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
