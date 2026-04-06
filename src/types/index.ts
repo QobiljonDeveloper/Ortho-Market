@@ -20,6 +20,14 @@ export interface Category {
 }
 
 // ── Variant Types ──────────────────────────────────────────
+export interface ProductType {
+    id: number;
+    typeId: number | null;
+    name: string;
+    logoUrl?: string; // Optional URL for color swatches
+    stock?: number;
+}
+
 export interface ProductVariantColor {
     name: string;   // e.g. "Oq", "Qora", "Ko'k"
     hex: string;    // e.g. "#FFFFFF", "#000000"

@@ -1,161 +1,179 @@
 "use client";
 
-import { useCallback } from "react";
+import { useMemo } from "react";
 import { Check } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import type {
-    ProductVariantColor,
-    ProductVariantSize,
-    SelectedVariants,
-} from "../types";
+import { getProductTypes } from "@/services/api";
+import { ProductType } from "../types";
 
-// ── Types ──────────────────────────────────────────────────
-export interface VariantValidationErrors {
-    color?: boolean;
-    size?: boolean;
+// ── Types ──────────────────────────────────────────
+interface VariantSelectorProps {
+    productId: string | number;
+    selectedOptions: Record<string, string>;
+    onOptionChange: (category: string, option: string) => void;
+    className?: string;
 }
 
-interface VariantSelectorProps {
-    colors?: ProductVariantColor[];
-    sizes?: ProductVariantSize[];
-    selected: SelectedVariants;
-    onChange: (selected: SelectedVariants) => void;
-    validationErrors?: VariantValidationErrors;
-    className?: string;
+interface GroupedProductType {
+    mainType: ProductType;
+    options: ProductType[];
 }
 
 // ── Component ──────────────────────────────────────────────
 export function VariantSelector({
-    colors,
-    sizes,
-    selected,
-    onChange,
-    validationErrors,
+    productId,
+    selectedOptions,
+    onOptionChange,
     className,
 }: VariantSelectorProps) {
-    const selectColor = useCallback(
-        (color: ProductVariantColor) => {
-            onChange({ ...selected, color });
-        },
-        [selected, onChange]
-    );
+    const { data: variants = [], isLoading } = useQuery<ProductType[]>({
+        queryKey: ["product-variants", productId],
+        queryFn: () => getProductTypes(productId),
+        enabled: !!productId,
+    });
 
-    const selectSize = useCallback(
-        (size: ProductVariantSize) => {
-            onChange({ ...selected, size });
-        },
-        [selected, onChange]
-    );
+    // Mapping Logic: Group data by Main Type (typeId === null)
+    const groupedVariants = useMemo(() => {
+        const mainTypes = variants.filter((v) => v.typeId === null);
+        return mainTypes.map((main) => ({
+            mainType: main,
+            options: variants.filter((v) => v.typeId === main.id),
+        })) as GroupedProductType[];
+    }, [variants]);
 
-    const hasColors = colors && colors.length > 0;
-    const hasSizes = sizes && sizes.length > 0;
+    if (isLoading) {
+        return (
+            <div className={cn("space-y-8 animate-pulse", className)}>
+                {[1, 2].map((i) => (
+                    <div key={i} className="space-y-4">
+                        <div className="h-4 w-24 bg-slate-100 rounded" />
+                        <div className="flex gap-4">
+                            {[1, 2, 3].map((j) => (
+                                <div key={j} className="w-12 h-12 bg-slate-50 rounded-xl" />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
-    if (!hasColors && !hasSizes) return null;
+    if (groupedVariants.length === 0) return null;
 
     return (
-        <div className={cn("space-y-5", className)}>
-            {/* ── Color Swatches ────────────────────────────── */}
-            {hasColors && (
-                <div
-                    className={cn(
-                        "rounded-2xl bg-slate-50 p-4 transition-all duration-300 border",
-                        validationErrors?.color
-                            ? "animate-shake border-red-400"
-                            : "border-transparent"
-                    )}
-                >
-                    <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
-                        Rangni tanlang
-                        {selected.color && (
-                            <span className="text-slate-800 normal-case tracking-normal font-bold ml-1.5">
-                                — {selected.color.name}
+        <div className={cn("space-y-8", className)}>
+            {groupedVariants.map((group) => (
+                <div key={group.mainType.id} className="space-y-4">
+                    {/* Main Type Label */}
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                            {group.mainType.name}
+                        </h3>
+                        {selectedOptions[group.mainType.name] && (
+                            <span className="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1 rounded-md">
+                                {selectedOptions[group.mainType.name]}
                             </span>
                         )}
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                        {colors.map((color) => {
-                            const isSelected =
-                                selected.color?.hex === color.hex &&
-                                selected.color?.name === color.name;
-                            return (
-                                <button
-                                    key={`${color.name}-${color.hex}`}
-                                    type="button"
-                                    onClick={() => selectColor(color)}
-                                    className={cn(
-                                        "relative w-10 h-10 rounded-full transition-all duration-200 outline-none active:scale-90",
-                                        isSelected
-                                            ? "ring-2 ring-blue-500 ring-offset-2"
-                                            : "ring-1 ring-slate-200 hover:ring-slate-300"
-                                    )}
-                                    title={color.name}
-                                >
-                                    <span
-                                        className="absolute inset-0.5 rounded-full"
-                                        style={{ backgroundColor: color.hex }}
-                                    />
-                                    {isSelected && (
-                                        <span className="absolute inset-0 flex items-center justify-center">
-                                            <Check
-                                                className={cn(
-                                                    "w-4 h-4 drop-shadow-sm",
-                                                    isLightColor(color.hex) ? "text-slate-800" : "text-white"
-                                                )}
-                                                strokeWidth={3}
-                                            />
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
                     </div>
-                </div>
-            )}
 
-            {/* ── Size / Model Buttons ──────────────────────── */}
-            {hasSizes && (
-                <div
-                    className={cn(
-                        "rounded-2xl bg-slate-50 p-4 transition-all duration-300 border",
-                        validationErrors?.size
-                            ? "animate-shake border-red-400"
-                            : "border-transparent"
-                    )}
-                >
-                    <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
-                        O'lcham / Model
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        {sizes.map((size) => {
-                            const isSelected = selected.size?.value === size.value;
+                    <div className="flex flex-wrap gap-4">
+                        {group.options.map((option) => {
+                            const isSelected = selectedOptions[group.mainType.name] === option.name;
+                            const isOutOfStock = option.stock === 0;
+
+                            // UI Selection Logic
+                            const isColorType = !!option.logoUrl;
+
+                            if (isColorType) {
+                                return (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        disabled={isOutOfStock}
+                                        onClick={() => onOptionChange(group.mainType.name, option.name)}
+                                        className={cn(
+                                            "relative w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-white outline-none active:scale-95",
+                                            isSelected
+                                                ? "ring-2 ring-blue-600 ring-offset-2 scale-105"
+                                                : "border border-slate-200 hover:border-slate-300 hover:scale-[1.02]",
+                                            isOutOfStock && "opacity-40 grayscale-80 cursor-not-allowed hover:scale-100"
+                                        )}
+                                        title={option.name}
+                                    >
+                                        {/* Color Swatch */}
+                                        <div
+                                            className="w-full h-full rounded-[10px] border border-black/5"
+                                            style={{
+                                                backgroundImage: option.logoUrl?.startsWith("http")
+                                                    ? `url(${option.logoUrl})`
+                                                    : undefined,
+                                                backgroundColor: !option.logoUrl?.startsWith("http")
+                                                    ? option.logoUrl
+                                                    : undefined,
+                                                backgroundSize: "cover",
+                                                backgroundPosition: "center",
+                                            }}
+                                        />
+
+                                        {/* Selected Checkmark */}
+                                        {isSelected && (
+                                            <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in duration-200">
+                                                <Check
+                                                    className={cn("w-5 h-5", isLightColor(option.logoUrl || "") ? "text-slate-900" : "text-white")}
+                                                    strokeWidth={4}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Out of Stock Strike-through */}
+                                        {isOutOfStock && (
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                                                <div className="w-[140%] h-[2px] bg-slate-500 rotate-45 rounded-full" />
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            }
+
+                            // Pill Style (Size, etc.)
                             return (
                                 <button
-                                    key={size.value}
+                                    key={option.id}
                                     type="button"
-                                    onClick={() => selectSize(size)}
+                                    disabled={isOutOfStock}
+                                    onClick={() => onOptionChange(group.mainType.name, option.name)}
                                     className={cn(
-                                        "min-w-[48px] h-11 px-4 rounded-xl text-sm font-semibold transition-all duration-200 outline-none active:scale-95 border",
+                                        "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center active:scale-95 border",
                                         isSelected
-                                            ? "bg-blue-50 border-blue-500 text-blue-600"
-                                            : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-105 border-transparent"
+                                            : "bg-slate-50 border-slate-200/60 text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 hover:border-slate-300 hover:scale-105",
+                                        isOutOfStock && "opacity-40 bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed overflow-hidden relative"
                                     )}
                                 >
-                                    {size.label}
+                                    {option.name}
+                                    {isOutOfStock && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
+                                        </div>
+                                    )}
                                 </button>
                             );
                         })}
                     </div>
                 </div>
-            )}
+            ))}
         </div>
     );
 }
 
 // ── Helpers ────────────────────────────────────────────────
-function isLightColor(hex: string): boolean {
-    const c = hex.replace("#", "");
-    const r = parseInt(c.substring(0, 2), 16);
-    const g = parseInt(c.substring(2, 4), 16);
-    const b = parseInt(c.substring(4, 6), 16);
+function isLightColor(color: string): boolean {
+    if (!color || color.startsWith("http")) return true;
+    const hex = color.replace("#", "");
+    if (hex.length !== 6) return true;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
     return (r * 299 + g * 587 + b * 114) / 1000 > 160;
 }

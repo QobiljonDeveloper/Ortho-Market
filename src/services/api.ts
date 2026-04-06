@@ -97,3 +97,9 @@ export interface UpdateUserProfilePayload {
 export const updateUserProfile = async (payload: UpdateUserProfilePayload) => {
     return await api.post('/api/users/create-or-update', payload);
 };
+
+// Fetch product variants/types by product ID
+export const getProductTypes = async (productId: string | number) => {
+    const response = await api.get(`/api/product-types/by-product/${productId}`);
+    return response.data;
+};

@@ -4,25 +4,20 @@ import {
     SheetTitle,
 } from "./ui/sheet";
 import { type Product } from "../types";
-import { Heart, ShieldCheck, Truck, ArrowLeft, Check, ShoppingCart, Minus, Plus } from "lucide-react";
+import { Heart, ShieldCheck, Truck, ArrowLeft, ShoppingCart, Minus, Plus } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
 import { useCart } from "../context/CartContext";
+import { VariantSelector } from "./VariantSelector";
 
 interface ProductDetailsDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     product: Product;
 }
-
-const mockColors = [
-    { id: 1, name: 'Kumush', hex: '#E2E8F0' },
-    { id: 2, name: 'Ko\'k', hex: '#007AFF' }
-];
-const mockSizes = ['Standart', 'Kichik', 'Katta'];
 
 export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDetailsDrawerProps) {
     const { user } = useAuthContext();
@@ -32,8 +27,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
     const { addToCart, getItemQuantity, updateQuantity } = useCart();
 
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const [selectedSize, setSelectedSize] = useState<any>(null);
-    const [selectedColor, setSelectedColor] = useState<any>(null);
+    const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
     console.log("Variantlar consolega chiqarildi: ", product);
 
@@ -42,6 +36,9 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
         if (open && product.images?.length) {
             const primaryIdx = product.images.findIndex(img => img.isPrimary);
             setSelectedImageIndex(primaryIdx >= 0 ? primaryIdx : 0);
+        }
+        if (open) {
+            setSelectedOptions({});
         }
     }, [open, product.images]);
 
@@ -159,75 +156,14 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                             </div>
                         </div>
 
-                        {/* Premium Variant Options UI */}
                         <div className="bg-white rounded-[24px] p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-slate-100/60 mb-6 space-y-8">
-                            {/* Colors */}
-                            <div>
-                                <p className="text-[15px] font-medium text-slate-500 mb-4 flex items-center gap-2">
-                                    Select Color
-                                    {selectedColor && (
-                                        <>
-                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                            <span className="text-slate-900 font-semibold">{selectedColor.name}</span>
-                                        </>
-                                    )}
-                                </p>
-                                <div className="flex flex-wrap gap-4">
-                                    {mockColors.map((color) => {
-                                        const isSelected = selectedColor?.id === color.id;
-                                        return (
-                                            <button
-                                                key={color.id}
-                                                type="button"
-                                                onClick={() => setSelectedColor(color)}
-                                                className={cn(
-                                                    "relative w-[52px] h-[52px] rounded-full transition-all duration-300 outline-none flex items-center justify-center group shrink-0",
-                                                    isSelected ? "ring-2 ring-[#007AFF] ring-offset-[4px] scale-105" : "hover:ring-2 hover:ring-slate-300 hover:ring-offset-[4px] hover:scale-105 active:scale-95"
-                                                )}
-                                                title={color.name}
-                                            >
-                                                <span
-                                                    className="absolute inset-0 rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] border border-black/5"
-                                                    style={{ backgroundColor: color.hex }}
-                                                />
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Sizes */}
-                            <div>
-                                <p className="text-[15px] font-medium text-slate-500 mb-4 flex items-center gap-2">
-                                    Select Size
-                                    {selectedSize && (
-                                        <>
-                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                            <span className="text-slate-900 font-semibold">{selectedSize}</span>
-                                        </>
-                                    )}
-                                </p>
-                                <div className="flex flex-wrap gap-3">
-                                    {mockSizes.map((size, index) => {
-                                        const isSelected = selectedSize === size;
-                                        return (
-                                            <button
-                                                key={index}
-                                                type="button"
-                                                onClick={() => setSelectedSize(size)}
-                                                className={cn(
-                                                    "h-12 px-8 rounded-full text-[15px] font-medium transition-all duration-300 outline-none active:scale-95",
-                                                    isSelected
-                                                        ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25 scale-105"
-                                                        : "bg-slate-50 border border-slate-200/60 text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 hover:border-slate-300 hover:scale-105"
-                                                )}
-                                            >
-                                                {size}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            <VariantSelector
+                                productId={product.id}
+                                selectedOptions={selectedOptions}
+                                onOptionChange={(category, option) =>
+                                    setSelectedOptions(prev => ({ ...prev, [category]: option }))
+                                }
+                            />
                         </div>
 
                         {/* Description */}
