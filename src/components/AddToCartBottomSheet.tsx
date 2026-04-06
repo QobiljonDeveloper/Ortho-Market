@@ -57,8 +57,8 @@ export function AddToCartDrawer({
 
     const handleConfirm = useCallback(() => {
         // Validation: Ensure all main types have a selection
-        const mainTypes = variants?.filter(v => v.typeId === null) || [];
-        const missingSelections = mainTypes.filter(m => !selected[m.name]);
+        const mainTypes = variants?.filter((v: any) => v.typeId === null) || [];
+        const missingSelections = mainTypes.filter((m: any) => !selected[m.name]);
 
         if (missingSelections.length > 0) {
             setShowErrors(true);
@@ -131,15 +131,11 @@ export function AddToCartDrawer({
 
                         {/* ── Variant Selector ─────────────────────── */}
                         <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-hide">
-                            {variants && variants.length > 0 && (
-                                <ProductVariants
-                                    variants={variants}
-                                    selectedOptions={selected}
-                                    onOptionChange={(category, option) =>
-                                        setSelected(prev => ({ ...prev, [category]: option }))
-                                    }
-                                />
-                            )}
+                            <ProductVariants
+                                productId={product.id}
+                                onOptionChange={setSelected}
+                                initialSelectedOptions={selected}
+                            />
                             {showErrors && (
                                 <p className="text-red-500 text-sm font-medium mt-4 animate-in fade-in slide-in-from-top-1">
                                     Iltimos, barcha variantlarni tanlang

@@ -22,8 +22,8 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
 
     const handleAddToCart = useCallback(() => {
         // Validation: Ensure all main types have a selection
-        const mainTypes = variants?.filter(v => v.typeId === null) || [];
-        const missingSelections = mainTypes.filter(m => !selected[m.name]);
+        const mainTypes = variants?.filter((v: any) => v.typeId === null) || [];
+        const missingSelections = mainTypes.filter((m: any) => !selected[m.name]);
 
         if (missingSelections.length > 0) {
             setShowErrors(true);
@@ -40,11 +40,9 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
             {variants && variants.length > 0 && (
                 <div className="bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm mb-4">
                     <ProductVariants
-                        variants={variants}
-                        selectedOptions={selected}
-                        onOptionChange={(category, option) =>
-                            setSelected(prev => ({ ...prev, [category]: option }))
-                        }
+                        productId={product.id}
+                        onOptionChange={setSelected}
+                        initialSelectedOptions={selected}
                     />
                     {showErrors && (
                         <p className="text-red-500 text-sm font-medium mt-4 animate-in fade-in slide-in-from-top-1 px-1">
