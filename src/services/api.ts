@@ -99,7 +99,8 @@ export const updateUserProfile = async (payload: UpdateUserProfilePayload) => {
 };
 
 // Fetch product variants/types by product ID
-export const getProductTypes = async (productId: string | number) => {
+export const fetchProductTypes = async (productId: string | number) => {
+    console.log('Fetching types for ID:', productId);
     const response = await api.get(`/api/product-types/by-product/${productId}`);
     return response.data;
 };

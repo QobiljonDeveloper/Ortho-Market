@@ -1,6 +1,7 @@
+"use client";
+
 import { useState, useMemo, useEffect } from "react";
 import { Check } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { type ProductType } from "../types";
 import { useProductVariants } from "../hooks/useProductVariants";
@@ -12,6 +13,11 @@ interface ProductVariantsProps {
     className?: string;
 }
 
+interface GroupedProductType {
+    mainType: ProductType;
+    options: ProductType[];
+}
+
 export function ProductVariants({
     productId,
     initialSelectedOptions = {},
@@ -19,163 +25,149 @@ export function ProductVariants({
     className,
 }: ProductVariantsProps) {
     const { data: variants = [], isLoading } = useProductVariants(productId);
+    const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(initialSelectedOptions);
 
-    // Step 1: All Main Types (typeId === null)
-    const mainTypes = useMemo(() => variants.filter(v => v.typeId === null), [variants]);
-
-    // State for Top-level and Child-level selection
-    const [selectedMainId, setSelectedMainId] = useState<number | string | null>(null);
-    const [selectedChildId, setSelectedChildId] = useState<number | string | null>(null);
-
-    // Sync with initialSelectedOptions if provided
     useEffect(() => {
-        if (Object.keys(initialSelectedOptions).length > 0 && variants.length > 0) {
-            // This is complex because we need to map back names to IDs
-            // For now, let's just use IDs internally
+        if (Object.keys(initialSelectedOptions).length > 0) {
+            setSelectedOptions(initialSelectedOptions);
         }
-    }, [initialSelectedOptions, variants]);
+    }, [initialSelectedOptions]);
 
-    // Handle Main Selection
-    const handleMainSelect = (main: ProductType) => {
-        setSelectedMainId(main.id);
-        setSelectedChildId(null); // Reset child on parent change
+    const groupedVariants = useMemo(() => {
+        const mainTypes = variants.filter((v) => v.typeId === null);
+        return mainTypes.map((main) => ({
+            mainType: main,
+            options: variants.filter((v) => v.typeId === main.id),
+        })) as GroupedProductType[];
+    }, [variants]);
 
-        // Find if it has children
-        const children = variants.filter(v => v.typeId === main.id);
-
-        // Notify parent: if it's a flat type (no children), it's the final selection
-        if (children.length === 0) {
-            onOptionChange?.({ main: main.name, type: main.name });
-        } else {
-            // Notify parent that selection is in progress
-            onOptionChange?.({ main: main.name });
-        }
+    const handleSelect = (category: string, value: string) => {
+        const next = { ...selectedOptions, [category]: value };
+        setSelectedOptions(next);
+        onOptionChange?.(next);
     };
 
-    // Handle Child Selection
-    const handleChildSelect = (child: ProductType) => {
-        setSelectedChildId(child.id);
-        const main = mainTypes.find(m => m.id === selectedMainId);
-        onOptionChange?.({
-            main: main?.name || "",
-            child: child.name,
-            type: `${main?.name} - ${child.name}`
-        });
-    };
+    // Hide entire section while loading or if no data
+    if (isLoading || groupedVariants.length === 0) return null;
 
-    const selectedMainChildren = useMemo(() => {
-        if (!selectedMainId) return [];
-        return variants.filter(v => v.typeId === selectedMainId);
-    }, [selectedMainId, variants]);
-
-    if (isLoading) return null;
-    if (mainTypes.length === 0) return null;
+    const isFlatList = groupedVariants.every(g => g.options.length === 0);
 
     return (
-        <div className={cn("space-y-8", className)}>
-            {/* ── STEP 1: Main Types ─────────────────────── */}
-            <div className="space-y-4">
-                <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                    Variant tanlang
-                </h3>
-                <div className="flex flex-wrap gap-3">
-                    {mainTypes.map((main) => {
-                        const isSelected = selectedMainId === main.id;
-                        const isOutOfStock = (main.stock ?? 0) === 0 && variants.filter(v => v.typeId === main.id).every(c => (c.stock ?? 0) === 0);
-                        const isColor = !!main.logoUrl;
+        <div className={cn("bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm space-y-6", className)}>
+            {isFlatList ? (
+                <div className="space-y-4">
+                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-[0.1em]">
+                        Variant tanlang
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                        {groupedVariants.map((group) => {
+                            const option = group.mainType;
+                            const isSelected = selectedOptions["type"] === option.name;
+                            const isOutOfStock = (option.stock ?? 0) === 0;
 
-                        if (isColor) {
-                            return renderSwatch(main, isSelected, isOutOfStock, () => handleMainSelect(main));
-                        }
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    disabled={isOutOfStock}
+                                    onClick={() => handleSelect("type", option.name)}
+                                    className={cn(
+                                        "min-w-18 h-12 px-6 rounded-full text-[15px] font-bold transition-all outline-none flex flex-col items-center justify-center border relative gap-0.5",
+                                        isSelected
+                                            ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                            : "bg-white text-gray-900 border-gray-200 hover:border-blue-400",
+                                        isOutOfStock && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200 overflow-hidden"
+                                    )}
+                                >
+                                    <span>{option.name}</span>
+                                    {!isOutOfStock && option.stock !== undefined && (
+                                        <span className={cn("text-[9px] opacity-70 font-bold uppercase", isSelected ? "text-white" : "text-slate-500")}>
+                                            {option.stock} dona
+                                        </span>
+                                    )}
+                                    {isOutOfStock && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-8">
+                    {groupedVariants.map((group) => {
+                        if (group.options.length === 0) return null;
 
                         return (
-                            <button
-                                key={main.id}
-                                type="button"
-                                disabled={isOutOfStock}
-                                onClick={() => handleMainSelect(main)}
-                                className={cn(
-                                    "min-w-18 h-12 px-6 rounded-full text-[15px] font-bold transition-all outline-none flex flex-col items-center justify-center border relative gap-0.5",
-                                    isSelected
-                                        ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20 scale-105"
-                                        : "bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30",
-                                    isOutOfStock && "opacity-40 grayscale cursor-not-allowed bg-slate-50 overflow-hidden"
-                                )}
-                            >
-                                <span>{main.name}</span>
-                                {isOutOfStock && (
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
-                                        <div className="w-[140%] h-[1.5px] bg-slate-400 rotate-15" />
-                                    </div>
-                                )}
-                            </button>
+                            <div key={group.mainType.id} className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-[0.1em]">
+                                        {group.mainType.name}
+                                    </h3>
+                                    {selectedOptions[group.mainType.name] && (
+                                        <span className="text-xs font-bold text-blue-600 bg-blue-50/50 border border-blue-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                                            {selectedOptions[group.mainType.name]}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                    {group.options.map((option) => {
+                                        const isSelected = selectedOptions[group.mainType.name] === option.name;
+                                        const isOutOfStock = (option.stock ?? 0) === 0;
+                                        const isColorType = !!option.logoUrl;
+
+                                        if (isColorType) {
+                                            return renderColorSwatch(
+                                                option,
+                                                isSelected,
+                                                isOutOfStock,
+                                                () => handleSelect(group.mainType.name, option.name)
+                                            );
+                                        }
+
+                                        return (
+                                            <button
+                                                key={option.id}
+                                                type="button"
+                                                disabled={isOutOfStock}
+                                                onClick={() => handleSelect(group.mainType.name, option.name)}
+                                                className={cn(
+                                                    "min-w-18 h-12 px-6 rounded-full text-[15px] font-bold transition-all outline-none flex flex-col items-center justify-center border relative gap-0.5",
+                                                    isSelected
+                                                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                                        : "bg-white text-gray-900 border-gray-200 hover:border-blue-400",
+                                                    isOutOfStock && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200 overflow-hidden"
+                                                )}
+                                            >
+                                                <span>{option.name}</span>
+                                                {!isOutOfStock && option.stock !== undefined && (
+                                                    <span className={cn("text-[9px] opacity-70 font-bold uppercase", isSelected ? "text-white" : "text-slate-500")}>
+                                                        {option.stock} dona
+                                                    </span>
+                                                )}
+                                                {isOutOfStock && (
+                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                        <div className="w-[110%] h-[1.5px] bg-slate-400 rotate-15 rounded-full" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         );
                     })}
                 </div>
-            </div>
-
-            {/* ── STEP 2: Child Types ────────────────────── */}
-            <AnimatePresence mode="wait">
-                {selectedMainChildren.length > 0 && (
-                    <motion.div
-                        key={selectedMainId}
-                        initial={{ opacity: 0, y: 10, height: 0 }}
-                        animate={{ opacity: 1, y: 0, height: "auto" }}
-                        exit={{ opacity: 0, y: -10, height: 0 }}
-                        transition={{
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 30,
-                            opacity: { duration: 0.2 }
-                        }}
-                        className="space-y-4 overflow-hidden pt-2"
-                    >
-                        <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                            Qo'shimcha variant
-                        </h3>
-                        <div className="flex flex-wrap gap-3">
-                            {selectedMainChildren.map((child) => {
-                                const isSelected = selectedChildId === child.id;
-                                const isOutOfStock = (child.stock ?? 0) === 0;
-                                const isColor = !!child.logoUrl;
-
-                                if (isColor) {
-                                    return renderSwatch(child, isSelected, isOutOfStock, () => handleChildSelect(child));
-                                }
-
-                                return (
-                                    <button
-                                        key={child.id}
-                                        type="button"
-                                        disabled={isOutOfStock}
-                                        onClick={() => handleChildSelect(child)}
-                                        className={cn(
-                                            "min-w-18 h-12 px-6 rounded-full text-[15px] font-bold transition-all outline-none flex flex-col items-center justify-center border relative gap-0.5",
-                                            isSelected
-                                                ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20 scale-105"
-                                                : "bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30",
-                                            isOutOfStock && "opacity-40 grayscale cursor-not-allowed bg-slate-50 overflow-hidden"
-                                        )}
-                                    >
-                                        <span>{child.name}</span>
-                                        {isOutOfStock && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
-                                                <div className="w-[140%] h-[1.5px] bg-slate-400 rotate-15" />
-                                            </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            )}
         </div>
     );
 }
 
-// ── Shared Swatch Helper ──────────────────────────────────────────
-function renderSwatch(
+// ── Render Helpers ────────────────────────────────────────────────
+function renderColorSwatch(
     option: ProductType,
     isSelected: boolean,
     isOutOfStock: boolean,
@@ -190,9 +182,9 @@ function renderSwatch(
             className={cn(
                 "relative w-14 h-14 rounded-full flex items-center justify-center transition-all bg-white outline-none p-1",
                 isSelected
-                    ? "ring-2 ring-blue-600 ring-offset-2 scale-110 shadow-lg"
-                    : "border border-slate-200 hover:border-slate-400 hover:scale-105",
-                isOutOfStock && "opacity-40 grayscale cursor-not-allowed ring-0 shadow-none border-slate-100"
+                    ? "ring-2 ring-blue-600 ring-offset-2 scale-105"
+                    : "border border-slate-200 hover:border-slate-400",
+                isOutOfStock && "opacity-50 grayscale cursor-not-allowed ring-0 shadow-none border-slate-100"
             )}
             title={option.name}
         >
@@ -219,7 +211,7 @@ function renderSwatch(
             )}
             {isOutOfStock && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
-                    <div className="w-[140%] h-[2px] bg-slate-500 rotate-45" />
+                    <div className="w-[140%] h-[2px] bg-slate-500 rotate-45 rounded-full" />
                 </div>
             )}
         </button>

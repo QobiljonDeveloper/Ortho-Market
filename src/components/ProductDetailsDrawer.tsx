@@ -25,7 +25,6 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
 
     const saved = isSaved(product.id);
     const { addToCart, getItemQuantity, updateQuantity } = useCart();
-
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
@@ -158,9 +157,8 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
 
                         <ProductVariants
                             productId={product.id}
-                            onOptionChange={(selected) =>
-                                setSelectedOptions(selected)
-                            }
+                            initialSelectedOptions={selectedOptions}
+                            onOptionChange={setSelectedOptions}
                         />
 
                         {/* Description */}

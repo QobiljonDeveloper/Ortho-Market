@@ -58,7 +58,7 @@ export function AddToCartDrawer({
     const handleConfirm = useCallback(() => {
         // Validation: Ensure all categories are selected
         const mainTypes = variants?.filter((v: any) => v.typeId === null) || [];
-        const isFlat = mainTypes.length > 0 && mainTypes.every(m => !variants?.some(v => v.typeId === m.id));
+        const isFlat = mainTypes.length > 0 && mainTypes.every((m: any) => !variants?.some((v: any) => v.typeId === m.id));
 
         if (isFlat) {
             if (!selected["type"]) {
@@ -67,8 +67,8 @@ export function AddToCartDrawer({
                 return;
             }
         } else {
-            const requiredTypes = mainTypes.filter(m => variants?.some(v => v.typeId === m.id));
-            const missingSelections = requiredTypes.filter(m => !selected[m.name]);
+            const requiredTypes = mainTypes.filter((m: any) => variants?.some((v: any) => v.typeId === m.id));
+            const missingSelections = requiredTypes.filter((m: any) => !selected[m.name]);
 
             if (missingSelections.length > 0) {
                 setShowErrors(true);

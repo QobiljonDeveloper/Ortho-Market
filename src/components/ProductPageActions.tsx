@@ -21,15 +21,17 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
 
     const handleAddToCart = useCallback(() => {
         // Validation: Ensure selections are complete
-        const mainTypes = variants?.filter((v: any) => v.typeId === null) || [];
-        const isFlat = mainTypes.length > 0 && mainTypes.every(m => !variants?.some(v => v.typeId === m.id));
+        if (!variants) return;
+
+        const mainTypes = variants.filter((v: any) => v.typeId === null);
+        const isFlat = mainTypes.length > 0 && mainTypes.every((m: any) => !variants.some((v: any) => v.typeId === m.id));
 
         let hasError = false;
         if (isFlat) {
             if (!selected["type"]) hasError = true;
         } else {
-            const requiredTypes = mainTypes.filter(m => variants?.some(v => v.typeId === m.id));
-            if (requiredTypes.some(m => !selected[m.name])) hasError = true;
+            const requiredTypes = mainTypes.filter((m: any) => variants.some((v: any) => v.typeId === m.id));
+            if (requiredTypes.some((m: any) => !selected[m.name])) hasError = true;
         }
 
         if (hasError) {
@@ -44,16 +46,20 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
     return (
         <>
             {/* ── Inline Variant Selector ──────────────────── */}
-            <ProductVariants
-                productId={product.id}
-                onOptionChange={setSelected}
-                initialSelectedOptions={selected}
-                className="mb-2"
-            />
-            {showErrors && (
-                <p className="text-red-500 text-[13px] font-semibold mt-2 px-1 animate-in fade-in slide-in-from-top-1">
-                    Iltimos, variantni tanlang
-                </p>
+            {variants && variants.length > 0 && (
+                <>
+                    <ProductVariants
+                        productId={product.id}
+                        onOptionChange={setSelected}
+                        initialSelectedOptions={selected}
+                        className="mb-2"
+                    />
+                    {showErrors && (
+                        <p className="text-red-500 text-[13px] font-semibold mt-2 px-1 animate-in fade-in slide-in-from-top-1">
+                            Iltimos, variantni tanlang
+                        </p>
+                    )}
+                </>
             )}
 
             {/* ── Sticky Bottom CTA ──────────────────────── */}
