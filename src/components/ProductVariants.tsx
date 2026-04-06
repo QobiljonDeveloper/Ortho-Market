@@ -68,9 +68,9 @@ export function ProductVariants({
                                         className={cn(
                                             "relative w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-white outline-none active:scale-95",
                                             isSelected
-                                                ? "ring-2 ring-blue-600 ring-offset-2 scale-105"
-                                                : "border border-slate-200 hover:border-slate-300 hover:scale-[1.02]",
-                                            isOutOfStock && "opacity-40 grayscale cursor-not-allowed hover:scale-100 ring-0"
+                                                ? "ring-[3px] ring-blue-600 ring-offset-2 scale-105 z-10"
+                                                : "border border-slate-200 hover:border-slate-400 hover:scale-[1.05] hover:shadow-sm",
+                                            isOutOfStock && "opacity-50 grayscale cursor-not-allowed hover:scale-100 ring-0 hover:shadow-none"
                                         )}
                                         title={option.name}
                                     >
@@ -119,9 +119,9 @@ export function ProductVariants({
                                     className={cn(
                                         "min-w-16 h-12 px-5 rounded-xl text-[15px] font-bold transition-all outline-none flex items-center justify-center active:scale-95 border",
                                         isSelected
-                                            ? "bg-blue-50 border-blue-600 text-blue-600 shadow-sm"
-                                            : "bg-white border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600",
-                                        isOutOfStock && "opacity-40 bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed overflow-hidden relative"
+                                            ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20 scale-105 z-10"
+                                            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600 hover:scale-[1.02]",
+                                        isOutOfStock && "opacity-50 bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed overflow-hidden relative"
                                     )}
                                 >
                                     {option.name}
