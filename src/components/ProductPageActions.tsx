@@ -44,20 +44,16 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
     return (
         <>
             {/* ── Inline Variant Selector ──────────────────── */}
-            {variants && variants.length > 0 && (
-                <>
-                    <ProductVariants
-                        productId={product.id}
-                        onOptionChange={setSelected}
-                        initialSelectedOptions={selected}
-                        className="mb-2"
-                    />
-                    {showErrors && (
-                        <p className="text-red-500 text-[13px] font-semibold mt-2 px-1 animate-in fade-in slide-in-from-top-1">
-                            Iltimos, variantni tanlang
-                        </p>
-                    )}
-                </>
+            <ProductVariants
+                productId={product.id}
+                onOptionChange={setSelected}
+                initialSelectedOptions={selected}
+                className="mb-2"
+            />
+            {showErrors && (
+                <p className="text-red-500 text-[13px] font-semibold mt-2 px-1 animate-in fade-in slide-in-from-top-1">
+                    Iltimos, variantni tanlang
+                </p>
             )}
 
             {/* ── Sticky Bottom CTA ──────────────────────── */}

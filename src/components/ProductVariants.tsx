@@ -25,11 +25,11 @@ export function ProductVariants({
     className,
 }: ProductVariantsProps) {
     const { data: variants = [], isLoading } = useProductVariants(productId);
-    const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(initialSelectedOptions);
+    const [selectedVariant, setSelectedVariant] = useState<Record<string, string>>(initialSelectedOptions);
 
     useEffect(() => {
         if (Object.keys(initialSelectedOptions).length > 0) {
-            setSelectedOptions(initialSelectedOptions);
+            setSelectedVariant(initialSelectedOptions);
         }
     }, [initialSelectedOptions]);
 
@@ -42,8 +42,8 @@ export function ProductVariants({
     }, [variants]);
 
     const handleSelect = (category: string, value: string) => {
-        const next = { ...selectedOptions, [category]: value };
-        setSelectedOptions(next);
+        const next = { ...selectedVariant, [category]: value };
+        setSelectedVariant(next);
         onOptionChange?.(next);
     };
 
@@ -56,13 +56,13 @@ export function ProductVariants({
         <div className={cn("bg-white rounded-[1.25rem] border border-slate-200 p-5 shadow-sm space-y-6", className)}>
             {isFlatList ? (
                 <div className="space-y-4">
-                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-[0.1em]">
+                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">
                         Variant tanlang
                     </h3>
                     <div className="flex flex-wrap gap-3">
                         {groupedVariants.map((group) => {
                             const option = group.mainType;
-                            const isSelected = selectedOptions["type"] === option.name;
+                            const isSelected = selectedVariant["type"] === option.name;
                             const isOutOfStock = (option.stock ?? 0) === 0;
 
                             return (
@@ -103,19 +103,19 @@ export function ProductVariants({
                         return (
                             <div key={group.mainType.id} className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-[0.1em]">
+                                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">
                                         {group.mainType.name}
                                     </h3>
-                                    {selectedOptions[group.mainType.name] && (
+                                    {selectedVariant[group.mainType.name] && (
                                         <span className="text-xs font-bold text-blue-600 bg-blue-50/50 border border-blue-100 px-3 py-1 rounded-full uppercase tracking-wider">
-                                            {selectedOptions[group.mainType.name]}
+                                            {selectedVariant[group.mainType.name]}
                                         </span>
                                     )}
                                 </div>
 
                                 <div className="flex flex-wrap gap-3">
                                     {group.options.map((option) => {
-                                        const isSelected = selectedOptions[group.mainType.name] === option.name;
+                                        const isSelected = selectedVariant[group.mainType.name] === option.name;
                                         const isOutOfStock = (option.stock ?? 0) === 0;
                                         const isColorType = !!option.logoUrl;
 
