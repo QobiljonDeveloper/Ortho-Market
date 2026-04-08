@@ -29,6 +29,7 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
             try {
                 setLoading(true);
                 const result = await fetchProductTypes(productId);
+                console.log("API Dastlabki javob:", result);
                 setData(result);
             } catch (error) {
                 console.error("Failed to fetch product types:", error);
