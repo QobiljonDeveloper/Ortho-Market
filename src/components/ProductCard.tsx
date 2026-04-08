@@ -9,7 +9,7 @@ import { AddToCartDrawer } from "./AddToCartBottomSheet";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
-import { fetchProductById } from "../services/api";
+import { fetchProductById, fetchProductTypes } from "../services/api";
 
 interface ProductCardProps {
     product: Product;
@@ -31,6 +31,7 @@ export function ProductCard({ product }: ProductCardProps) {
     const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
     const [productDetails, setProductDetails] = useState<Product | null>(null);
+    const [productTypes, setProductTypes] = useState<any[]>([]);
     const hasVariants = (product.colors && product.colors.length > 0) || (product.sizes && product.sizes.length > 0);
 
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
@@ -45,13 +46,21 @@ export function ProductCard({ product }: ProductCardProps) {
         setIsDetailsOpen(true);
 
         try {
-            const details = await fetchProductById(product.id);
+            const [details, types] = await Promise.all([
+                fetchProductById(product.id),
+                fetchProductTypes(product.id),
+            ]);
+
             console.info("🎯 [DEBUG-PRODUCT-FETCHED] =>", details);
+            console.info("🎯 [DEBUG-TYPES-FETCHED] =>", types);
+
             setProductDetails(details);
+            setProductTypes(types);
         } catch (error) {
             console.error("❌ API Error:", error);
             // Fallback to existing product prop data if API fails
             setProductDetails(product);
+            setProductTypes([]);
         } finally {
             setIsDetailsLoading(false);
         }
@@ -62,6 +71,7 @@ export function ProductCard({ product }: ProductCardProps) {
         if (!open) {
             // Clear fetched details when modal closes
             setProductDetails(null);
+            setProductTypes([]);
             setIsDetailsLoading(false);
         }
     };
