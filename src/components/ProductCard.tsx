@@ -120,7 +120,6 @@ export function ProductCard({ product }: ProductCardProps) {
                                             if (hasVariants) {
                                                 setIsBottomSheetOpen(true);
                                             } else {
-                                                console.log(`ProductCard: Triggering addToCart for product ${product.id}`);
                                                 addToCart(product);
                                             }
                                         }}
@@ -144,7 +143,6 @@ export function ProductCard({ product }: ProductCardProps) {
                                             e.stopPropagation();
                                             e.preventDefault();
                                             const newQuantity = Math.max(0, quantity - 1);
-                                            console.log(`ProductCard: Triggering updateQuantity for product ${product.id} to ${newQuantity}`);
                                             updateQuantity(product.id, newQuantity);
                                         }}
                                         className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors active:scale-95 shrink-0"
@@ -161,7 +159,6 @@ export function ProductCard({ product }: ProductCardProps) {
                                             e.stopPropagation();
                                             e.preventDefault();
                                             const newQuantity = quantity + 1;
-                                            console.log(`ProductCard: Triggering updateQuantity for product ${product.id} to ${newQuantity}`);
                                             updateQuantity(product.id, newQuantity);
                                         }}
                                         className="w-8 h-8 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-lg transition-colors active:scale-95 shrink-0"

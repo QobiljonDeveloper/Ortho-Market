@@ -12,10 +12,8 @@ export const useCartApi = (userId: string | undefined | null) => {
         queryKey: ['cart', safeUserId],
         queryFn: async (): Promise<CartItem[]> => {
             if (!safeUserId || safeUserId === 'undefined' || safeUserId === 'null') return [];
-            console.log(`Fetching cart for user: ${safeUserId}`);
             try {
                 const data = await cartService.getCart(safeUserId);
-                console.log("Cart data received:", data);
                 // Xavfsizlik qatlami: array emas bo'lsa (masalan {items: []} obyekt kelsa), array ni ajratib olish
                 const items = Array.isArray(data) ? data : (data as any)?.items || [];
                 return items;
@@ -31,10 +29,8 @@ export const useCartApi = (userId: string | undefined | null) => {
     const addToCartMutation = useMutation({
         mutationFn: async (product: Product) => {
             if (!safeUserId) throw new Error("User not logged in");
-            console.log(`Adding product ${product.id} to cart...`);
             try {
                 const data = await cartService.addToCart(safeUserId, product.id);
-                console.log("Add to cart success:", data);
                 return data;
             } catch (error: any) {
                 console.error("Error adding product to cart:", error);
@@ -42,9 +38,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             }
         },
         onMutate: async (product: Product) => {
-            console.log("=== CART DEBUG: Add to Cart ===");
-            console.log("-> UserId:", safeUserId);
-            console.log("-> Product Payload:", product);
             await queryClient.cancelQueries({ queryKey: ['cart', safeUserId] });
             const previousData = queryClient.getQueryData<any>(['cart', safeUserId]);
             const previousCart: CartItem[] = Array.isArray(previousData) ? previousData : (previousData?.items || []);
@@ -81,7 +74,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             console.error("Add to cart error details:", err);
         },
         onSuccess: (data) => {
-            console.log("=== CART DEBUG: Add to Cart SUCCESS ===", data);
             toast.success("Savatga qo'shildi");
             queryClient.invalidateQueries({ queryKey: ['cart'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -96,7 +88,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             let finalCartItemId = cartItemId;
 
             if (cartItemId.startsWith('temp-')) {
-                console.log(`Cart item ID is temporary (${cartItemId}), waiting for real ID from server...`);
                 // Lookup local cache to map temp ID to actual product ID
                 const cachedCart = queryClient.getQueryData<any>(['cart', safeUserId]);
                 const items = Array.isArray(cachedCart) ? cachedCart : (cachedCart?.items || []);
@@ -118,10 +109,8 @@ export const useCartApi = (userId: string | undefined | null) => {
                 }
             }
 
-            console.log(`Updating cart item ${finalCartItemId} to quantity: ${quantity}`);
             try {
                 const data = await cartService.updateQuantity(safeUserId, finalCartItemId, quantity);
-                console.log("Update quantity success:", data);
                 return data;
             } catch (error: any) {
                 console.error("Error updating cart item quantity:", error);
@@ -129,9 +118,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             }
         },
         onMutate: async ({ cartItemId, quantity }) => {
-            console.log("=== CART DEBUG: Update Quantity ===");
-            console.log("-> UserId:", safeUserId);
-            console.log("-> CartItemId:", cartItemId, "| New Quantity:", quantity);
             await queryClient.cancelQueries({ queryKey: ['cart', safeUserId] });
             const previousData = queryClient.getQueryData<any>(['cart', safeUserId]);
             const previousCart: CartItem[] = Array.isArray(previousData) ? previousData : (previousData?.items || []);
@@ -154,7 +140,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             console.error("Update quantity error details:", err);
         },
         onSuccess: (data) => {
-            console.log("=== CART DEBUG: Update Quantity SUCCESS ===", data);
             queryClient.invalidateQueries({ queryKey: ['cart'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
         },
@@ -168,7 +153,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             let finalCartItemId = cartItemId;
 
             if (cartItemId.startsWith('temp-')) {
-                console.log(`Cart item ID is temporary (${cartItemId}), waiting for real ID from server...`);
                 // Lookup local cache to map temp ID to actual product ID
                 const cachedCart = queryClient.getQueryData<any>(['cart', safeUserId]);
                 const items = Array.isArray(cachedCart) ? cachedCart : (cachedCart?.items || []);
@@ -190,10 +174,8 @@ export const useCartApi = (userId: string | undefined | null) => {
                 }
             }
 
-            console.log(`Removing item ${finalCartItemId} from cart...`);
             try {
                 const data = await cartService.removeCartItem(safeUserId, finalCartItemId);
-                console.log("Remove cart item success:", data);
                 return data;
             } catch (error: any) {
                 console.error("Error removing cart item:", error);
@@ -201,9 +183,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             }
         },
         onMutate: async (cartItemId: string) => {
-            console.log("=== CART DEBUG: Remove Item ===");
-            console.log("-> UserId:", safeUserId);
-            console.log("-> CartItemId:", cartItemId);
             await queryClient.cancelQueries({ queryKey: ['cart', safeUserId] });
             const previousData = queryClient.getQueryData<any>(['cart', safeUserId]);
             const previousCart: CartItem[] = Array.isArray(previousData) ? previousData : (previousData?.items || []);
@@ -222,7 +201,6 @@ export const useCartApi = (userId: string | undefined | null) => {
             console.error("Remove cart item error details:", err);
         },
         onSuccess: (data) => {
-            console.log("=== CART DEBUG: Remove Item SUCCESS ===", data);
             toast.success("Savatdan o'chirildi");
             queryClient.invalidateQueries({ queryKey: ['cart'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });

@@ -15,7 +15,6 @@ api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log("=== AUTH DEBUG === [custom instance] Active Token:", token);
     }
 
     // Sanitize URL: remove double slashes (except after protocol) and trailing slashes
@@ -23,7 +22,6 @@ api.interceptors.request.use((config) => {
         config.url = config.url.replace(/([^:]\/)\/+/g, '$1').replace(/\/+$/, '');
     }
 
-    console.log(`[API Request] URL: ${config.baseURL || ''}${config.url} | Method: ${config.method?.toUpperCase()} | Body:`, config.data);
 
     return config;
 });
@@ -31,7 +29,6 @@ api.interceptors.request.use((config) => {
 // Response Interceptor: specific error toasts instead of crashing the UI
 api.interceptors.response.use(
     (response) => {
-        console.log(`[API Response] Status: ${response.status} | URL: ${response.config.url}`, response.data);
         return response;
     },
     (error) => {
@@ -100,7 +97,6 @@ export const updateUserProfile = async (payload: UpdateUserProfilePayload) => {
 
 // Fetch product variants/types by product ID
 export const fetchProductTypes = async (productId: string | number) => {
-    console.log('Fetching types for ID:', productId);
     const response = await api.get(`/api/product-types/by-product/${productId}`);
     return response.data;
 };

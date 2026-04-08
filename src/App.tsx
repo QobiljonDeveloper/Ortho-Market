@@ -47,7 +47,6 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
     }
 
     const initData = tg?.initData;
-    console.log("System InitData found:", !!initData);
 
     if (initData) {
       // 3. Mandatory POST Auth Request: strictly first network request

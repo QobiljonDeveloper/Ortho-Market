@@ -31,21 +31,13 @@ export function TelegramAuthDebug() {
                 const rawInitData = tg.initData;
                 const initDataUnsafe = tg.initDataUnsafe;
 
-                console.log('--- Telegram WebApp Debug ---');
-                console.log('initData:', rawInitData);
-                console.log('initDataUnsafe:', initDataUnsafe);
 
                 const userData = initDataUnsafe?.user;
                 if (userData) {
-                    console.log('User ID:', userData.id);
-                    console.log('First Name:', userData.first_name);
-                    console.log('Username:', userData.username);
-                    console.log('Language Code:', userData.language_code);
                 }
             }
         } else {
             if (isDev) {
-                console.log('Telegram WebApp is not natively available. Running in standard browser mode.');
             }
         }
 

@@ -63,11 +63,6 @@ export function ProductBottomSheet({
         }
 
         // ✅ Success — mock add-to-cart
-        console.log("Added to cart:", {
-            product: MOCK_PRODUCT.title,
-            color: selectedColor,
-            size: selectedSize,
-        });
         onOpenChange(false);
 
         // Reset on close

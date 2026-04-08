@@ -18,7 +18,6 @@ export const useWishlist = (userId: string | undefined | null) => {
         queryKey: ['wishlist', safeUserId],
         queryFn: async (): Promise<WishlistItem[]> => {
             if (!safeUserId) return [];
-            console.log("Fetching wishlist for user:", safeUserId);
             const { data } = await api.get(`/api/wishlist/${safeUserId}`);
             return data;
         },
@@ -34,12 +33,6 @@ export const useWishlist = (userId: string | undefined | null) => {
         mutationFn: async ({ productId, isCurrentlySaved }: TogglePayload) => {
             if (!safeUserId) throw new Error("User not logged in");
             const url = `/api/wishlist/${safeUserId}/${productId}`;
-            console.log("=== WISHLIST DEBUG ===");
-            console.log("Method:", isCurrentlySaved ? "DELETE" : "POST");
-            console.log("Current Auth User ID:", safeUserId);
-            console.log("Product ID:", productId);
-            console.log("Full URL:", `${api.defaults.baseURL}${url}`);
-            console.log("=====================");
             if (isCurrentlySaved) {
                 await api.delete(url);
             } else {
@@ -47,10 +40,6 @@ export const useWishlist = (userId: string | undefined | null) => {
             }
         },
         onMutate: async ({ product, isCurrentlySaved }: TogglePayload) => {
-            console.log("=== WISHLIST DEBUG: Toggle Item ===");
-            console.log("-> UserId:", safeUserId);
-            console.log(`-> Action: ${isCurrentlySaved ? "REMOVE" : "ADD"}`);
-            console.log("-> Product Payload:", product);
             await queryClient.cancelQueries({ queryKey: ['wishlist', safeUserId] });
             const previousWishlist = queryClient.getQueryData<WishlistItem[]>(['wishlist', safeUserId]);
 
@@ -87,7 +76,6 @@ export const useWishlist = (userId: string | undefined | null) => {
             toast.error(err?.response?.data?.message || err?.message || "Xatolik yuz berdi");
         },
         onSuccess: (data) => {
-            console.log("=== WISHLIST DEBUG: Toggle Item SUCCESS ===", data);
             queryClient.invalidateQueries({ queryKey: ['wishlist', safeUserId] });
         },
     });
@@ -97,7 +85,6 @@ export const useWishlist = (userId: string | undefined | null) => {
         mutationFn: async (productId: string) => {
             if (!safeUserId) throw new Error("User not logged in");
             const url = `/api/wishlist/${safeUserId}/${productId}`;
-            console.log("Removing from wishlist:", `${api.defaults.baseURL}${url}`);
             await api.delete(url);
         },
         onMutate: async (productId: string) => {

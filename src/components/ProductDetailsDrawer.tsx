@@ -28,7 +28,6 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
-    console.log("Variantlar consolega chiqarildi: ", product);
 
     // Reset default selected image when opened
     useEffect(() => {

@@ -17,7 +17,6 @@ export const useAuth = () => {
             return response.data;
         },
         onSuccess: (data) => {
-            console.log("Auth Success:", data);
             import('axios').then(axios => {
                 axios.default.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
             });

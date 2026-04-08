@@ -62,7 +62,6 @@ export const useAddress = (userId?: string) => {
                 isDefault: payload.isDefault,
             };
 
-            console.log("=== ADDRESS DEBUG === Sending POST to /api/addresses with body:", JSON.stringify(data));
 
             // Bypass potential interceptor issues by using a explicit config
             const res = await api({
