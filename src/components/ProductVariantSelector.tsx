@@ -10,7 +10,7 @@ export interface ProductTypeVariant {
 }
 
 interface ProductVariantSelectorProps {
-    product?: any; // Added to receive the product object
+    product?: any; // To receive the product object
     productId: string | number;
     onVariantSelected: (variantId: number | null) => void;
 }
@@ -25,24 +25,20 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
     const [selectedChildId, setSelectedChildId] = useState<number | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
-    // 2. Add a specific console.log to print the current product object
-    useEffect(() => {
-        if (product) {
-            console.log("Tanlangan Product:", product);
-        }
-    }, [product]);
-
     // Fetch product types based on productId
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
                 const result = await fetchProductTypes(productId);
-                // 3. Add another console.log specifically for the product types data immediately after it is fetched
-                console.log("Shu productning Type'lari:", result);
+
+                // Exact logs requested, completely separate and clear:
+                console.log("=== TANLANGAN PRODUCT ===", product);
+                console.log("=== UNING TYPE'LARI ===", result);
+
                 setData(result);
             } catch (error) {
-                // 1. Removed console.error to keep the console clean as requested
+                // Clean console, no error logging here as requested
             } finally {
                 setLoading(false);
             }
@@ -51,7 +47,7 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
         if (productId) {
             loadData();
         }
-    }, [productId]);
+    }, [productId, product]);
 
     // Determine final variant selection logic
     useEffect(() => {
