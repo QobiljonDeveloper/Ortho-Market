@@ -32,13 +32,12 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
                 setLoading(true);
                 const result = await fetchProductTypes(productId);
 
-                // Exact logs requested, completely separate and clear:
-                console.log("=== TANLANGAN PRODUCT ===", product);
-                console.log("=== UNING TYPE'LARI ===", result);
+                console.info("🎯 [DEBUG-PRODUCT] =>", product);
+                console.info("🎯 [DEBUG-TYPES] =>", result);
 
                 setData(result);
             } catch (error) {
-                // Clean console, no error logging here as requested
+                // No logs here
             } finally {
                 setLoading(false);
             }
