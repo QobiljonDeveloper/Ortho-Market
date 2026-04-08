@@ -6,6 +6,7 @@ export interface ProductTypeVariant {
     name: string;
     stock: number;
     children?: ProductTypeVariant[];
+    subTypes?: ProductTypeVariant[]; // Fallback interface property
 }
 
 interface ProductVariantSelectorProps {
@@ -51,7 +52,9 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
         const parent = data.find(p => p.id === selectedParentId);
         if (!parent) return;
 
-        if (parent.children && parent.children.length > 0) {
+        const childrenList = parent.children || parent.subTypes || [];
+
+        if (childrenList.length > 0) {
             onVariantSelected(selectedChildId);
         } else {
             onVariantSelected(selectedParentId);
@@ -75,8 +78,8 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
         return null; // Don't render component if there's no variants data
     }
 
-    const selectedParent = data.find(p => p.id === selectedParentId);
-    const hasChildren = selectedParent?.children && selectedParent.children.length > 0;
+    const selectedParentData = data.find(p => p.id === selectedParentId);
+    const parentChildrenList = selectedParentData ? (selectedParentData.children || selectedParentData.subTypes || []) : [];
 
     return (
         <div className="flex flex-col gap-4 w-full">
@@ -109,36 +112,34 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
             </div>
 
             {/* Conditional Child Variants Row */}
-            <div
-                className={`transition-all duration-300 ease-in-out overflow-hidden flex flex-col gap-2
-          ${hasChildren ? 'opacity-100 max-h-40' : 'opacity-0 max-h-0'}`
-                }
-            >
-                <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider ml-1 mt-1">QO'SHIMCHA VARIANT</h3>
-                <div className="flex flex-row overflow-x-auto gap-3 pb-2 scrollbar-none snap-x flex-wrap">
-                    {selectedParent?.children?.map((child) => {
-                        const isSelected = selectedChildId === child.id;
-                        return (
-                            <button
-                                key={child.id}
-                                onClick={() => handleChildSelect(child.id)}
-                                className={`flex-shrink-0 flex flex-col items-center justify-center w-24 h-16 rounded-2xl border transition-all duration-300 snap-center
-                  ${isSelected
-                                        ? 'border-[#007AFF] bg-[#F0F8FF]'
-                                        : 'border-gray-200 bg-white hover:bg-gray-50'
-                                    }`}
-                            >
-                                <span className={`text-sm tracking-tight ${isSelected ? 'font-bold text-[#007AFF]' : 'font-bold text-gray-900'}`}>
-                                    {child.name}
-                                </span>
-                                <span className={`text-xs mt-0.5 ${isSelected ? 'text-[#007AFF]/80' : 'text-gray-400'}`}>
-                                    {child.stock} DONA
-                                </span>
-                            </button>
-                        );
-                    })}
+            {selectedParentData && parentChildrenList && parentChildrenList.length > 0 && (
+                <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-300 ease-in-out">
+                    <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider ml-1 mt-1">QO'SHIMCHA VARIANT</h3>
+                    <div className="flex flex-row overflow-x-auto gap-3 pb-2 scrollbar-none snap-x flex-wrap">
+                        {parentChildrenList.map((child) => {
+                            const isSelected = selectedChildId === child.id;
+                            return (
+                                <button
+                                    key={child.id}
+                                    onClick={() => handleChildSelect(child.id)}
+                                    className={`flex-shrink-0 flex flex-col items-center justify-center w-24 h-16 rounded-2xl border transition-all duration-300 snap-center
+                    ${isSelected
+                                            ? 'border-[#007AFF] bg-[#F0F8FF]'
+                                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <span className={`text-sm tracking-tight ${isSelected ? 'font-bold text-[#007AFF]' : 'font-bold text-gray-900'}`}>
+                                        {child.name}
+                                    </span>
+                                    <span className={`text-xs mt-0.5 ${isSelected ? 'text-[#007AFF]/80' : 'text-gray-400'}`}>
+                                        {child.stock} DONA
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
