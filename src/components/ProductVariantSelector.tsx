@@ -32,9 +32,6 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
                 setLoading(true);
                 const result = await fetchProductTypes(productId);
 
-                console.info("🎯 [DEBUG-PRODUCT] =>", product);
-                console.info("🎯 [DEBUG-TYPES] =>", result);
-
                 setData(result);
             } catch (error) {
                 // No logs here
@@ -46,7 +43,7 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
         if (productId) {
             loadData();
         }
-    }, [productId, product]);
+    }, [productId]);
 
     // Determine final variant selection logic
     useEffect(() => {
@@ -68,11 +65,17 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
     }, [selectedParentId, selectedChildId, data, onVariantSelected]);
 
     const handleParentSelect = (id: number) => {
+        console.info("🎯 [DEBUG-PRODUCT] =>", product);
+        console.info("🎯 [DEBUG-TYPES] =>", data);
+
         setSelectedParentId(id);
         setSelectedChildId(null); // Reset child selection when parent changes
     };
 
     const handleChildSelect = (id: number) => {
+        console.info("🎯 [DEBUG-PRODUCT] =>", product);
+        console.info("🎯 [DEBUG-TYPES] =>", data);
+
         setSelectedChildId(id);
     };
 
