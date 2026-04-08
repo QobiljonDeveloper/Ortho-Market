@@ -46,8 +46,10 @@ export function ProductCard({ product }: ProductCardProps) {
 
         try {
             const details = await fetchProductById(product.id);
+            console.info("🎯 [DEBUG-PRODUCT-FETCHED] =>", details);
             setProductDetails(details);
-        } catch {
+        } catch (error) {
+            console.error("❌ API Error:", error);
             // Fallback to existing product prop data if API fails
             setProductDetails(product);
         } finally {
