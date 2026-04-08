@@ -3,6 +3,7 @@ import {
     SheetContent,
     SheetHeader,
     SheetTitle,
+    SheetDescription,
 } from "./ui/sheet";
 import { ScrollArea } from "./ui/scroll-area";
 import { WishlistCard } from "./WishlistCard";
@@ -23,6 +24,7 @@ export function SavedDrawer({ open, onOpenChange }: SavedDrawerProps) {
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="bottom" className="w-full h-[90vh] sm:max-w-md sm:h-[95vh] sm:mx-auto sm:rounded-t-4xl rounded-t-4xl flex flex-col bg-[#F8FAFC] border-t border-slate-200 p-0 text-slate-900 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                <SheetDescription className="sr-only">Sevimli mahsulotlar ro'yxati</SheetDescription>
                 <SheetHeader className="px-6 py-5 border-b border-slate-200 bg-white/80 backdrop-blur-xl shrink-0 sticky top-0 z-10 rounded-t-4xl">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">

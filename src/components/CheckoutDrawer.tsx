@@ -7,6 +7,7 @@ import {
     SheetContent,
     SheetHeader,
     SheetTitle,
+    SheetDescription,
 } from "./ui/sheet";
 import { ScrollArea } from "./ui/scroll-area";
 import { Input } from "./ui/input";
@@ -170,6 +171,7 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                     <SheetTitle className="text-xl font-bold text-slate-900 tracking-tight">
                         Rasmiylashtirish
                     </SheetTitle>
+                    <SheetDescription className="sr-only">Buyurtmani rasmiylashtirish sahifasi</SheetDescription>
                 </SheetHeader>
 
                 <ScrollArea className="flex-1 px-5 py-6">

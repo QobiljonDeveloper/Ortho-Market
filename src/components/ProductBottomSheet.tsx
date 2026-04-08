@@ -5,6 +5,7 @@ import {
     Sheet,
     SheetContent,
     SheetTitle,
+    SheetDescription,
 } from "./ui/sheet";
 import {
     MockVariantSelector,
@@ -84,6 +85,7 @@ export function ProductBottomSheet({
             >
                 {/* ── Accessibility: sr-only Title ─────────────── */}
                 <SheetTitle className="sr-only">Mahsulot xususiyatlari</SheetTitle>
+                <SheetDescription className="sr-only">Mahsulot variant tanlash oynasi</SheetDescription>
 
                 {/* ── Drag Handle ──────────────────────────────── */}
                 <div className="flex justify-center pt-3 pb-1 shrink-0">

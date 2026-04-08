@@ -2,6 +2,7 @@ import {
     Sheet,
     SheetContent,
     SheetTitle,
+    SheetDescription,
 } from "./ui/sheet";
 import { type Product } from "../types";
 import { Heart, ShieldCheck, Truck, ArrowLeft, ShoppingCart, Minus, Plus } from "lucide-react";
@@ -50,6 +51,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
             >
                 {/* Accessibility: visually hidden title for Radix */}
                 <SheetTitle className="sr-only">Mahsulot tafsilotlari</SheetTitle>
+                <SheetDescription className="sr-only">Mahsulot haqida batafsil ma'lumot</SheetDescription>
 
                 {/* Sticky Header Actions */}
                 <div className="flex justify-between items-center px-4 py-3 bg-white/90 backdrop-blur-xl border-b border-slate-100 z-50 shrink-0 sticky top-0 rounded-t-[2.5rem] shadow-sm">
