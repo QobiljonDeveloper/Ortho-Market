@@ -167,7 +167,6 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
 
                         <ProductVariants
                             productId={product.id}
-                            initialSelectedOptions={selectedOptions}
                             onOptionChange={setSelectedOptions}
                         />
 
