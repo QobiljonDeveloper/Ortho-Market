@@ -10,11 +10,13 @@ export interface ProductTypeVariant {
 }
 
 interface ProductVariantSelectorProps {
+    product?: any; // Added to receive the product object
     productId: string | number;
     onVariantSelected: (variantId: number | null) => void;
 }
 
 export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
+    product,
     productId,
     onVariantSelected
 }) => {
@@ -23,16 +25,24 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
     const [selectedChildId, setSelectedChildId] = useState<number | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
+    // 2. Add a specific console.log to print the current product object
+    useEffect(() => {
+        if (product) {
+            console.log("Tanlangan Product:", product);
+        }
+    }, [product]);
+
     // Fetch product types based on productId
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
                 const result = await fetchProductTypes(productId);
-                console.log("API Dastlabki javob:", result);
+                // 3. Add another console.log specifically for the product types data immediately after it is fetched
+                console.log("Shu productning Type'lari:", result);
                 setData(result);
             } catch (error) {
-                console.error("Failed to fetch product types:", error);
+                // 1. Removed console.error to keep the console clean as requested
             } finally {
                 setLoading(false);
             }
@@ -94,7 +104,7 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
                             <button
                                 key={parent.id}
                                 onClick={() => handleParentSelect(parent.id)}
-                                className={`flex-shrink-0 flex flex-col items-center justify-center w-24 h-16 rounded-2xl border transition-all duration-300 snap-center
+                                className={`shrink-0 flex flex-col items-center justify-center w-24 h-16 rounded-2xl border transition-all duration-300 snap-center
                   ${isSelected
                                         ? 'border-[#007AFF] bg-[#F0F8FF]' // Modern Telegram iOS blue accent
                                         : 'border-gray-200 bg-white hover:bg-gray-50'
@@ -123,7 +133,7 @@ export const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
                                 <button
                                     key={child.id}
                                     onClick={() => handleChildSelect(child.id)}
-                                    className={`flex-shrink-0 flex flex-col items-center justify-center w-24 h-16 rounded-2xl border transition-all duration-300 snap-center
+                                    className={`shrink-0 flex flex-col items-center justify-center w-24 h-16 rounded-2xl border transition-all duration-300 snap-center
                     ${isSelected
                                             ? 'border-[#007AFF] bg-[#F0F8FF]'
                                             : 'border-gray-200 bg-white hover:bg-gray-50'
