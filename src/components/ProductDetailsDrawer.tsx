@@ -5,7 +5,7 @@ import {
     SheetDescription,
 } from "./ui/sheet";
 import { type Product } from "../types";
-import { Heart, ShieldCheck, Truck, ArrowLeft, ShoppingCart, Minus, Plus } from "lucide-react";
+import { Heart, ShieldCheck, Truck, ArrowLeft, ShoppingCart, Minus, Plus, Loader2 } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -18,9 +18,10 @@ interface ProductDetailsDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     product: Product;
+    isLoading?: boolean;
 }
 
-export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDetailsDrawerProps) {
+export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }: ProductDetailsDrawerProps) {
     const { user } = useAuthContext();
     const { isSaved, toggleWishlist } = useWishlist(user?.id);
 
@@ -52,6 +53,14 @@ export function ProductDetailsDrawer({ open, onOpenChange, product }: ProductDet
                 {/* Accessibility: visually hidden title for Radix */}
                 <SheetTitle className="sr-only">Mahsulot tafsilotlari</SheetTitle>
                 <SheetDescription className="sr-only">Mahsulot haqida batafsil ma'lumot</SheetDescription>
+
+                {/* Loading Spinner Overlay */}
+                {isLoading && (
+                    <div className="absolute inset-0 z-[60] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 rounded-t-[2.5rem]">
+                        <Loader2 className="w-8 h-8 text-[#007AFF] animate-spin" />
+                        <span className="text-sm font-semibold text-slate-500">Yuklanmoqda...</span>
+                    </div>
+                )}
 
                 {/* Sticky Header Actions */}
                 <div className="flex justify-between items-center px-4 py-3 bg-white/90 backdrop-blur-xl border-b border-slate-100 z-50 shrink-0 sticky top-0 rounded-t-[2.5rem] shadow-sm">

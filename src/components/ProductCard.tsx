@@ -1,4 +1,4 @@
-import { Heart, ShoppingCart, Minus, Plus } from "lucide-react";
+import { Heart, ShoppingCart, Minus, Plus, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useCart } from "../context/CartContext";
 import type { Product } from "../types";
@@ -9,6 +9,7 @@ import { AddToCartDrawer } from "./AddToCartBottomSheet";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
+import { fetchProductById } from "../services/api";
 
 interface ProductCardProps {
     product: Product;
@@ -28,16 +29,54 @@ export function ProductCard({ product }: ProductCardProps) {
     const quantity = getItemQuantity(product.id);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+    const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+    const [productDetails, setProductDetails] = useState<Product | null>(null);
     const hasVariants = (product.colors && product.colors.length > 0) || (product.sizes && product.sizes.length > 0);
 
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
 
+    const handleCardClick = async () => {
+        // Telegram haptic feedback
+        try {
+            (window as any).Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+        } catch { }
+
+        setIsDetailsLoading(true);
+        setIsDetailsOpen(true);
+
+        try {
+            const details = await fetchProductById(product.id);
+            setProductDetails(details);
+        } catch {
+            // Fallback to existing product prop data if API fails
+            setProductDetails(product);
+        } finally {
+            setIsDetailsLoading(false);
+        }
+    };
+
+    const handleDetailsClose = (open: boolean) => {
+        setIsDetailsOpen(open);
+        if (!open) {
+            // Clear fetched details when modal closes
+            setProductDetails(null);
+            setIsDetailsLoading(false);
+        }
+    };
+
     return (
         <>
             <div
-                onClick={() => setIsDetailsOpen(true)}
+                onClick={handleCardClick}
                 className="group flex flex-col bg-white p-3 rounded-2xl border border-slate-200 relative hover:border-[#007AFF]/30 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all duration-300 h-full cursor-pointer"
             >
+                {/* Loading overlay when fetching details */}
+                {isDetailsLoading && (
+                    <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 text-[#007AFF] animate-spin" />
+                    </div>
+                )}
+
                 {/* Image Area with soft medical blue backing */}
                 <div className="relative w-full aspect-square bg-[#F1F5F9] group-hover:bg-[#E0F2F1]/50 rounded-xl overflow-hidden mb-3 shrink-0 transition-colors duration-300 flex items-center justify-center p-4">
                     {primaryImageUrl ? (
@@ -174,8 +213,9 @@ export function ProductCard({ product }: ProductCardProps) {
 
             <ProductDetailsDrawer
                 open={isDetailsOpen}
-                onOpenChange={setIsDetailsOpen}
-                product={product}
+                onOpenChange={handleDetailsClose}
+                product={productDetails || product}
+                isLoading={isDetailsLoading}
             />
 
             <AddToCartDrawer

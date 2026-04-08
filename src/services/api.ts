@@ -100,3 +100,9 @@ export const fetchProductTypes = async (productId: string | number) => {
     const response = await api.get(`/api/product-types/by-product/${productId}`);
     return response.data;
 };
+
+// Fetch full product details by product ID
+export const fetchProductById = async (productId: string | number) => {
+    const response = await api.get(`/api/products/${productId}`);
+    return response.data;
+};
