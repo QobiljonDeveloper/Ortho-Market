@@ -121,7 +121,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, x: -20 }}
                                                     onClick={() => handleEditItem(item.productId)}
-                                                    className="bg-white p-3 rounded-2xl border border-slate-100 flex gap-4 transition-all hover:bg-slate-50 hover:border-slate-200 group shadow-sm cursor-pointer"
+                                                    className="bg-white p-3 rounded-2xl border border-slate-100 flex gap-4 transition-all hover:bg-slate-50 hover:border-slate-200 group shadow-sm cursor-pointer active:scale-[0.98]"
                                                 >
                                                     {/* Clickable image area — opens product modal */}
                                                     <div
@@ -151,9 +151,8 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                                 </h4>
                                                                 {/* Variant display */}
                                                                 {variant && (
-                                                                    <p className="text-xs text-slate-400 mt-0.5 font-medium leading-relaxed">
-                                                                        Variant: {variant.parentName}
-                                                                        {variant.childName ? ` -> ${variant.childName}` : ''}
+                                                                    <p className="text-sm text-slate-500 mt-1 font-medium leading-relaxed">
+                                                                        Variant: {variant.parentName} {variant.childName ? `➔ ${variant.childName}` : ''}
                                                                     </p>
                                                                 )}
                                                             </div>
