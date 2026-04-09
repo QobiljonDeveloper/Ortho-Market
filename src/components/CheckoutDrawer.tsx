@@ -100,7 +100,7 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
     };
 
-    const VARIANTS_STORAGE_KEY = 'cart_variants';
+    const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
     /**
      * Build a dynamic note string from variant selections directly from localStorage.
@@ -116,8 +116,8 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                 .filter((item) => savedMap[item.productId])
                 .map((item) => {
                     const v = savedMap[item.productId];
-                    const childPart = v.childName ? ` -> ${v.childName}` : '';
-                    return `[Product: ${item.productNameUz} | Variant: ${v.parentName}${childPart}]`;
+                    const childPart = v.childName ? `-> ${v.childName}` : '';
+                    return `[Product: ${item.productNameUz} | Variant: ${v.parentName} ${childPart}]`.trim().replace(' ]', ']');
                 });
 
             return variantNotes.length > 0 ? variantNotes.join('\n') : null;
@@ -146,7 +146,7 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
             const variantNote = buildVariantNote();
             let finalNote = null;
             if (customNote.trim() && variantNote) {
-                finalNote = `${customNote.trim()}\n--- Selected Variants ---\n${variantNote}`;
+                finalNote = `${customNote.trim()}\n\n--- Selected Variants ---\n${variantNote}`;
             } else if (customNote.trim()) {
                 finalNote = customNote.trim();
             } else if (variantNote) {

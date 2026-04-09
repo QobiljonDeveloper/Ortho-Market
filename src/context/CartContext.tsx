@@ -25,7 +25,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const VARIANTS_STORAGE_KEY = 'cart_variants';
+export const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
