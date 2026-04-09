@@ -237,10 +237,9 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                                                         {item.productNameUz}
                                                     </p>
                                                     {variant && (
-                                                        <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
-                                                            <span className="inline-block w-1 h-1 rounded-full bg-[#007AFF]/50" />
-                                                            {variant.parentName}
-                                                            {variant.childName ? ` > ${variant.childName}` : ''}
+                                                        <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                                                            Variant: {variant.parentName}
+                                                            {variant.childName ? ` -> ${variant.childName}` : ''}
                                                         </p>
                                                     )}
                                                     <p className="text-[11px] text-slate-400 mt-0.5">
