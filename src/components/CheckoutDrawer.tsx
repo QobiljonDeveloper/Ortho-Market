@@ -14,7 +14,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Textarea } from "./ui/textarea";
-import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store, ShieldCheck } from "lucide-react";
+import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store, ShieldCheck, Package } from "lucide-react";
 import { AddressPopup } from "./AddressPopup";
 import { useAddress } from "../hooks/useAddress";
 import { api } from "../services/api";
@@ -43,7 +43,7 @@ interface CheckoutDrawerProps {
 }
 
 export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
-    const { cartTotal, clearCart, cart } = useCart();
+    const { cartTotal, clearCart, cart, variantMap } = useCart();
     const { user, token } = useAuthContext();
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,10 +59,14 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
     const [fullName, setFullName] = useState("");
     const [phone, setPhone] = useState("+998");
 
+    // Custom note from user
+    const [customNote, setCustomNote] = useState("");
+
     useEffect(() => {
         if (open) {
             setFullName(user?.fullName || "");
             setPhone(user?.phone || "+998");
+            setCustomNote("");
         }
     }, [open, user]);
 
@@ -96,6 +100,21 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
     };
 
+    /**
+     * Build a dynamic note string from variant selections.
+     * Format: "{ProductName} - Variant: {ParentName} (ChildName)"
+     */
+    const buildVariantNote = (): string => {
+        const variantNotes = cart
+            .filter((item) => variantMap[item.productId])
+            .map((item) => {
+                const v = variantMap[item.productId];
+                const childPart = v.childName ? ` (${v.childName})` : '';
+                return `${item.productNameUz} - Variant: ${v.parentName}${childPart}`;
+            });
+        return variantNotes.join('\n');
+    };
+
     const handleConfirm = async () => {
         if (!user?.id || !token) {
             toast.error("Iltimos, avval tizimga kiring.");
@@ -112,7 +131,18 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
 
         setIsSubmitting(true);
         try {
-            const payload = {
+            // Build the final note combining user's custom note + variant info
+            const variantNote = buildVariantNote();
+            let finalNote = '';
+            if (customNote.trim() && variantNote) {
+                finalNote = `${customNote.trim()}\n---\n${variantNote}`;
+            } else if (customNote.trim()) {
+                finalNote = customNote.trim();
+            } else if (variantNote) {
+                finalNote = variantNote;
+            }
+
+            const payload: any = {
                 userId: user.id,
                 telegramId: (user as any).telegramId || "",
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
@@ -123,6 +153,11 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                     quantity: item.quantity
                 }))
             };
+
+            // Include note only if there is content
+            if (finalNote) {
+                payload.note = finalNote;
+            }
 
             const res = await api.post("/api/orders", payload, {
                 headers: {
@@ -176,6 +211,52 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
 
                 <ScrollArea className="flex-1 px-5 py-6">
                     <div className="space-y-8">
+                        {/* Cart Items Summary */}
+                        {cart && cart.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 mb-2 ml-1">
+                                    <div className="w-8 h-8 rounded-lg bg-[#E0F2F1] flex items-center justify-center text-[#007AFF] border border-[#007AFF]/10">
+                                        <Package className="w-4 h-4" strokeWidth={2} />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Mahsulotlar</h3>
+                                </div>
+                                <div className="bg-[#F8FAFC] rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+                                    {cart.map((item) => {
+                                        const variant = variantMap[item.productId];
+                                        return (
+                                            <div key={item.id} className="flex items-center gap-3 p-3.5">
+                                                <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                                                    {item.primaryImageUrl ? (
+                                                        <img src={item.primaryImageUrl} alt={item.productNameUz} className="w-full h-full object-contain" />
+                                                    ) : (
+                                                        <div className="text-[8px] text-slate-300 font-bold text-center">📦</div>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-slate-800 leading-snug line-clamp-1">
+                                                        {item.productNameUz}
+                                                    </p>
+                                                    {variant && (
+                                                        <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                                            <span className="inline-block w-1 h-1 rounded-full bg-[#007AFF]/50" />
+                                                            {variant.parentName}
+                                                            {variant.childName ? ` > ${variant.childName}` : ''}
+                                                        </p>
+                                                    )}
+                                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                                        {item.quantity} × {formatPrice(item.unitPrice || item.basePrice || 0)}
+                                                    </p>
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-900 shrink-0">
+                                                    {formatPrice((item.unitPrice || item.basePrice || 0) * item.quantity)}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Summary Section */}
                         <div className="bg-[#F8FAFC] p-6 rounded-3xl border border-slate-200 flex flex-col items-center group shadow-sm relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-[#007AFF]/5 rounded-full blur-[30px] pointer-events-none" />
@@ -370,6 +451,8 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                                     </div>
                                     <Textarea
                                         id="comment"
+                                        value={customNote}
+                                        onChange={(e) => setCustomNote(e.target.value)}
                                         placeholder="Qo'shimcha istaklaringiz..."
                                         className="min-h-[100px] rounded-xl border-slate-200 bg-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#007AFF]/20 focus-visible:border-[#007AFF] text-slate-900 font-medium resize-none pl-11 py-4 placeholder:text-slate-400 shadow-sm"
                                     />

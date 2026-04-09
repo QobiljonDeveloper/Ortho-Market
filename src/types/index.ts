@@ -82,6 +82,9 @@ export interface CartItem {
     unitPrice?: number;
     basePrice?: number;
     primaryImageUrl?: string | null;
+    // Client-side variant selections (not persisted to backend cart)
+    selectedParentName?: string;
+    selectedChildName?: string;
 }
 
 export interface WishlistItem {

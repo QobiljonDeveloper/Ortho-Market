@@ -1,7 +1,12 @@
-import { createContext, useContext, ReactNode, useCallback } from "react";
+import { createContext, useContext, ReactNode, useCallback, useState } from "react";
 import type { Product, CartItem } from "../types";
 import { useAuthContext } from "./AuthContext";
 import { useCartApi } from "../hooks/useCartApi";
+
+interface VariantSelection {
+    parentName: string;
+    childName?: string;
+}
 
 interface CartContextType {
     cart: CartItem[];
@@ -13,6 +18,9 @@ interface CartContextType {
     cartTotal: number;
     cartCount: number;
     refetchCart: () => void;
+    setVariantForItem: (productId: string, parentName: string, childName?: string) => void;
+    getVariantForItem: (productId: string) => VariantSelection | undefined;
+    variantMap: Record<string, VariantSelection>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -20,6 +28,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
     const { cart, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
+
+    // Client-side variant selection storage (not persisted to backend cart)
+    const [variantMap, setVariantMap] = useState<Record<string, VariantSelection>>({});
 
     // Xavfsizlik qatlami: cart doim massiv ekanligiga ishonch hosil qilish
     const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
@@ -35,6 +46,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const item = safeCart.find((item: any) => item?.productId === productId);
         return item ? item.quantity : 0;
     }, [safeCart]);
+
+    const setVariantForItem = useCallback((productId: string, parentName: string, childName?: string) => {
+        setVariantMap(prev => ({
+            ...prev,
+            [productId]: { parentName, childName }
+        }));
+    }, []);
+
+    const getVariantForItem = useCallback((productId: string): VariantSelection | undefined => {
+        return variantMap[productId];
+    }, [variantMap]);
 
     const addToCart = useCallback((product: Product) => {
         if (!user?.id) {
@@ -62,6 +84,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
             const item = safeCart.find((i: any) => i?.productId === productId);
             if (item) {
                 removeCartItemMutation.mutate(item.id);
+                // Clean up variant selection
+                setVariantMap(prev => {
+                    const next = { ...prev };
+                    delete next[productId];
+                    return next;
+                });
             }
         } catch (err) {
             console.error("Error executing removeFromCart mutation:", err);
@@ -86,6 +114,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // Typically a loop removing everything, or better a dedicated backend endpoint.
         // The prompt didn't request a clearCart endpoint, so skipping it.
         console.warn("Backend clear cart endpoint not yet configured.");
+        setVariantMap({});
     }, []);
 
     return (
@@ -100,6 +129,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 cartCount,
                 getItemQuantity,
                 refetchCart: refetch,
+                setVariantForItem,
+                getVariantForItem,
+                variantMap,
             }}
         >
             {children}
@@ -115,3 +147,4 @@ export function useCart() {
     }
     return context;
 }
+

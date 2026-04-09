@@ -10,10 +10,13 @@ import {
     SheetFooter,
 } from "./ui/sheet";
 import { ScrollArea } from "./ui/scroll-area";
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ArrowLeft, Pencil, Loader2 } from "lucide-react";
 import { CheckoutDrawer } from "./CheckoutDrawer";
+import { ProductDetailsDrawer } from "./ProductDetailsDrawer";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { fetchProductById } from "../services/api";
+import type { Product } from "../types";
 
 interface CartDrawerProps {
     open: boolean;
@@ -21,9 +24,14 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
-    const { cart, updateQuantity, removeFromCart, cartTotal, cartCount, refetchCart } = useCart();
+    const { cart, updateQuantity, removeFromCart, cartTotal, cartCount, refetchCart, getVariantForItem, setVariantForItem } = useCart();
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
     const navigate = useNavigate();
+
+    // Product details modal state for editing variants
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isEditLoading, setIsEditLoading] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -33,6 +41,20 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
     const formatPrice = (price: number) => {
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
+    };
+
+    const handleEditItem = async (productId: string) => {
+        setIsEditLoading(true);
+        setIsEditDrawerOpen(true);
+        try {
+            const product = await fetchProductById(productId);
+            setEditingProduct(product);
+        } catch (err) {
+            console.error("Failed to fetch product details:", err);
+            setIsEditDrawerOpen(false);
+        } finally {
+            setIsEditLoading(false);
+        }
     };
 
     return (
@@ -87,6 +109,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                     <AnimatePresence initial={false}>
                                         {cart.map((item) => {
                                             if (!item) return null;
+                                            const variant = getVariantForItem(item.productId);
                                             return (
                                                 <motion.div
                                                     key={item.id}
@@ -96,29 +119,45 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                     exit={{ opacity: 0, x: -20 }}
                                                     className="bg-white p-3 rounded-2xl border border-slate-100 flex gap-4 transition-all hover:bg-slate-50 hover:border-slate-200 group shadow-sm"
                                                 >
-                                                    <div className="h-20 w-20 rounded-xl overflow-hidden bg-[#F8FAFC] shrink-0 border border-slate-100 p-2 flex items-center justify-center">
+                                                    {/* Clickable image area — opens product modal */}
+                                                    <div
+                                                        className="h-20 w-20 rounded-xl overflow-hidden bg-[#F8FAFC] shrink-0 border border-slate-100 p-2 flex items-center justify-center cursor-pointer relative group/img"
+                                                        onClick={() => handleEditItem(item.productId)}
+                                                    >
                                                         {(() => {
                                                             const imgUrl = item.primaryImageUrl;
                                                             return imgUrl ? (
-                                                                <img src={imgUrl} alt={item.productNameUz || "Mahsulot"} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-sm" />
+                                                                <img src={imgUrl} alt={item.productNameUz || "Mahsulot"} className="w-full h-full object-contain group-hover/img:scale-110 transition-transform duration-500 drop-shadow-sm" />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase text-center leading-none">
                                                                     Rasm<br />yo'q
                                                                 </div>
                                                             );
                                                         })()}
+                                                        {/* Edit overlay hint */}
+                                                        <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors rounded-xl flex items-center justify-center">
+                                                            <Pencil className="w-4 h-4 text-white opacity-0 group-hover/img:opacity-70 transition-opacity" strokeWidth={2.5} />
+                                                        </div>
                                                     </div>
+
                                                     <div className="flex flex-col flex-1 py-0.5 justify-between">
                                                         <div className="flex justify-between gap-2.5 items-start">
-                                                            <h4
-                                                                className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 cursor-pointer hover:text-[#007AFF] transition-colors"
-                                                                onClick={() => {
-                                                                    onOpenChange(false);
-                                                                    navigate(`/product/${item.productId}`);
-                                                                }}
+                                                            <div
+                                                                className="flex-1 cursor-pointer"
+                                                                onClick={() => handleEditItem(item.productId)}
                                                             >
-                                                                {item.productNameUz}
-                                                            </h4>
+                                                                <h4 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 hover:text-[#007AFF] transition-colors">
+                                                                    {item.productNameUz}
+                                                                </h4>
+                                                                {/* Variant display */}
+                                                                {variant && (
+                                                                    <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#007AFF]/40" />
+                                                                        {variant.parentName}
+                                                                        {variant.childName ? ` > ${variant.childName}` : ''}
+                                                                    </p>
+                                                                )}
+                                                            </div>
                                                             <button
                                                                 onClick={() => removeFromCart(item.productId)}
                                                                 className="text-slate-300 hover:text-red-500 bg-white border border-slate-100 hover:bg-red-50 hover:border-red-100 rounded-lg p-1.5 transition-all shadow-sm shrink-0"
@@ -191,6 +230,8 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     )}
                 </SheetContent>
             </Sheet>
+
+            {/* Checkout Drawer */}
             <CheckoutDrawer
                 open={isCheckoutOpen}
                 onOpenChange={(val) => {
@@ -200,6 +241,21 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     }
                 }}
             />
+
+            {/* Product Details Drawer for editing variants */}
+            {editingProduct && (
+                <ProductDetailsDrawer
+                    open={isEditDrawerOpen}
+                    onOpenChange={(val) => {
+                        setIsEditDrawerOpen(val);
+                        if (!val) {
+                            setEditingProduct(null);
+                        }
+                    }}
+                    product={editingProduct}
+                    isLoading={isEditLoading}
+                />
+            )}
         </>
     );
 }
