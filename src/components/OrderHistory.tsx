@@ -1,5 +1,6 @@
-import { X, Package, Clock, CheckCircle2, Truck, ChevronRight } from 'lucide-react';
+import { X, Package, Clock, CheckCircle2, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect } from 'react';
 
 interface OrderHistoryProps {
     open: boolean;
@@ -12,7 +13,7 @@ import { useAuthContext } from '../context/AuthContext';
 
 export function OrderHistory({ open, onClose }: OrderHistoryProps) {
     const { user } = useAuthContext();
-    const { data: orders = [], isLoading } = useQuery({
+    const { data: orders = [], isLoading, refetch } = useQuery({
         queryKey: ["orders", user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
@@ -22,6 +23,14 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
         },
         enabled: !!user?.id && open,
     });
+
+    useEffect(() => {
+        if (!open) return;
+        const interval = setInterval(() => {
+            refetch();
+        }, 15000); // 15 seconds
+        return () => clearInterval(interval);
+    }, [open, refetch]);
 
     return (
         <AnimatePresence>
@@ -64,7 +73,7 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
-                                const totalStr = order.totalAmount ? `${order.totalAmount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, " ")} UZS` : "Hisoblanmoqda";
+                                const totalStr = order.totalAmount ? `${order.totalAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} UZS` : "Hisoblanmoqda >";
 
                                 const paymentStatus = order.paymentStatus || 0;
                                 let paymentBadge = null;
@@ -80,29 +89,34 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                     <div
                                         key={order.id}
                                         onClick={() => window.dispatchEvent(new CustomEvent('open-order-details', { detail: order }))}
-                                        className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 relative overflow-hidden group cursor-pointer hover:border-[#007AFF]/30 hover:bg-slate-50/50 active:scale-[0.98] transition-all"
+                                        className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3 mb-3 cursor-pointer hover:border-[#007AFF]/30 border border-transparent transition-all"
                                     >
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                                        {/* Top Row: Extracted Date out from ID line */}
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400 font-medium uppercase">
                                                     BUYURTMA RAQAMI
                                                 </span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-lg font-bold text-slate-900">
-                                                        #{String(order.id).slice(0, 8)}
-                                                    </span>
-                                                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />
-                                                        {formattedDate}
-                                                    </span>
-                                                </div>
+                                                <span className="text-lg font-bold text-gray-900">
+                                                    #{String(order.id).slice(0, 8)}
+                                                </span>
                                             </div>
-                                            <div className="flex flex-col items-end gap-2">
+                                            <div>
                                                 {paymentBadge}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                                        {/* Middle Row: Date */}
+                                        <div className="text-sm text-gray-500 flex items-center gap-1">
+                                            <Clock className="w-4 h-4" />
+                                            {formattedDate}
+                                        </div>
+
+                                        {/* Divider */}
+                                        <div className="border-t border-gray-100 my-1"></div>
+
+                                        {/* Bottom Row */}
+                                        <div className="flex justify-between items-center">
                                             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${isDelivered
                                                 ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                                                 : "bg-[#007AFF]/5 text-[#007AFF] border-[#007AFF]/20"
@@ -110,13 +124,10 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                                 {isDelivered ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
                                                 {statusText}
                                             </div>
-                                            <div className="flex flex-col items-end gap-1 text-right">
-                                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Jami summa</span>
-                                                <span className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                            <div className="flex flex-col items-end text-right">
+                                                <span className="text-xs text-gray-400 font-medium uppercase">JAMI SUMMA</span>
+                                                <span className="text-base font-bold text-gray-900 flex items-center gap-1">
                                                     {totalStr}
-                                                    <div className="w-6 h-6 rounded-full bg-slate-50 group-hover:bg-[#007AFF]/10 flex items-center justify-center text-slate-400 group-hover:text-[#007AFF] transition-colors -translate-y-px">
-                                                        <ChevronRight className="w-4 h-4" />
-                                                    </div>
                                                 </span>
                                             </div>
                                         </div>
