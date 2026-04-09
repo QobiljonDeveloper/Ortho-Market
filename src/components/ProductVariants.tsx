@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useProductVariants } from "../hooks/useProductVariants";
 
@@ -28,22 +28,94 @@ export function ProductVariants({
     const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
     const [selectedChildId, setSelectedChildId] = useState<number | null>(null);
 
-    const handleParentSelect = (parent: VariantItem) => {
-        setSelectedParentId(parent.id);
-        setSelectedChildId(null); // Always reset child when parent changes
+    // Add initialization flag to prevent wiping variant on first load
+    const [isInitialized, setIsInitialized] = useState(false);
 
-        // If parent has no children, it IS the final selection
-        if (!parent.children || parent.children.length === 0) {
-            onOptionChange?.({ type: parent.name, typeId: String(parent.id) });
+    const VARIANTS_KEY = 'tg_cart_variants';
+
+    // 1. Initialize from LocalStorage
+    useEffect(() => {
+        if (!isLoading && productTypes.length > 0 && !isInitialized) {
+            const saved = localStorage.getItem(VARIANTS_KEY);
+            if (saved) {
+                const existingData = JSON.parse(saved);
+                const currentVariant = existingData[productId];
+
+                if (currentVariant && currentVariant.parentName) {
+                    const parent = (productTypes as VariantItem[]).find(p => p.name === currentVariant.parentName);
+                    if (parent) {
+                        setSelectedParentId(parent.id);
+                        if (currentVariant.childName) {
+                            const child = parent.children?.find(c => c.name === currentVariant.childName);
+                            if (child) setSelectedChildId(child.id);
+                        }
+                    }
+                }
+            }
+            setIsInitialized(true);
+        }
+    }, [isLoading, productTypes, productId, isInitialized]);
+
+    // 2. Sync to LocalStorage requested by user
+    useEffect(() => {
+        // Do not sync if not fully initialized yet
+        if (!isInitialized) return;
+
+        const saved = localStorage.getItem(VARIANTS_KEY);
+        const existingData = saved ? JSON.parse(saved) : {};
+
+        if (selectedParentId) {
+            // Find the selected parent object
+            const parent = (productTypes as VariantItem[]).find(p => p.id === selectedParentId);
+            // Find the selected child object (if any)
+            const child = parent?.children?.find(c => c.id === selectedChildId);
+
+            if (parent) {
+                existingData[productId] = {
+                    parentName: parent.name,
+                    childName: child?.name || null
+                };
+                localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
+                // Fire storage event manually so CartContext updates in real-time
+                window.dispatchEvent(new Event('storage'));
+            }
         } else {
-            // Parent selected but child not yet chosen
-            onOptionChange?.({ type: parent.name, typeId: "" });
+            // Handling Unselection
+            if (existingData[productId]) {
+                delete existingData[productId];
+                localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
+                window.dispatchEvent(new Event('storage'));
+            }
+        }
+    }, [selectedParentId, selectedChildId, productId, productTypes, isInitialized]);
+
+    const handleParentSelect = (parent: VariantItem) => {
+        // If clicking the same parent, unselect it
+        if (selectedParentId === parent.id) {
+            setSelectedParentId(null);
+            setSelectedChildId(null);
+            onOptionChange?.({});
+        } else {
+            setSelectedParentId(parent.id);
+            setSelectedChildId(null); // Always reset child when parent changes
+
+            if (!parent.children || parent.children.length === 0) {
+                onOptionChange?.({ type: parent.name, typeId: String(parent.id) });
+            } else {
+                onOptionChange?.({ type: parent.name, typeId: "" });
+            }
         }
     };
 
     const handleChildSelect = (child: VariantItem, parentName: string) => {
-        setSelectedChildId(child.id);
-        onOptionChange?.({ type: parentName, subType: child.name, typeId: String(child.id) });
+        // Allow click to unselect child
+        if (selectedChildId === child.id) {
+            setSelectedChildId(null);
+            onOptionChange?.({ type: parentName, typeId: "" });
+        } else {
+            setSelectedChildId(child.id);
+            onOptionChange?.({ type: parentName, subType: child.name, typeId: String(child.id) });
+        }
     };
 
     // Hide entire section while loading or if no data
