@@ -100,19 +100,30 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
     };
 
+    const VARIANTS_STORAGE_KEY = 'cart_variants';
+
     /**
-     * Build a dynamic note string from variant selections.
-     * Format: "{ProductName} - Variant: {ParentName} (ChildName)"
+     * Build a dynamic note string from variant selections directly from localStorage.
+     * Format: "[Product: {cartItem.name} | Variant: {parentName} -> {childName}]"
      */
-    const buildVariantNote = (): string => {
-        const variantNotes = cart
-            .filter((item) => variantMap[item.productId])
-            .map((item) => {
-                const v = variantMap[item.productId];
-                const childPart = v.childName ? ` (${v.childName})` : '';
-                return `${item.productNameUz} - Variant: ${v.parentName}${childPart}`;
-            });
-        return variantNotes.join('\n');
+    const buildVariantNote = (): string | null => {
+        try {
+            const saved = localStorage.getItem(VARIANTS_STORAGE_KEY);
+            if (!saved) return null;
+            const savedMap = JSON.parse(saved);
+
+            const variantNotes = cart
+                .filter((item) => savedMap[item.productId])
+                .map((item) => {
+                    const v = savedMap[item.productId];
+                    const childPart = v.childName ? ` -> ${v.childName}` : '';
+                    return `[Product: ${item.productNameUz} | Variant: ${v.parentName}${childPart}]`;
+                });
+
+            return variantNotes.length > 0 ? variantNotes.join('\n') : null;
+        } catch {
+            return null;
+        }
     };
 
     const handleConfirm = async () => {
@@ -133,9 +144,9 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
         try {
             // Build the final note combining user's custom note + variant info
             const variantNote = buildVariantNote();
-            let finalNote = '';
+            let finalNote = null;
             if (customNote.trim() && variantNote) {
-                finalNote = `${customNote.trim()}\n---\n${variantNote}`;
+                finalNote = `${customNote.trim()}\n--- Selected Variants ---\n${variantNote}`;
             } else if (customNote.trim()) {
                 finalNote = customNote.trim();
             } else if (variantNote) {
@@ -165,6 +176,9 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                     ...(token ? { Authorization: `Bearer ${token}` } : {})
                 }
             });
+
+            // 4. Cleanup: ONLY AFTER a successful 200/201 API response for order creation
+            localStorage.removeItem(VARIANTS_STORAGE_KEY);
 
             try {
                 await api.delete(`/api/cart/${user.id}`, {

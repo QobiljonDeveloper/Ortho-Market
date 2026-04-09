@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useCallback, useState } from "react";
+import { createContext, useContext, ReactNode, useCallback, useState, useEffect } from "react";
 import type { Product, CartItem } from "../types";
 import { useAuthContext } from "./AuthContext";
 import { useCartApi } from "../hooks/useCartApi";
@@ -25,14 +25,23 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+export const VARIANTS_STORAGE_KEY = 'cart_variants';
+
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
     const { cart, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
 
-    // Client-side variant selection storage (not persisted to backend cart)
-    const [variantMap, setVariantMap] = useState<Record<string, VariantSelection>>({});
+    // Client-side variant selection storage persisted to localStorage
+    const [variantMap, setVariantMap] = useState<Record<string, VariantSelection>>(() => {
+        try {
+            const saved = localStorage.getItem(VARIANTS_STORAGE_KEY);
+            return saved ? JSON.parse(saved) : {};
+        } catch (err) {
+            console.error("Failed to parse variants from localStorage:", err);
+            return {};
+        }
+    });
 
-    // Xavfsizlik qatlami: cart doim massiv ekanligiga ishonch hosil qilish
     const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
 
     const cartCount = safeCart.length;
@@ -48,10 +57,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [safeCart]);
 
     const setVariantForItem = useCallback((productId: string, parentName: string, childName?: string) => {
-        setVariantMap(prev => ({
-            ...prev,
-            [productId]: { parentName, childName }
-        }));
+        setVariantMap(prev => {
+            const next = { ...prev };
+
+            // If parentName is empty, it means "clear selection"
+            if (!parentName) {
+                delete next[productId];
+            } else {
+                next[productId] = { parentName, childName };
+            }
+
+            localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(next));
+            return next;
+        });
     }, []);
 
     const getVariantForItem = useCallback((productId: string): VariantSelection | undefined => {
@@ -87,7 +105,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 // Clean up variant selection
                 setVariantMap(prev => {
                     const next = { ...prev };
-                    delete next[productId];
+                    if (next[productId]) {
+                        delete next[productId];
+                        localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(next));
+                    }
                     return next;
                 });
             }
@@ -111,10 +132,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [user?.id, safeCart, removeFromCart, updateQuantityMutation]);
 
     const clearCart = useCallback(() => {
-        // Typically a loop removing everything, or better a dedicated backend endpoint.
-        // The prompt didn't request a clearCart endpoint, so skipping it.
         console.warn("Backend clear cart endpoint not yet configured.");
         setVariantMap({});
+        localStorage.removeItem(VARIANTS_STORAGE_KEY);
+    }, []);
+
+    // Listen for cross-tab or direct localStorage updates
+    useEffect(() => {
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === VARIANTS_STORAGE_KEY) {
+                try {
+                    setVariantMap(e.newValue ? JSON.parse(e.newValue) : {});
+                } catch {
+                    // Ignore parsing errors
+                }
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
     }, []);
 
     return (
