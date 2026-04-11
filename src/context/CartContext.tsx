@@ -7,7 +7,9 @@ import { fetchProductTypes } from "../services/api";
 
 interface VariantSelection {
     parentName: string;
+    parentPrice?: number;
     childName?: string;
+    childPrice?: number;
 }
 
 interface CartContextType {
@@ -69,28 +71,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [typeQueries, productIds]);
 
     const getItemPrice = useCallback((productId: string) => {
-        const item = safeCart.find((i: any) => i?.productId === productId);
+        const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
 
         let price = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
-        const variant = variantMap[productId];
+        const variant = variantMap[String(productId)];
         if (variant) {
-            const types = productTypesMap[productId];
-            if (types) {
-                const parent = types.find((t: any) => t.name === variant.parentName);
-                if (parent) {
-                    price += (parent.price || 0);
-                    if (variant.childName && parent.children) {
-                        const child = parent.children.find((c: any) => c.name === variant.childName);
-                        if (child) {
-                            price += (child.price || 0);
-                        }
-                    }
-                }
-            }
+            price += (variant.parentPrice || 0) + (variant.childPrice || 0);
         }
         return price;
-    }, [safeCart, variantMap, productTypesMap]);
+    }, [safeCart, variantMap]);
 
     const cartTotal = useMemo(() => {
         return safeCart.reduce((total: number, item: any) => {
@@ -112,7 +102,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             if (!parentName) {
                 delete next[productId];
             } else {
-                next[productId] = { parentName, childName };
+                next[String(productId)] = { parentName, parentPrice: 0, childName, childPrice: 0 };
             }
 
             localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(next));

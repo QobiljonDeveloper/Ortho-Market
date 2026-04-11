@@ -16,6 +16,7 @@ interface VariantItem {
     name: string;
     stock?: number;
     logoUrl?: string;
+    price?: number | null;
     children?: VariantItem[];
 }
 
@@ -73,7 +74,9 @@ export function ProductVariants({
             if (parent) {
                 existingData[productId] = {
                     parentName: parent.name,
-                    childName: child?.name || null
+                    parentPrice: parent.price || 0,
+                    childName: child?.name || null,
+                    childPrice: child?.price || 0
                 };
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
                 // Fire storage event manually so CartContext updates in real-time

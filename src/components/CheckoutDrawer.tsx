@@ -44,7 +44,7 @@ interface CheckoutDrawerProps {
 }
 
 export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: CheckoutDrawerProps) {
-    const { cartTotal, clearCart, cart, variantMap, productTypesMap, getItemPrice } = useCart();
+    const { cartTotal, clearCart, cart, productTypesMap } = useCart();
     const { user, token } = useAuthContext();
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -141,12 +141,15 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             return;
         }
 
+        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
+        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+
         // Validate variants
         for (const item of cart) {
             const types = productTypesMap[item.productId];
             if (types && types.length > 0) {
-                const variant = variantMap[item.productId];
-                if (!variant || !variant.parentName) {
+                const variantData = storedVariants[String(item.productId)];
+                if (!variantData) {
                     toast.error('Iltimos, mahsulot turini tanlang: ' + item.productNameUz);
                     if (onRequireVariant) onRequireVariant(item.productId);
                     return;
@@ -250,7 +253,12 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                 </div>
                                 <div className="bg-[#F8FAFC] rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
                                     {cart.map((item) => {
-                                        const variant = variantMap[item.productId];
+                                        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
+                                        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+                                        const variantData = storedVariants[String(item.productId)];
+                                        const basePrice = item.unitPrice || item.basePrice || 0;
+                                        const itemFinalPrice = basePrice + (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+
                                         return (
                                             <div key={item.id} className="flex items-center gap-3 p-3.5">
                                                 <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 p-1">
@@ -264,18 +272,18 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                                     <p className="text-sm font-bold text-slate-800 leading-snug line-clamp-1">
                                                         {item.productNameUz}
                                                     </p>
-                                                    {variant && (
+                                                    {variantData && variantData.parentName && (
                                                         <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                                                            Variant: {variant.parentName}
-                                                            {variant.childName ? ` ➔ ${variant.childName}` : ''}
+                                                            Variant: {variantData.parentName}
+                                                            {variantData.childName ? ` ➔ ${variantData.childName}` : ''}
                                                         </p>
                                                     )}
                                                     <p className="text-[11px] text-slate-400 mt-0.5">
-                                                        {item.quantity} × {formatPrice(getItemPrice(item.productId))}
+                                                        {item.quantity} × {formatPrice(itemFinalPrice)}
                                                     </p>
                                                 </div>
                                                 <span className="text-sm font-bold text-slate-900 shrink-0">
-                                                    {formatPrice(getItemPrice(item.productId) * item.quantity)}
+                                                    {formatPrice(itemFinalPrice * item.quantity)}
                                                 </span>
                                             </div>
                                         );
