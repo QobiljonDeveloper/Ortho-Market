@@ -23,7 +23,7 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
-    const { cart, updateQuantity, removeFromCart, cartTotal, cartCount, refetchCart, getVariantForItem } = useCart();
+    const { cart, updateQuantity, removeFromCart, cartTotal, cartCount, refetchCart, getVariantForItem, getItemPrice } = useCart();
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
     // Product details modal state for editing variants
@@ -169,7 +169,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
                                                         <div className="flex items-center justify-between mt-2">
                                                             <span className="font-bold text-[#007AFF] text-sm">
-                                                                {formatPrice(item.unitPrice || item.basePrice || 0)}
+                                                                {formatPrice(getItemPrice(item.productId))}
                                                             </span>
 
                                                             <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-lg p-1 border border-slate-100">
@@ -246,6 +246,10 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     if (!val) {
                         onOpenChange(false);
                     }
+                }}
+                onRequireVariant={(productId) => {
+                    setIsCheckoutOpen(false);
+                    handleEditItem(productId);
                 }}
             />
 

@@ -40,10 +40,11 @@ const REGION_MAP: Record<number, string> = {
 interface CheckoutDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onRequireVariant?: (productId: string) => void;
 }
 
-export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
-    const { cartTotal, clearCart, cart, variantMap } = useCart();
+export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: CheckoutDrawerProps) {
+    const { cartTotal, clearCart, cart, variantMap, productTypesMap, getItemPrice } = useCart();
     const { user, token } = useAuthContext();
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,6 +139,19 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
         if (!cart || cart.length === 0) {
             toast.error("Savatingiz bo'sh.");
             return;
+        }
+
+        // Validate variants
+        for (const item of cart) {
+            const types = productTypesMap[item.productId];
+            if (types && types.length > 0) {
+                const variant = variantMap[item.productId];
+                if (!variant || !variant.parentName) {
+                    toast.error('Iltimos, mahsulot turini tanlang: ' + item.productNameUz);
+                    if (onRequireVariant) onRequireVariant(item.productId);
+                    return;
+                }
+            }
         }
 
         setIsSubmitting(true);
@@ -257,11 +271,11 @@ export function CheckoutDrawer({ open, onOpenChange }: CheckoutDrawerProps) {
                                                         </p>
                                                     )}
                                                     <p className="text-[11px] text-slate-400 mt-0.5">
-                                                        {item.quantity} × {formatPrice(item.unitPrice || item.basePrice || 0)}
+                                                        {item.quantity} × {formatPrice(getItemPrice(item.productId))}
                                                     </p>
                                                 </div>
                                                 <span className="text-sm font-bold text-slate-900 shrink-0">
-                                                    {formatPrice((item.unitPrice || item.basePrice || 0) * item.quantity)}
+                                                    {formatPrice(getItemPrice(item.productId) * item.quantity)}
                                                 </span>
                                             </div>
                                         );

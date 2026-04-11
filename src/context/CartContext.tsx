@@ -1,7 +1,9 @@
-import { createContext, useContext, ReactNode, useCallback, useState, useEffect } from "react";
+import { createContext, useContext, ReactNode, useCallback, useState, useEffect, useMemo } from "react";
 import type { Product, CartItem } from "../types";
 import { useAuthContext } from "./AuthContext";
 import { useCartApi } from "../hooks/useCartApi";
+import { useQueries } from "@tanstack/react-query";
+import { fetchProductTypes } from "../services/api";
 
 interface VariantSelection {
     parentName: string;
@@ -15,12 +17,14 @@ interface CartContextType {
     updateQuantity: (productId: string, quantity: number) => void;
     clearCart: () => void;
     getItemQuantity: (productId: string) => number;
+    getItemPrice: (productId: string) => number;
     cartTotal: number;
     cartCount: number;
     refetchCart: () => void;
     setVariantForItem: (productId: string, parentName: string, childName?: string) => void;
     getVariantForItem: (productId: string) => VariantSelection | undefined;
     variantMap: Record<string, VariantSelection>;
+    productTypesMap: Record<string, any[]>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -45,10 +49,54 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
 
     const cartCount = safeCart.length;
-    const cartTotal = safeCart.reduce(
-        (total: number, item: any) => total + ((item?.unitPrice || item?.basePrice || item?.priceValue || item?.price || 0) * (item?.quantity || 0)),
-        0
-    );
+
+    const productIds: string[] = useMemo(() => Array.from(new Set(safeCart.map((i: any) => String(i.productId)))), [safeCart]);
+
+    const typeQueries = useQueries({
+        queries: productIds.map(id => ({
+            queryKey: ['product-types', id],
+            queryFn: () => fetchProductTypes(id),
+            staleTime: 1000 * 60 * 5,
+        }))
+    });
+
+    const productTypesMap = useMemo(() => {
+        const map: Record<string, any[]> = {};
+        typeQueries.forEach((q, idx) => {
+            if (q.data) map[productIds[idx]] = q.data;
+        });
+        return map;
+    }, [typeQueries, productIds]);
+
+    const getItemPrice = useCallback((productId: string) => {
+        const item = safeCart.find((i: any) => i?.productId === productId);
+        if (!item) return 0;
+
+        let price = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
+        const variant = variantMap[productId];
+        if (variant) {
+            const types = productTypesMap[productId];
+            if (types) {
+                const parent = types.find((t: any) => t.name === variant.parentName);
+                if (parent) {
+                    price += (parent.price || 0);
+                    if (variant.childName && parent.children) {
+                        const child = parent.children.find((c: any) => c.name === variant.childName);
+                        if (child) {
+                            price += (child.price || 0);
+                        }
+                    }
+                }
+            }
+        }
+        return price;
+    }, [safeCart, variantMap, productTypesMap]);
+
+    const cartTotal = useMemo(() => {
+        return safeCart.reduce((total: number, item: any) => {
+            return total + (getItemPrice(item.productId) * (item.quantity || 0));
+        }, 0);
+    }, [safeCart, getItemPrice]);
 
     const getItemQuantity = useCallback((productId: string) => {
         if (!productId) return 0;
@@ -163,10 +211,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 cartTotal,
                 cartCount,
                 getItemQuantity,
+                getItemPrice,
                 refetchCart: refetch,
                 setVariantForItem,
                 getVariantForItem,
                 variantMap,
+                productTypesMap,
             }}
         >
             {children}
