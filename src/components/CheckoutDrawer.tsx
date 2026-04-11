@@ -144,17 +144,17 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
         const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
 
-        // Validate variants
-        for (const item of cart) {
+        const invalidItem = cart.find((item: any) => {
             const types = productTypesMap[item.productId];
-            if (types && types.length > 0) {
-                const variantData = storedVariants[String(item.productId)];
-                if (!variantData) {
-                    toast.error('Iltimos, mahsulot turini tanlang: ' + item.productNameUz);
-                    if (onRequireVariant) onRequireVariant(item.productId);
-                    return;
-                }
-            }
+            const requiresVariant = types && types.length > 0;
+            const hasSelectedVariant = storedVariants[String(item.productId)];
+            return requiresVariant && !hasSelectedVariant;
+        });
+
+        if (invalidItem) {
+            toast.error('Iltimos, mahsulot turini tanlang: ' + invalidItem.productNameUz);
+            if (onRequireVariant) onRequireVariant(invalidItem.productId);
+            return;
         }
 
         setIsSubmitting(true);
