@@ -8,6 +8,7 @@ interface ProductVariantsProps {
     productId: string | number;
     initialSelectedOptions?: Record<string, string>;
     onOptionChange?: (selected: Record<string, string>) => void;
+    onPriceChange?: (extraPrice: number) => void;
     className?: string;
 }
 
@@ -23,6 +24,7 @@ interface VariantItem {
 export function ProductVariants({
     productId,
     onOptionChange,
+    onPriceChange,
     className,
 }: ProductVariantsProps) {
     const { data: productTypes = [], isLoading } = useProductVariants(productId);
@@ -121,6 +123,14 @@ export function ProductVariants({
         }
     };
 
+    // Notify parent about extra price whenever selections change
+    useEffect(() => {
+        const parent = (productTypes as VariantItem[]).find(p => p.id === selectedParentId);
+        const child = parent?.children?.find(c => c.id === selectedChildId);
+        const extra = (parent?.price || 0) + (child?.price || 0);
+        onPriceChange?.(extra);
+    }, [selectedParentId, selectedChildId, productTypes]);
+
     // Hide entire section while loading or if no data
     if (isLoading || productTypes.length === 0) return null;
 
@@ -161,6 +171,11 @@ export function ProductVariants({
                                 )}>
                                     {parent.name}
                                 </span>
+                                {(parent.price ?? 0) > 0 && (
+                                    <span className="text-[10px] font-bold text-emerald-500 mt-0.5">
+                                        (+{(parent.price ?? 0).toLocaleString()} UZS)
+                                    </span>
+                                )}
                                 {parent.stock !== undefined && !isOutOfStock && (
                                     <span className={cn(
                                         "text-[10px] font-bold uppercase mt-0.5",
@@ -211,6 +226,11 @@ export function ProductVariants({
                                     )}>
                                         {child.name}
                                     </span>
+                                    {(child.price ?? 0) > 0 && (
+                                        <span className="text-[10px] font-bold text-emerald-500 mt-0.5">
+                                            (+{(child.price ?? 0).toLocaleString()} UZS)
+                                        </span>
+                                    )}
                                     {child.stock !== undefined && !isOutOfStock && (
                                         <span className={cn(
                                             "text-[10px] font-bold uppercase mt-0.5",

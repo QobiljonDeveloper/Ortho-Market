@@ -28,7 +28,8 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
     const saved = isSaved(product.id);
     const { addToCart, getItemQuantity, updateQuantity } = useCart();
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+    const [_selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+    const [extraVariantPrice, setExtraVariantPrice] = useState(0);
 
 
     // Reset default selected image when opened
@@ -39,6 +40,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
         }
         if (open) {
             setSelectedOptions({});
+            setExtraVariantPrice(0);
         }
     }, [open, product.images]);
 
@@ -157,7 +159,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                             </h1>
                             <div className="flex items-baseline gap-2">
                                 <p className="text-3xl font-black text-[#007AFF]">
-                                    {product.basePrice !== undefined ? `${product.basePrice.toLocaleString()} so'm` : product.price}
+                                    {(Number(product.basePrice !== undefined ? product.basePrice : (product.price || 0)) + extraVariantPrice).toLocaleString()} so'm
                                 </p>
                                 {product.unit && (
                                     <span className="text-sm font-semibold text-slate-500">/ {product.unit}</span>
@@ -168,6 +170,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                         <ProductVariants
                             productId={product.id}
                             onOptionChange={setSelectedOptions}
+                            onPriceChange={setExtraVariantPrice}
                         />
 
                         {/* Description */}
