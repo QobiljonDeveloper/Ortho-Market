@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCart } from "../context/CartContext";
 import { Button } from "./ui/button";
 import {
@@ -23,13 +23,44 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
-    const { cart, updateQuantity, removeFromCart, cartTotal, cartCount, refetchCart, getVariantForItem, getItemPrice } = useCart();
+    const { cart, updateQuantity, removeFromCart, cartCount, refetchCart } = useCart();
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
     // Product details modal state for editing variants
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [isEditLoading, setIsEditLoading] = useState(false);
+
+    const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
+
+    const [refreshCartTrigger, setRefreshCartTrigger] = useState(0);
+
+    useEffect(() => {
+        const handleVariantSaved = () => setRefreshCartTrigger(prev => prev + 1);
+        window.addEventListener('variantSaved', handleVariantSaved);
+        return () => window.removeEventListener('variantSaved', handleVariantSaved);
+    }, []);
+
+    const cartItemsWithDynamicPrices = useMemo(() => {
+        const _trigger = refreshCartTrigger; // register dependency
+        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
+        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+
+        return cart.map((item: any) => {
+            const variantData = storedVariants[String(item.productId)];
+            const basePrice = item.unitPrice || item.basePrice || 0;
+            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            return {
+                ...item,
+                displayPrice: basePrice + extraPrice,
+                variantData
+            };
+        });
+    }, [cart, refreshCartTrigger]);
+
+    const dynamicCartTotal = useMemo(() => {
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
+    }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {
         if (open) {
@@ -110,9 +141,9 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                             <ScrollArea className="flex-1 px-4 py-6">
                                 <div className="flex flex-col gap-3">
                                     <AnimatePresence initial={false}>
-                                        {cart.map((item) => {
+                                        {cartItemsWithDynamicPrices.map((item: any) => {
                                             if (!item) return null;
-                                            const variant = getVariantForItem(item.productId);
+                                            const variant = item.variantData;
                                             return (
                                                 <motion.div
                                                     key={item.id}
@@ -169,7 +200,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
                                                         <div className="flex items-center justify-between mt-2">
                                                             <span className="font-bold text-[#007AFF] text-sm">
-                                                                {formatPrice(getItemPrice(item.productId))}
+                                                                {formatPrice(item.displayPrice)}
                                                             </span>
 
                                                             <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-lg p-1 border border-slate-100">
@@ -212,7 +243,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Jami narx</span>
-                                        <span className="text-2xl font-black text-slate-900 tracking-tight">{formatPrice(cartTotal)}</span>
+                                        <span className="text-2xl font-black text-slate-900 tracking-tight">{formatPrice(dynamicCartTotal)}</span>
                                     </div>
                                 </div>
 

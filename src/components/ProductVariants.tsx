@@ -83,6 +83,7 @@ export function ProductVariants({
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
                 // Fire storage event manually so CartContext updates in real-time
                 window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new Event('variantSaved'));
             }
         } else {
             // Handling Unselection
@@ -90,6 +91,7 @@ export function ProductVariants({
                 delete existingData[productId];
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
                 window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new Event('variantSaved'));
             }
         }
     }, [selectedParentId, selectedChildId, productId, productTypes, isInitialized]);

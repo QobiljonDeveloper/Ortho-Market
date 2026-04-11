@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCart } from "../context/CartContext";
 import { useAuthContext } from "../context/AuthContext";
 import { Button } from "./ui/button";
@@ -44,7 +44,16 @@ interface CheckoutDrawerProps {
 }
 
 export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: CheckoutDrawerProps) {
-    const { cartTotal, clearCart, cart, productTypesMap } = useCart();
+    const { clearCart, cart, productTypesMap } = useCart();
+
+    // Refresh trigger requested by user for reactivity
+    const [refreshCartTrigger, setRefreshCartTrigger] = useState(0);
+
+    useEffect(() => {
+        const handleVariantSaved = () => setRefreshCartTrigger(prev => prev + 1);
+        window.addEventListener('variantSaved', handleVariantSaved);
+        return () => window.removeEventListener('variantSaved', handleVariantSaved);
+    }, []);
     const { user, token } = useAuthContext();
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +71,29 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
     // Custom note from user
     const [customNote, setCustomNote] = useState("");
+
+    const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
+
+    const cartItemsWithDynamicPrices = useMemo(() => {
+        const _trigger = refreshCartTrigger; // register dependency
+        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
+        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+
+        return cart.map((item: any) => {
+            const variantData = storedVariants[String(item.productId)];
+            const basePrice = item.unitPrice || item.basePrice || 0;
+            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            return {
+                ...item,
+                displayPrice: basePrice + extraPrice,
+                variantData
+            };
+        });
+    }, [cart, refreshCartTrigger]);
+
+    const dynamicCartTotal = useMemo(() => {
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
+    }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {
         if (open) {
@@ -100,8 +132,6 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     const formatPrice = (price: number) => {
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
     };
-
-    const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
     /**
      * Build a dynamic note string from variant selections directly from localStorage.
@@ -252,13 +282,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                     <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Mahsulotlar</h3>
                                 </div>
                                 <div className="bg-[#F8FAFC] rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-                                    {cart.map((item) => {
-                                        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
-                                        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
-                                        const variantData = storedVariants[String(item.productId)];
-                                        const basePrice = item.unitPrice || item.basePrice || 0;
-                                        const itemFinalPrice = basePrice + (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-
+                                    {cartItemsWithDynamicPrices.map((item: any) => {
                                         return (
                                             <div key={item.id} className="flex items-center gap-3 p-3.5">
                                                 <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 p-1">
@@ -272,18 +296,18 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                                     <p className="text-sm font-bold text-slate-800 leading-snug line-clamp-1">
                                                         {item.productNameUz}
                                                     </p>
-                                                    {variantData && variantData.parentName && (
+                                                    {item.variantData && item.variantData.parentName && (
                                                         <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                                                            Variant: {variantData.parentName}
-                                                            {variantData.childName ? ` ➔ ${variantData.childName}` : ''}
+                                                            Variant: {item.variantData.parentName}
+                                                            {item.variantData.childName ? ` ➔ ${item.variantData.childName}` : ''}
                                                         </p>
                                                     )}
                                                     <p className="text-[11px] text-slate-400 mt-0.5">
-                                                        {item.quantity} × {formatPrice(itemFinalPrice)}
+                                                        {item.quantity} × {formatPrice(item.displayPrice)}
                                                     </p>
                                                 </div>
                                                 <span className="text-sm font-bold text-slate-900 shrink-0">
-                                                    {formatPrice(itemFinalPrice * item.quantity)}
+                                                    {formatPrice(item.displayPrice * item.quantity)}
                                                 </span>
                                             </div>
                                         );
@@ -297,7 +321,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                             <div className="absolute top-0 right-0 w-24 h-24 bg-[#007AFF]/5 rounded-full blur-[30px] pointer-events-none" />
                             <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-1">To'lov miqdori</span>
                             <span className="text-slate-900 font-black text-3xl tracking-tight">
-                                {formatPrice(cartTotal)}
+                                {formatPrice(dynamicCartTotal)}
                             </span>
                         </div>
 
