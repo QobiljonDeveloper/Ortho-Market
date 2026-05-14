@@ -94,7 +94,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     {primaryImageUrl ? (
                         <img
                             src={primaryImageUrl}
-                            alt={product.nameUz || product.name || "Mahsulot"}
+                            alt={product.nameUz}
                             className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 drop-shadow-sm"
                         />
                     ) : (
@@ -137,7 +137,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     </div>
 
                     <h3 className="text-[14px] font-semibold text-slate-900 line-clamp-2 leading-snug min-h-10 tracking-tight mt-1">
-                        {product.nameUz || product.name}
+                        {product.nameUz}
                     </h3>
 
                     <div className="flex flex-col gap-0.5 mt-2 mb-3 h-8">
@@ -149,9 +149,22 @@ export function ProductCard({ product }: ProductCardProps) {
                         ))}
                     </div>
 
-                    <span className="text-[16px] font-bold text-[#007AFF] mt-auto whitespace-nowrap">
-                        {product.basePrice !== undefined ? `${product.basePrice.toLocaleString()} so'm` : product.price}
-                    </span>
+                    <div className="mt-auto flex flex-col gap-1 min-h-[40px] justify-end">
+                        {product.discountPrice && product.discountPrice < product.basePrice ? (
+                            <>
+                                <span className="text-[12px] text-slate-400 line-through font-medium leading-none">
+                                    {product.basePrice.toLocaleString()} so'm
+                                </span>
+                                <span className="text-[16px] font-bold text-[#007AFF] leading-tight">
+                                    {product.discountPrice.toLocaleString()} so'm
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-[16px] font-bold text-[#007AFF] leading-tight">
+                                {product.basePrice !== undefined ? `${product.basePrice.toLocaleString()} so'm` : `${(0).toLocaleString()} so'm`}
+                            </span>
+                        )}
+                    </div>
 
                     {/* Action Area */}
                     <div className="mt-3 h-10">

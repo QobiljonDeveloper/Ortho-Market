@@ -175,7 +175,7 @@ export function ProductVariants({
                                 </span>
                                 {(parent.price ?? 0) > 0 && (
                                     <span className="text-[10px] font-bold text-emerald-500 mt-0.5">
-                                        (+{(parent.price ?? 0).toLocaleString()} UZS)
+                                        (+{(parent.price ?? 0).toLocaleString()} so'm)
                                     </span>
                                 )}
                                 {parent.stock !== undefined && !isOutOfStock && (
@@ -230,7 +230,7 @@ export function ProductVariants({
                                     </span>
                                     {(child.price ?? 0) > 0 && (
                                         <span className="text-[10px] font-bold text-emerald-500 mt-0.5">
-                                            (+{(child.price ?? 0).toLocaleString()} UZS)
+                                            (+{(child.price ?? 0).toLocaleString()} so'm)
                                         </span>
                                     )}
                                     {child.stock !== undefined && !isOutOfStock && (

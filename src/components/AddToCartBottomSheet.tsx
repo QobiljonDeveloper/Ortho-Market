@@ -132,11 +132,24 @@ export function AddToCartDrawer({
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h3 className="text-slate-800 font-semibold text-[15px] leading-snug line-clamp-2">
-                                    {product.nameUz || product.name}
+                                    {product.nameUz}
                                 </h3>
-                                <p className="text-blue-500 font-bold text-lg mt-0.5">
-                                    {product.basePrice?.toLocaleString()} so'm
-                                </p>
+                                <div className="flex flex-col mt-0.5">
+                                    {product.discountPrice && product.discountPrice < product.basePrice ? (
+                                        <>
+                                            <span className="text-[11px] text-slate-400 line-through font-medium leading-none">
+                                                {product.basePrice.toLocaleString()} so'm
+                                            </span>
+                                            <span className="text-blue-500 font-bold text-[17px] leading-tight mt-0.5">
+                                                {product.discountPrice.toLocaleString()} so'm
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <p className="text-blue-500 font-bold text-[17px] leading-tight">
+                                            {product.basePrice?.toLocaleString()} so'm
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

@@ -81,11 +81,20 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
         return cart.map((item: any) => {
             const variantData = storedVariants[String(item.productId)];
-            const basePrice = item.unitPrice || item.basePrice || 0;
             const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+
+            const basePrice = item.basePrice || item.unitPrice || 0;
+            const unitPrice = item.unitPrice || item.basePrice || 0;
+
+            const finalBasePrice = basePrice + extraPrice;
+            const finalUnitPrice = unitPrice + extraPrice;
+            const hasDiscount = unitPrice < basePrice;
+
             return {
                 ...item,
-                displayPrice: basePrice + extraPrice,
+                displayPrice: finalUnitPrice,
+                originalPrice: finalBasePrice,
+                hasDiscount,
                 variantData
             };
         });
@@ -130,7 +139,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     };
 
     const formatPrice = (price: number) => {
-        return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
+        return price.toLocaleString() + " so'm";
     };
 
     /**
@@ -302,9 +311,25 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                                             {item.variantData.childName ? ` ➔ ${item.variantData.childName}` : ''}
                                                         </p>
                                                     )}
-                                                    <p className="text-[11px] text-slate-400 mt-0.5">
-                                                        {item.quantity} × {formatPrice(item.displayPrice)}
-                                                    </p>
+                                                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                        <span className="text-[11px] text-slate-400">
+                                                            {item.quantity} ×
+                                                        </span>
+                                                        {item.hasDiscount ? (
+                                                            <>
+                                                                <span className="text-[10px] text-slate-400 line-through font-medium">
+                                                                    {formatPrice(item.originalPrice)}
+                                                                </span>
+                                                                <span className="text-[11px] font-bold text-[#007AFF]">
+                                                                    {formatPrice(item.displayPrice)}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[11px] text-slate-600 font-semibold">
+                                                                {formatPrice(item.displayPrice)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <span className="text-sm font-bold text-slate-900 shrink-0">
                                                     {formatPrice(item.displayPrice * item.quantity)}

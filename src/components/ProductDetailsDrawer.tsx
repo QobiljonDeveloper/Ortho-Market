@@ -117,7 +117,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                                 <img
                                     key={mainImage}
                                     src={mainImage}
-                                    alt={product.nameUz || product.name || "Mahsulot"}
+                                    alt={product.nameUz}
                                     className="w-full h-full object-contain relative z-10 drop-shadow-xl saturate-110 animate-in fade-in zoom-in-95 duration-300"
                                 />
                             ) : (
@@ -155,16 +155,38 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                                 )}
                             </div>
                             <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-tight">
-                                {product.nameUz || product.name}
+                                {product.nameUz}
                             </h1>
-                            <div className="flex items-baseline gap-2">
-                                <p className="text-3xl font-black text-[#007AFF]">
-                                    {(Number(product.basePrice !== undefined ? product.basePrice : (product.price || 0)) + extraVariantPrice).toLocaleString()} so'm
-                                </p>
-                                {product.unit && (
-                                    <span className="text-sm font-semibold text-slate-500">/ {product.unit}</span>
-                                )}
-                            </div>
+                            {(() => {
+                                const finalBasePrice = (product.basePrice || 0) + extraVariantPrice;
+                                const finalDiscountPrice = product.discountPrice !== undefined ? (product.discountPrice + extraVariantPrice) : undefined;
+                                const hasDiscount = finalDiscountPrice !== undefined && finalDiscountPrice < finalBasePrice;
+
+                                return hasDiscount ? (
+                                    <div className="flex flex-col items-start gap-0.5">
+                                        <span className="text-[15px] text-slate-400 line-through font-medium leading-none">
+                                            {finalBasePrice.toLocaleString()} so'm
+                                        </span>
+                                        <div className="flex items-baseline gap-2 mt-1">
+                                            <p className="text-3xl font-black text-[#007AFF] leading-tight">
+                                                {finalDiscountPrice!.toLocaleString()} so'm
+                                            </p>
+                                            {product.unit && (
+                                                <span className="text-sm font-semibold text-slate-500">/ {product.unit}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-3xl font-black text-[#007AFF] leading-tight">
+                                            {finalBasePrice.toLocaleString()} so'm
+                                        </p>
+                                        {product.unit && (
+                                            <span className="text-sm font-semibold text-slate-500">/ {product.unit}</span>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         <ProductVariants

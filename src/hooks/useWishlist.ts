@@ -58,6 +58,7 @@ export const useWishlist = (userId: string | undefined | null) => {
                         productNameRu: '',
                         slug: '',
                         basePrice: product.basePrice,
+                        discountPrice: product.discountPrice,
                         primaryImageUrl: product.images?.[0]?.url || null,
                     };
                     queryClient.setQueryData<WishlistItem[]>(

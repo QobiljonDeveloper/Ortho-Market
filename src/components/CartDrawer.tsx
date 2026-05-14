@@ -48,11 +48,20 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
         return cart.map((item: any) => {
             const variantData = storedVariants[String(item.productId)];
-            const basePrice = item.unitPrice || item.basePrice || 0;
             const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+
+            const basePrice = item.basePrice || item.unitPrice || 0;
+            const unitPrice = item.unitPrice || item.basePrice || 0;
+
+            const finalBasePrice = basePrice + extraPrice;
+            const finalUnitPrice = unitPrice + extraPrice;
+            const hasDiscount = unitPrice < basePrice;
+
             return {
                 ...item,
-                displayPrice: basePrice + extraPrice,
+                displayPrice: finalUnitPrice,
+                originalPrice: finalBasePrice,
+                hasDiscount,
                 variantData
             };
         });
@@ -69,7 +78,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
     }, [open, refetchCart]);
 
     const formatPrice = (price: number) => {
-        return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS";
+        return price.toLocaleString() + " so'm";
     };
 
     const handleEditItem = async (productId: string) => {
@@ -198,10 +207,23 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                             </button>
                                                         </div>
 
-                                                        <div className="flex items-center justify-between mt-2">
-                                                            <span className="font-bold text-[#007AFF] text-sm">
-                                                                {formatPrice(item.displayPrice)}
-                                                            </span>
+                                                        <div className="flex items-center justify-between mt-2 min-h-[38px]">
+                                                            <div className="flex flex-col justify-end gap-0.5">
+                                                                {item.hasDiscount ? (
+                                                                    <>
+                                                                        <span className="text-[11px] text-slate-400 line-through font-medium leading-none">
+                                                                            {formatPrice(item.originalPrice)}
+                                                                        </span>
+                                                                        <span className="font-bold text-[#007AFF] text-sm leading-tight mt-0.5">
+                                                                            {formatPrice(item.displayPrice)}
+                                                                        </span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="font-bold text-[#007AFF] text-sm leading-tight">
+                                                                        {formatPrice(item.displayPrice)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
 
                                                             <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-lg p-1 border border-slate-100">
                                                                 <button

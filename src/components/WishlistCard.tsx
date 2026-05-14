@@ -14,7 +14,6 @@ export function WishlistCard({ item, onRemove }: WishlistCardProps) {
     const navigate = useNavigate();
     const { addToCart, updateQuantity, getItemQuantity } = useCart();
 
-    const formattedPrice = item.basePrice?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") || "0";
     const quantity = getItemQuantity(item.productId);
 
     return (
@@ -73,9 +72,22 @@ export function WishlistCard({ item, onRemove }: WishlistCardProps) {
                     {item.productNameUz}
                 </h3>
 
-                <span className="text-[16px] font-bold text-[#007AFF] mt-1 pt-1 whitespace-nowrap">
-                    {formattedPrice} so'm
-                </span>
+                <div className="flex flex-col gap-1 min-h-[38px] justify-end mt-1 pt-1">
+                    {item.discountPrice && item.discountPrice < item.basePrice ? (
+                        <>
+                            <span className="text-[12px] text-slate-400 line-through font-medium leading-none">
+                                {item.basePrice.toLocaleString()} so'm
+                            </span>
+                            <span className="text-[16px] font-bold text-[#007AFF] leading-tight">
+                                {item.discountPrice.toLocaleString()} so'm
+                            </span>
+                        </>
+                    ) : (
+                        <span className="text-[16px] font-bold text-[#007AFF] leading-tight">
+                            {item.basePrice.toLocaleString()} so'm
+                        </span>
+                    )}
+                </div>
 
                 {/* Action Area (Add to Cart / Counter) */}
                 <div className="mt-auto h-10 w-full">
@@ -97,6 +109,7 @@ export function WishlistCard({ item, onRemove }: WishlistCardProps) {
                                             nameUz: item.productNameUz,
                                             name: item.productNameUz,
                                             basePrice: item.basePrice || 0,
+                                            discountPrice: item.discountPrice,
                                             price: `${item.basePrice || 0} so'm`,
                                             images: [{ url: item.primaryImageUrl || "", isPrimary: true }],
                                             image: item.primaryImageUrl || ""

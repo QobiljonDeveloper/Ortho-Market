@@ -37,7 +37,7 @@ export function OrderDetails() {
     if (!order) return null;
 
     const formatPrice = (price: number) => {
-        return price ? price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS" : "0 UZS";
+        return (price || 0).toLocaleString() + " so'm";
     };
 
     const isDelivery = order.deliveryMethod === 1;
@@ -164,7 +164,7 @@ export function OrderDetails() {
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="font-medium text-slate-500">Yetkazib berish</span>
-                                    <span className="font-bold text-slate-900">{isDelivery ? "Bepul" : "0 UZS"}</span>
+                                    <span className="font-bold text-slate-900">{isDelivery ? "Bepul" : "0 so'm"}</span>
                                 </div>
                                 <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
                                     <span className="text-xs font-black uppercase text-slate-400">Jami to'lov</span>

@@ -52,12 +52,16 @@ export const useCartApi = (userId: string | undefined | null) => {
                     )
                 );
             } else {
+                const hasDiscount = product.discountPrice !== undefined && product.discountPrice < product.basePrice;
+                const activePrice = hasDiscount ? product.discountPrice! : product.basePrice;
+
                 const newItem: CartItem = {
                     id: `temp-${Date.now()}`,
                     productId: product.id,
                     productNameUz: product.nameUz || product.name || '',
-                    unitPrice: product.basePrice || product.priceValue || 0,
-                    basePrice: product.basePrice || product.priceValue || 0,
+                    unitPrice: activePrice || 0,
+                    basePrice: product.basePrice || 0,
+                    discountPrice: product.discountPrice,
                     primaryImageUrl: product.primaryImageUrl || product.images?.find(i => i.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
                     quantity: 1
                 };

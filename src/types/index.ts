@@ -49,6 +49,7 @@ export interface Product {
     // New Backend Fields
     nameUz: string;
     basePrice: number;
+    discountPrice?: number;
     images: ProductImage[];
     primaryImageUrl?: string | null;
     descriptionUz?: string;
@@ -81,6 +82,7 @@ export interface CartItem {
     quantity: number;
     unitPrice?: number;
     basePrice?: number;
+    discountPrice?: number;
     primaryImageUrl?: string | null;
     // Client-side variant selections (not persisted to backend cart)
     selectedParentName?: string;
@@ -94,5 +96,6 @@ export interface WishlistItem {
     productNameRu: string;
     slug: string;
     basePrice: number;
+    discountPrice?: number;
     primaryImageUrl: string | null;
 }

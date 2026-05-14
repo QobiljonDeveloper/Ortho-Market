@@ -73,7 +73,7 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
-                                const totalStr = order.totalAmount ? `${order.totalAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} UZS` : "Hisoblanmoqda >";
+                                const totalStr = order.totalAmount ? `${order.totalAmount.toLocaleString()} so'm` : "Hisoblanmoqda >";
 
                                 const paymentStatus = order.paymentStatus || 0;
                                 let paymentBadge = null;
