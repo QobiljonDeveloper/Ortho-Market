@@ -242,6 +242,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
                 paymentMethod: 1, // Card/Onlayn-o'tkazma
                 deliveryMethod: deliveryMethod === "delivery" ? 1 : 0,
+                totalPrice: dynamicCartTotal, // To'g'ri hisoblangan jami narx (variant + product narxi)
                 items: cart.map((item: any) => {
                     const variant = storedVariants[String(item.productId)];
                     return {
