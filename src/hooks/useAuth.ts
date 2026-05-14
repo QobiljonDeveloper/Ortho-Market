@@ -13,7 +13,9 @@ export const useAuth = () => {
 
     return useMutation({
         mutationFn: async (initData: string): Promise<AuthResponse> => {
-            const response = await api.post('/api/auth/telegram', { initData });
+            const body = { initData };
+            console.log("SENDING_TO_BACKEND:", body);
+            const response = await api.post('/api/auth/telegram', body);
             return response.data;
         },
         onSuccess: (data) => {
