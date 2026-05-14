@@ -73,26 +73,34 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
-                                const calculatedTotal = order.items && order.items.length > 0
-                                    ? order.items.reduce((ttl: number, item: any) => {
-                                        const rawPrice = item.unitPrice || item.price || 0;
-                                        const prodName = item.product?.name || item.product?.nameUz || item.name || "";
-                                        const hasVariantField = !!(item.productTypeId || item.typeId || item.productType);
-                                        let hasVariantInNote = false;
-                                        if (order.note && typeof order.note === 'string' && prodName) {
-                                            hasVariantInNote = order.note.includes(`[Product: ${prodName}`) && order.note.includes('Variant:');
-                                        }
-                                        const hasVariant = hasVariantField || hasVariantInNote;
-                                        const prodBase = item.product?.basePrice;
-                                        const prodDiscount = item.product?.discountPrice;
-                                        const hasProdDiscount = prodBase !== undefined && prodDiscount !== undefined && prodDiscount < prodBase;
-                                        const prodActivePrice = hasProdDiscount ? prodDiscount : (prodBase || 0);
-                                        const correctedPrice = hasVariant ? (rawPrice + prodActivePrice) : rawPrice;
-                                        return ttl + ((item.quantity || 1) * correctedPrice);
-                                    }, 0)
-                                    : order.totalAmount || 0;
+                                const calculatedTotal = order.items?.reduce((sum: number, item: any) => {
+                                    const prodBase = item.product?.basePrice || 0;
+                                    const prodDiscount = item.product?.discountPrice;
+                                    const hasProdDiscount = prodBase > 0 && prodDiscount !== undefined && prodDiscount < prodBase;
+                                    const activeProdPrice = hasProdDiscount ? prodDiscount! : prodBase;
 
-                                const totalStr = calculatedTotal ? `${calculatedTotal.toLocaleString()} so'm` : "Hisoblanmoqda >";
+                                    const prodName = item.product?.name || item.product?.nameUz || item.name || "";
+                                    let unitPrice = item.unitPrice || item.price || 0;
+
+                                    // Detect variant presence
+                                    const hasVariant = !!(
+                                        item.productTypeId || 
+                                        item.typeId || 
+                                        item.productType || 
+                                        (order.note && order.note.includes(prodName) && order.note.includes("Variant:"))
+                                    );
+
+                                    if (hasVariant && unitPrice > 0 && activeProdPrice > 0) {
+                                        unitPrice += activeProdPrice;
+                                    } else if (unitPrice === 0 && activeProdPrice > 0) {
+                                        unitPrice = activeProdPrice;
+                                    }
+
+                                    return sum + (unitPrice * (item.quantity || 1));
+                                }, 0);
+
+                                const actualTotal = calculatedTotal > 0 ? calculatedTotal : (order.totalAmount || 0);
+                                const totalStr = actualTotal > 0 ? `${actualTotal.toLocaleString()} so'm` : "Hisoblanmoqda >";
 
                                 const paymentStatus = order.paymentStatus || 0;
                                 let paymentBadge = null;

@@ -59,32 +59,33 @@ export function OrderDetails() {
         paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">Qaytarilgan</span>;
     }
 
-    // Highly robust helper to reconstruct item pricing when backend only saved the variant's extra price
-    const getCorrectedPrice = (item: any) => {
-        const rawPrice = item.unitPrice || item.price || 0;
+    const getTrueItemPrice = (item: any) => {
+        const prodBase = item.product?.basePrice || 0;
+        const prodDiscount = item.product?.discountPrice;
+        const hasProdDiscount = prodBase > 0 && prodDiscount !== undefined && prodDiscount < prodBase;
+        const activeProdPrice = hasProdDiscount ? prodDiscount! : prodBase;
+
         const prodName = item.product?.name || item.product?.nameUz || item.name || "";
+        let unitPrice = item.unitPrice || item.price || 0;
 
-        // Detect variant using backend IDs or relation fields
-        const hasVariantField = !!(item.productTypeId || item.typeId || item.productType);
+        // Detect variant presence
+        const hasVariant = !!(
+            item.productTypeId || 
+            item.typeId || 
+            item.productType || 
+            (order?.note && order.note.includes(prodName) && order.note.includes("Variant:"))
+        );
 
-        // Bulletproof fallback: Search for variant in user note
-        let hasVariantInNote = false;
-        if (order.note && typeof order.note === 'string' && prodName) {
-            hasVariantInNote = order.note.includes(`[Product: ${prodName}`) && order.note.includes('Variant:');
+        if (hasVariant && unitPrice > 0 && activeProdPrice > 0) {
+            unitPrice += activeProdPrice;
+        } else if (unitPrice === 0 && activeProdPrice > 0) {
+            unitPrice = activeProdPrice;
         }
 
-        const hasVariant = hasVariantField || hasVariantInNote;
-
-        const prodBase = item.product?.basePrice;
-        const prodDiscount = item.product?.discountPrice;
-        const hasProdDiscount = prodBase !== undefined && prodDiscount !== undefined && prodDiscount < prodBase;
-        const prodActivePrice = hasProdDiscount ? prodDiscount : (prodBase || 0);
-
-        // If it has a variant and the saved price matches the variant's standalone value, add product price
-        return hasVariant ? (rawPrice + prodActivePrice) : rawPrice;
+        return unitPrice;
     };
 
-    const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + (i.quantity * getCorrectedPrice(i)), 0) || order.totalAmount || 0;
+    const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + (i.quantity * getTrueItemPrice(i)), 0) || order.totalAmount || 0;
 
     return (
         <AnimatePresence>
@@ -132,7 +133,7 @@ export function OrderDetails() {
                                     const sku = item.product?.sku || item.sku || "OM-002";
                                     const imgUrl = item.product?.images?.[0]?.url || item.product?.image || item.image || item.primaryImageUrl || null;
                                     const qty = item.quantity || 1;
-                                    const unitPrice = getCorrectedPrice(item);
+                                    const unitPrice = getTrueItemPrice(item);
                                     const itemTotal = qty * unitPrice;
 
                                     // Enhanced discount logic
@@ -143,7 +144,7 @@ export function OrderDetails() {
                                     let itemBasePrice = unitPrice;
                                     let hasDiscount = false;
 
-                                    if (item.basePrice && item.basePrice > (item.unitPrice || item.price || 0)) {
+                                    if (item.basePrice && item.basePrice > unitPrice) {
                                         itemBasePrice = item.basePrice;
                                         hasDiscount = true;
                                     } else if (hasProdDiscount) {
@@ -151,12 +152,13 @@ export function OrderDetails() {
                                         hasDiscount = true;
                                     }
 
-                                    // Super polished: Extract and display variant name from order note if available
-                                    let extractedVariant = null;
-                                    if (order.note && typeof order.note === 'string') {
-                                        const match = order.note.match(new RegExp(`\\[Product: ${prodName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\| Variant: ([^\\]]+)\\]`));
+                                    // Extract variant name from item or parse note
+                                    let variantName = item.productType?.name || item.type?.name || "";
+                                    if (!variantName && order?.note) {
+                                        const regex = new RegExp(`\\[Product: ${prodName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')} \\| Variant: ([^\\]]+)\\]`, 'i');
+                                        const match = order.note.match(regex);
                                         if (match && match[1]) {
-                                            extractedVariant = match[1];
+                                            variantName = match[1];
                                         }
                                     }
 
@@ -173,10 +175,8 @@ export function OrderDetails() {
                                             )}
                                             <div className="flex-1 flex flex-col justify-center">
                                                 <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{prodName}</p>
-                                                {extractedVariant && (
-                                                    <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                                                        Variant: {extractedVariant}
-                                                    </p>
+                                                {variantName && (
+                                                    <p className="text-[11px] text-slate-500 mt-0.5 font-medium">Variant: {variantName}</p>
                                                 )}
                                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">SKU: {sku}</p>
@@ -234,7 +234,7 @@ export function OrderDetails() {
                                 </div>
                                 <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
                                     <span className="text-xs font-black uppercase text-slate-400">Jami to'lov</span>
-                                    <span className="text-xl font-black text-[#007AFF]">{formatPrice(subTotal)}</span>
+                                    <span className="text-xl font-black text-[#007AFF]">{formatPrice(order.totalAmount || subTotal)}</span>
                                 </div>
                             </div>
                         </div>
