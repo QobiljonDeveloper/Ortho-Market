@@ -81,23 +81,41 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
         return cart.map((item: any) => {
             const variantData = storedVariants[String(item.productId)];
+            
+            // Extract variant-specific absolute prices directly from variant data
+            const variantBasePrice = variantData?.childBasePrice || variantData?.parentBasePrice;
+            const variantDiscountPrice = variantData?.childDiscountPrice || variantData?.parentDiscountPrice;
+            
             const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
 
             const product = productsMap[String(item.productId)];
 
-            let basePrice = item.basePrice || item.unitPrice || 0;
-            let unitPrice = item.unitPrice || item.basePrice || 0;
+            let finalBasePrice = 0;
+            let finalUnitPrice = 0;
 
-            if (product) {
-                basePrice = product.basePrice || basePrice;
-                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                    ? product.discountPrice
-                    : product.basePrice;
+            if (variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
+                // Scenario A: Variant defines full absolute pricing
+                finalBasePrice = variantBasePrice;
+                finalUnitPrice = (variantDiscountPrice !== undefined && variantDiscountPrice !== null && variantDiscountPrice < variantBasePrice)
+                    ? variantDiscountPrice 
+                    : variantBasePrice;
+            } else {
+                // Scenario B: Fallback to global product additive pricing
+                let basePrice = item.basePrice || item.unitPrice || 0;
+                let unitPrice = item.unitPrice || item.basePrice || 0;
+
+                if (product) {
+                    basePrice = product.basePrice || basePrice;
+                    unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                        ? product.discountPrice
+                        : product.basePrice;
+                }
+                
+                finalBasePrice = basePrice + extraPrice;
+                finalUnitPrice = unitPrice + extraPrice;
             }
 
-            const finalBasePrice = basePrice + extraPrice;
-            const finalUnitPrice = unitPrice + extraPrice;
-            const hasDiscount = unitPrice < basePrice;
+            const hasDiscount = finalUnitPrice < finalBasePrice;
 
             return {
                 ...item,

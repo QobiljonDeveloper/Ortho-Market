@@ -18,6 +18,8 @@ interface VariantItem {
     stock?: number;
     logoUrl?: string;
     price?: number | null;
+    basePrice?: number | null;
+    discountPrice?: number | null;
     children?: VariantItem[];
 }
 
@@ -77,8 +79,12 @@ export function ProductVariants({
                 existingData[productId] = {
                     parentName: parent.name,
                     parentPrice: parent.price || 0,
+                    parentBasePrice: parent.basePrice || null,
+                    parentDiscountPrice: parent.discountPrice || null,
                     childName: child?.name || null,
                     childPrice: child?.price || 0,
+                    childBasePrice: child?.basePrice || null,
+                    childDiscountPrice: child?.discountPrice || null,
                     productTypeId: child?.id || parent.id
                 };
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
