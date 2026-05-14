@@ -59,44 +59,7 @@ export function OrderDetails() {
         paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">Qaytarilgan</span>;
     }
 
-    const getTrueItemPrice = (item: any) => {
-        // Prioritize direct transaction prices from the item object
-        const itemBase = item.basePrice || 0;
-        const itemDiscount = item.discountPrice || 0;
-        
-        if (itemDiscount > 0 && itemBase > 0 && itemDiscount < itemBase) {
-            return itemDiscount;
-        } else if (itemBase > 0) {
-            return itemBase;
-        }
-
-        // Fallback reconstruct logic
-        const prodBase = item.product?.basePrice || 0;
-        const prodDiscount = item.product?.discountPrice;
-        const hasProdDiscount = prodBase > 0 && prodDiscount !== undefined && prodDiscount < prodBase;
-        const activeProdPrice = hasProdDiscount ? prodDiscount! : prodBase;
-
-        const prodName = item.product?.name || item.product?.nameUz || item.name || "";
-        let unitPrice = item.unitPrice || item.price || 0;
-
-        // Detect variant presence
-        const hasVariant = !!(
-            item.productTypeId || 
-            item.typeId || 
-            item.productType || 
-            (order?.note && order.note.includes(prodName) && order.note.includes("Variant:"))
-        );
-
-        if (hasVariant && unitPrice > 0 && activeProdPrice > 0) {
-            unitPrice += activeProdPrice;
-        } else if (unitPrice === 0 && activeProdPrice > 0) {
-            unitPrice = activeProdPrice;
-        }
-
-        return unitPrice;
-    };
-
-    const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + (i.quantity * getTrueItemPrice(i)), 0) || order.totalAmount || 0;
+    const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + ((i.quantity || 1) * (i.unitPrice || 0)), 0) || order.totalAmount || 0;
 
     return (
         <AnimatePresence>
@@ -144,30 +107,12 @@ export function OrderDetails() {
                                     const sku = item.product?.sku || item.sku || "OM-002";
                                     const imgUrl = item.product?.images?.[0]?.url || item.product?.image || item.image || item.primaryImageUrl || null;
                                     const qty = item.quantity || 1;
-                                    const unitPrice = getTrueItemPrice(item);
+                                    const unitPrice = item.unitPrice || 0;
+                                    const basePrice = item.basePrice || unitPrice;
                                     const itemTotal = qty * unitPrice;
 
-                                    // Enhanced discount logic
-                                    const prodBase = item.product?.basePrice;
-                                    const prodDiscount = item.product?.discountPrice;
-                                    const hasProdDiscount = prodBase !== undefined && prodDiscount !== undefined && prodDiscount < prodBase;
-
-                                     const itemBase = item.basePrice || 0;
-                                     const itemDiscount = item.discountPrice || 0;
-
-                                    let itemBasePrice = unitPrice;
-                                    let hasDiscount = false;
-
-                                    if (itemDiscount > 0 && itemBase > 0 && itemDiscount < itemBase) {
-                                        itemBasePrice = itemBase;
-                                        hasDiscount = true;
-                                     } else if (itemBase > unitPrice) {
-                                        itemBasePrice = itemBase;
-                                        hasDiscount = true;
-                                    } else if (hasProdDiscount) {
-                                        itemBasePrice = unitPrice + (prodBase - prodDiscount);
-                                        hasDiscount = true;
-                                    }
+                                    const hasDiscount = basePrice > unitPrice;
+                                    const itemBasePrice = basePrice;
 
                                     // Extract variant name from item or parse note
                                     let variantName = item.productType?.name || item.type?.name || "";
