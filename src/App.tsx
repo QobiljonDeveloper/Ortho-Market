@@ -47,6 +47,8 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
     }
 
     const initData = tg?.initData;
+    console.log("DEBUG_INIT_DATA:", initData);
+    console.log("DEBUG_WINDOW_INIT_DATA:", window.Telegram?.WebApp?.initData);
 
     if (initData) {
       // 3. Mandatory POST Auth Request: strictly first network request
