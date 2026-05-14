@@ -23,7 +23,7 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
-    const { cart, updateQuantity, removeFromCart, cartCount, refetchCart } = useCart();
+    const { cart, updateQuantity, removeFromCart, cartCount, refetchCart, productsMap } = useCart();
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
     // Product details modal state for editing variants
@@ -50,8 +50,17 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             const variantData = storedVariants[String(item.productId)];
             const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
 
-            const basePrice = item.basePrice || item.unitPrice || 0;
-            const unitPrice = item.unitPrice || item.basePrice || 0;
+            const product = productsMap[String(item.productId)];
+
+            let basePrice = item.basePrice || item.unitPrice || 0;
+            let unitPrice = item.unitPrice || item.basePrice || 0;
+
+            if (product) {
+                basePrice = product.basePrice || basePrice;
+                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                    ? product.discountPrice
+                    : product.basePrice;
+            }
 
             const finalBasePrice = basePrice + extraPrice;
             const finalUnitPrice = unitPrice + extraPrice;
@@ -65,7 +74,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 variantData
             };
         });
-    }, [cart, refreshCartTrigger]);
+    }, [cart, refreshCartTrigger, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
         return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);

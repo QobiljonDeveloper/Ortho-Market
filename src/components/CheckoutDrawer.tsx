@@ -44,7 +44,7 @@ interface CheckoutDrawerProps {
 }
 
 export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: CheckoutDrawerProps) {
-    const { clearCart, cart, productTypesMap } = useCart();
+    const { clearCart, cart, productTypesMap, productsMap } = useCart();
 
     // Refresh trigger requested by user for reactivity
     const [refreshCartTrigger, setRefreshCartTrigger] = useState(0);
@@ -83,8 +83,17 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             const variantData = storedVariants[String(item.productId)];
             const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
 
-            const basePrice = item.basePrice || item.unitPrice || 0;
-            const unitPrice = item.unitPrice || item.basePrice || 0;
+            const product = productsMap[String(item.productId)];
+
+            let basePrice = item.basePrice || item.unitPrice || 0;
+            let unitPrice = item.unitPrice || item.basePrice || 0;
+
+            if (product) {
+                basePrice = product.basePrice || basePrice;
+                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                    ? product.discountPrice
+                    : product.basePrice;
+            }
 
             const finalBasePrice = basePrice + extraPrice;
             const finalUnitPrice = unitPrice + extraPrice;
@@ -98,7 +107,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 variantData
             };
         });
-    }, [cart, refreshCartTrigger]);
+    }, [cart, refreshCartTrigger, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
         return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
@@ -215,10 +224,15 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
                 paymentMethod: 1, // Card/Onlayn-o'tkazma
                 deliveryMethod: deliveryMethod === "delivery" ? 1 : 0,
-                items: cart.map((item: any) => ({
-                    productId: item.productId,
-                    quantity: item.quantity
-                }))
+                items: cart.map((item: any) => {
+                    const variant = storedVariants[String(item.productId)];
+                    return {
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        productTypeId: variant?.productTypeId || null,
+                        typeId: variant?.productTypeId || null // Backwards compatibility fallback
+                    };
+                })
             };
 
             // Include note only if there is content

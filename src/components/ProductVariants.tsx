@@ -78,7 +78,8 @@ export function ProductVariants({
                     parentName: parent.name,
                     parentPrice: parent.price || 0,
                     childName: child?.name || null,
-                    childPrice: child?.price || 0
+                    childPrice: child?.price || 0,
+                    productTypeId: child?.id || parent.id
                 };
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
                 // Fire storage event manually so CartContext updates in real-time

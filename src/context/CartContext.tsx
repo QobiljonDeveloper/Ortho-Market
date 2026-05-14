@@ -3,7 +3,7 @@ import type { Product, CartItem } from "../types";
 import { useAuthContext } from "./AuthContext";
 import { useCartApi } from "../hooks/useCartApi";
 import { useQueries } from "@tanstack/react-query";
-import { fetchProductTypes } from "../services/api";
+import { fetchProductTypes, fetchProductById } from "../services/api";
 
 interface VariantSelection {
     parentName: string;
@@ -27,6 +27,7 @@ interface CartContextType {
     getVariantForItem: (productId: string) => VariantSelection | undefined;
     variantMap: Record<string, VariantSelection>;
     productTypesMap: Record<string, any[]>;
+    productsMap: Record<string, Product>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -62,6 +63,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }))
     });
 
+    const productQueries = useQueries({
+        queries: productIds.map(id => ({
+            queryKey: ['product-details-cart', id],
+            queryFn: () => fetchProductById(id),
+            staleTime: 1000 * 60 * 5,
+        }))
+    });
+
     const productTypesMap = useMemo(() => {
         const map: Record<string, any[]> = {};
         typeQueries.forEach((q, idx) => {
@@ -69,6 +78,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
         return map;
     }, [typeQueries, productIds]);
+
+    const productsMap = useMemo(() => {
+        const map: Record<string, Product> = {};
+        productQueries.forEach((q, idx) => {
+            if (q.data) map[productIds[idx]] = q.data;
+        });
+        return map;
+    }, [productQueries, productIds]);
 
     const getItemPrice = useCallback((productId: string) => {
         const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
@@ -207,6 +224,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 getVariantForItem,
                 variantMap,
                 productTypesMap,
+                productsMap,
             }}
         >
             {children}

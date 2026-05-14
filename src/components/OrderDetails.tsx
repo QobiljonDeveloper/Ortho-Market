@@ -109,6 +109,23 @@ export function OrderDetails() {
                                     const qty = item.quantity || 1;
                                     const unitPrice = item.unitPrice || item.price || 0;
                                     const itemTotal = qty * unitPrice;
+
+                                    // Enhanced discount logic
+                                    const prodBase = item.product?.basePrice;
+                                    const prodDiscount = item.product?.discountPrice;
+                                    const hasProdDiscount = prodBase !== undefined && prodDiscount !== undefined && prodDiscount < prodBase;
+
+                                    let itemBasePrice = unitPrice;
+                                    let hasDiscount = false;
+
+                                    if (item.basePrice && item.basePrice > unitPrice) {
+                                        itemBasePrice = item.basePrice;
+                                        hasDiscount = true;
+                                    } else if (hasProdDiscount) {
+                                        itemBasePrice = unitPrice + (prodBase - prodDiscount);
+                                        hasDiscount = true;
+                                    }
+
                                     return (
                                         <div key={idx} className="flex gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-100/50">
                                             {imgUrl ? (
@@ -125,7 +142,17 @@ export function OrderDetails() {
                                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">SKU: {sku}</p>
                                                     <div className="w-1 rounded-full h-1 bg-slate-300"></div>
-                                                    <p className="text-[10px] font-bold text-slate-500 tracking-wide">{qty} x {formatPrice(unitPrice)}</p>
+                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 tracking-wide">
+                                                        <span>{qty} x</span>
+                                                        {hasDiscount ? (
+                                                            <>
+                                                                <span className="line-through text-slate-400 font-medium">{formatPrice(itemBasePrice)}</span>
+                                                                <span className="text-[#007AFF]">{formatPrice(unitPrice)}</span>
+                                                            </>
+                                                        ) : (
+                                                            <span>{formatPrice(unitPrice)}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex flex-col items-end justify-center shrink-0">
