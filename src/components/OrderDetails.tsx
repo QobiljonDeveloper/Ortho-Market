@@ -60,21 +60,37 @@ export function OrderDetails() {
     }
 
     const getTrueItemPrice = (item: any) => {
-        let unitPrice = 0;
-        // Prioritize transaction-specific variant prices saved inside the order response item
-        if (item.discountPrice && item.discountPrice > 0) {
-            unitPrice = item.discountPrice;
-        } else if (item.basePrice && item.basePrice > 0) {
-            unitPrice = item.basePrice;
-        } else {
-            unitPrice = item.unitPrice || item.price || 0;
+        // Prioritize direct transaction prices from the item object
+        const itemBase = item.basePrice || 0;
+        const itemDiscount = item.discountPrice || 0;
+        
+        if (itemDiscount > 0 && itemBase > 0 && itemDiscount < itemBase) {
+            return itemDiscount;
+        } else if (itemBase > 0) {
+            return itemBase;
         }
 
-        // Ultimate fallback to product level price if completely missing
-        if (!unitPrice) {
-            const prodBase = item.product?.basePrice || 0;
-            const prodDiscount = item.product?.discountPrice;
-            unitPrice = (prodDiscount !== undefined && prodDiscount < prodBase && prodDiscount > 0) ? prodDiscount : prodBase;
+        // Fallback reconstruct logic
+        const prodBase = item.product?.basePrice || 0;
+        const prodDiscount = item.product?.discountPrice;
+        const hasProdDiscount = prodBase > 0 && prodDiscount !== undefined && prodDiscount < prodBase;
+        const activeProdPrice = hasProdDiscount ? prodDiscount! : prodBase;
+
+        const prodName = item.product?.name || item.product?.nameUz || item.name || "";
+        let unitPrice = item.unitPrice || item.price || 0;
+
+        // Detect variant presence
+        const hasVariant = !!(
+            item.productTypeId || 
+            item.typeId || 
+            item.productType || 
+            (order?.note && order.note.includes(prodName) && order.note.includes("Variant:"))
+        );
+
+        if (hasVariant && unitPrice > 0 && activeProdPrice > 0) {
+            unitPrice += activeProdPrice;
+        } else if (unitPrice === 0 && activeProdPrice > 0) {
+            unitPrice = activeProdPrice;
         }
 
         return unitPrice;
@@ -136,11 +152,17 @@ export function OrderDetails() {
                                     const prodDiscount = item.product?.discountPrice;
                                     const hasProdDiscount = prodBase !== undefined && prodDiscount !== undefined && prodDiscount < prodBase;
 
+                                     const itemBase = item.basePrice || 0;
+                                     const itemDiscount = item.discountPrice || 0;
+
                                     let itemBasePrice = unitPrice;
                                     let hasDiscount = false;
 
-                                    if (item.basePrice && item.basePrice > unitPrice) {
-                                        itemBasePrice = item.basePrice;
+                                    if (itemDiscount > 0 && itemBase > 0 && itemDiscount < itemBase) {
+                                        itemBasePrice = itemBase;
+                                        hasDiscount = true;
+                                     } else if (itemBase > unitPrice) {
+                                        itemBasePrice = itemBase;
                                         hasDiscount = true;
                                     } else if (hasProdDiscount) {
                                         itemBasePrice = unitPrice + (prodBase - prodDiscount);
