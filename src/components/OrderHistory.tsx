@@ -17,7 +17,10 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
         queryKey: ["orders", user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
-            const res = await api.get(`/api/orders/user/${user.id}`);
+            const url = `/api/orders/user/${user.id}`;
+            console.log("DEBUG: Order History Source:", url);
+            const res = await api.get(url);
+            console.log("DEBUG: Order History Data:", res.data);
             // Assuming response is an array or has an items array
             return Array.isArray(res.data) ? res.data : (res.data?.items || []);
         },
