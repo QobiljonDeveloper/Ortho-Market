@@ -76,7 +76,19 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
-                                const actualTotal = order.totalPrice || order.totalAmount || order.items?.reduce((sum: number, item: any) => sum + ((item.totalPrice || (item.unitPrice * (item.quantity || 1))) || 0), 0) || 0;
+                                // Reconstruct full price for each item (backend saves variant price only as unitPrice)
+                                const actualTotal = order.items?.reduce((sum: number, item: any) => {
+                                    const rawPrice = item.unitPrice || 0;
+                                    const hasVariant = !!(item.productTypeId || item.typeId);
+                                    let fullPrice = rawPrice;
+                                    if (hasVariant && item.product) {
+                                        const prodBase = item.product.basePrice || 0;
+                                        const prodDiscount = item.product.discountPrice;
+                                        const activePrice = (prodDiscount !== undefined && prodDiscount < prodBase) ? prodDiscount : prodBase;
+                                        fullPrice = rawPrice + activePrice;
+                                    }
+                                    return sum + (fullPrice * (item.quantity || 1));
+                                }, 0) || 0;
                                 const totalStr = actualTotal > 0 ? `${actualTotal.toLocaleString()} so'm` : "Hisoblanmoqda >";
 
                                 const paymentStatus = order.paymentStatus || 0;

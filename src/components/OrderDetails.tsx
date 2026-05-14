@@ -59,8 +59,36 @@ export function OrderDetails() {
         paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">Qaytarilgan</span>;
     }
 
-    const subTotal = order.subtotal || order.subTotal || order.totalPrice || order.totalAmount || 0;
-    const finalTotal = order.totalPrice || order.totalAmount || subTotal;
+    // Helper: reconstruct full item price
+    // Backend saves only variant price as unitPrice (e.g. 12,500)
+    // but the real price = variant price + product's active price (e.g. 12,500 + 2,000 = 14,500)
+    const getFullItemPrice = (item: any) => {
+        const rawPrice = item.unitPrice || 0;
+        const hasVariant = !!(item.productTypeId || item.typeId);
+
+        if (hasVariant && item.product) {
+            const prodBase = item.product.basePrice || 0;
+            const prodDiscount = item.product.discountPrice;
+            const activeProductPrice = (prodDiscount !== undefined && prodDiscount < prodBase)
+                ? prodDiscount
+                : prodBase;
+            return rawPrice + activeProductPrice;
+        }
+        return rawPrice;
+    };
+
+    const getFullBasePrice = (item: any) => {
+        const rawPrice = item.unitPrice || 0;
+        const hasVariant = !!(item.productTypeId || item.typeId);
+
+        if (hasVariant && item.product?.basePrice) {
+            return rawPrice + item.product.basePrice;
+        }
+        return rawPrice;
+    };
+
+    const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + ((i.quantity || 1) * getFullItemPrice(i)), 0) || order.totalAmount || 0;
+    const finalTotal = subTotal;
 
     return (
         <AnimatePresence>
@@ -107,11 +135,11 @@ export function OrderDetails() {
                                     const prodName = item.product?.name || item.product?.nameUz || item.name || "Ortodontik mahsulot";
                                     const sku = item.product?.sku || item.sku || "OM-002";
                                     const imgUrl = item.product?.images?.[0]?.url || item.product?.image || item.image || item.primaryImageUrl || null;
-                                    console.log("HISTORY_ITEM_PRICE:", item.unitPrice, "TOTAL:", item.totalPrice);
+                                    console.log("HISTORY_ITEM_RAW:", item.unitPrice, "FULL:", getFullItemPrice(item), "FULL_BASE:", getFullBasePrice(item));
                                     const qty = item.quantity || 1;
-                                    const unitPrice = item.unitPrice || 0;
-                                    const basePrice = item.basePrice || unitPrice;
-                                    const itemTotal = item.totalPrice || (qty * unitPrice);
+                                    const unitPrice = getFullItemPrice(item);
+                                    const basePrice = getFullBasePrice(item);
+                                    const itemTotal = qty * unitPrice;
 
                                     const hasDiscount = basePrice > unitPrice;
                                     const itemBasePrice = basePrice;
