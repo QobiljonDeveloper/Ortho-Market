@@ -242,16 +242,21 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
                 paymentMethod: 1, // Card/Onlayn-o'tkazma
                 deliveryMethod: deliveryMethod === "delivery" ? 1 : 0,
-                totalPrice: dynamicCartTotal, // To'g'ri hisoblangan jami narx (variant + product narxi)
-                items: cart.map((item: any) => {
+                subtotal: dynamicCartTotal,
+                totalPrice: dynamicCartTotal,
+                items: cartItemsWithDynamicPrices.map((item: any) => {
                     const variant = storedVariants[String(item.productId)];
                     return {
                         productId: item.productId,
                         productTypeId: variant?.productTypeId || null,
-                        quantity: item.quantity
+                        quantity: item.quantity,
+                        unitPrice: item.displayPrice,  // variant + product narxi (14,500)
+                        totalPrice: item.displayPrice * item.quantity
                     };
                 })
             };
+
+            console.log("DEBUG_ORDER_PAYLOAD:", JSON.stringify(payload, null, 2));
 
             // Include note only if there is content
             if (finalNote) {
