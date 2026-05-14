@@ -73,7 +73,26 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
-                                const totalStr = order.totalAmount ? `${order.totalAmount.toLocaleString()} so'm` : "Hisoblanmoqda >";
+                                const calculatedTotal = order.items && order.items.length > 0
+                                    ? order.items.reduce((ttl: number, item: any) => {
+                                        const rawPrice = item.unitPrice || item.price || 0;
+                                        const prodName = item.product?.name || item.product?.nameUz || item.name || "";
+                                        const hasVariantField = !!(item.productTypeId || item.typeId || item.productType);
+                                        let hasVariantInNote = false;
+                                        if (order.note && typeof order.note === 'string' && prodName) {
+                                            hasVariantInNote = order.note.includes(`[Product: ${prodName}`) && order.note.includes('Variant:');
+                                        }
+                                        const hasVariant = hasVariantField || hasVariantInNote;
+                                        const prodBase = item.product?.basePrice;
+                                        const prodDiscount = item.product?.discountPrice;
+                                        const hasProdDiscount = prodBase !== undefined && prodDiscount !== undefined && prodDiscount < prodBase;
+                                        const prodActivePrice = hasProdDiscount ? prodDiscount : (prodBase || 0);
+                                        const correctedPrice = hasVariant ? (rawPrice + prodActivePrice) : rawPrice;
+                                        return ttl + ((item.quantity || 1) * correctedPrice);
+                                    }, 0)
+                                    : order.totalAmount || 0;
+
+                                const totalStr = calculatedTotal ? `${calculatedTotal.toLocaleString()} so'm` : "Hisoblanmoqda >";
 
                                 const paymentStatus = order.paymentStatus || 0;
                                 let paymentBadge = null;
