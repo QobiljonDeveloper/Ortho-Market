@@ -74,26 +74,21 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
                                 const calculatedTotal = order.items?.reduce((sum: number, item: any) => {
-                                    const prodBase = item.product?.basePrice || 0;
-                                    const prodDiscount = item.product?.discountPrice;
-                                    const hasProdDiscount = prodBase > 0 && prodDiscount !== undefined && prodDiscount < prodBase;
-                                    const activeProdPrice = hasProdDiscount ? prodDiscount! : prodBase;
+                                    let unitPrice = 0;
+                                    // Prioritize dynamic transaction prices saved on item object directly
+                                    if (item.discountPrice && item.discountPrice > 0) {
+                                        unitPrice = item.discountPrice;
+                                    } else if (item.basePrice && item.basePrice > 0) {
+                                        unitPrice = item.basePrice;
+                                    } else {
+                                        unitPrice = item.unitPrice || item.price || 0;
+                                    }
 
-                                    const prodName = item.product?.name || item.product?.nameUz || item.name || "";
-                                    let unitPrice = item.unitPrice || item.price || 0;
-
-                                    // Detect variant presence
-                                    const hasVariant = !!(
-                                        item.productTypeId || 
-                                        item.typeId || 
-                                        item.productType || 
-                                        (order.note && order.note.includes(prodName) && order.note.includes("Variant:"))
-                                    );
-
-                                    if (hasVariant && unitPrice > 0 && activeProdPrice > 0) {
-                                        unitPrice += activeProdPrice;
-                                    } else if (unitPrice === 0 && activeProdPrice > 0) {
-                                        unitPrice = activeProdPrice;
+                                    // Fallback to product price if no price was saved in order item
+                                    if (!unitPrice) {
+                                        const prodBase = item.product?.basePrice || 0;
+                                        const prodDiscount = item.product?.discountPrice;
+                                        unitPrice = (prodDiscount !== undefined && prodDiscount < prodBase && prodDiscount > 0) ? prodDiscount : prodBase;
                                     }
 
                                     return sum + (unitPrice * (item.quantity || 1));

@@ -60,26 +60,21 @@ export function OrderDetails() {
     }
 
     const getTrueItemPrice = (item: any) => {
-        const prodBase = item.product?.basePrice || 0;
-        const prodDiscount = item.product?.discountPrice;
-        const hasProdDiscount = prodBase > 0 && prodDiscount !== undefined && prodDiscount < prodBase;
-        const activeProdPrice = hasProdDiscount ? prodDiscount! : prodBase;
+        let unitPrice = 0;
+        // Prioritize transaction-specific variant prices saved inside the order response item
+        if (item.discountPrice && item.discountPrice > 0) {
+            unitPrice = item.discountPrice;
+        } else if (item.basePrice && item.basePrice > 0) {
+            unitPrice = item.basePrice;
+        } else {
+            unitPrice = item.unitPrice || item.price || 0;
+        }
 
-        const prodName = item.product?.name || item.product?.nameUz || item.name || "";
-        let unitPrice = item.unitPrice || item.price || 0;
-
-        // Detect variant presence
-        const hasVariant = !!(
-            item.productTypeId || 
-            item.typeId || 
-            item.productType || 
-            (order?.note && order.note.includes(prodName) && order.note.includes("Variant:"))
-        );
-
-        if (hasVariant && unitPrice > 0 && activeProdPrice > 0) {
-            unitPrice += activeProdPrice;
-        } else if (unitPrice === 0 && activeProdPrice > 0) {
-            unitPrice = activeProdPrice;
+        // Ultimate fallback to product level price if completely missing
+        if (!unitPrice) {
+            const prodBase = item.product?.basePrice || 0;
+            const prodDiscount = item.product?.discountPrice;
+            unitPrice = (prodDiscount !== undefined && prodDiscount < prodBase && prodDiscount > 0) ? prodDiscount : prodBase;
         }
 
         return unitPrice;
