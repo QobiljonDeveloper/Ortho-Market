@@ -59,7 +59,8 @@ export function OrderDetails() {
         paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">Qaytarilgan</span>;
     }
 
-    const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + ((i.quantity || 1) * (i.unitPrice || 0)), 0) || order.totalAmount || 0;
+    const subTotal = order.subtotal || order.subTotal || order.totalPrice || order.totalAmount || 0;
+    const finalTotal = order.totalPrice || order.totalAmount || subTotal;
 
     return (
         <AnimatePresence>
@@ -106,10 +107,11 @@ export function OrderDetails() {
                                     const prodName = item.product?.name || item.product?.nameUz || item.name || "Ortodontik mahsulot";
                                     const sku = item.product?.sku || item.sku || "OM-002";
                                     const imgUrl = item.product?.images?.[0]?.url || item.product?.image || item.image || item.primaryImageUrl || null;
+                                    console.log("HISTORY_ITEM_PRICE:", item.unitPrice, "TOTAL:", item.totalPrice);
                                     const qty = item.quantity || 1;
                                     const unitPrice = item.unitPrice || 0;
                                     const basePrice = item.basePrice || unitPrice;
-                                    const itemTotal = qty * unitPrice;
+                                    const itemTotal = item.totalPrice || (qty * unitPrice);
 
                                     const hasDiscount = basePrice > unitPrice;
                                     const itemBasePrice = basePrice;
@@ -196,7 +198,7 @@ export function OrderDetails() {
                                 </div>
                                 <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
                                     <span className="text-xs font-black uppercase text-slate-400">Jami to'lov</span>
-                                    <span className="text-xl font-black text-[#007AFF]">{formatPrice(order.totalAmount || subTotal)}</span>
+                                    <span className="text-xl font-black text-[#007AFF]">{formatPrice(finalTotal)}</span>
                                 </div>
                             </div>
                         </div>
