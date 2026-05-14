@@ -242,16 +242,12 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
                 paymentMethod: 1, // Card/Onlayn-o'tkazma
                 deliveryMethod: deliveryMethod === "delivery" ? 1 : 0,
-                items: cartItemsWithDynamicPrices.map((item: any) => {
+                items: cart.map((item: any) => {
                     const variant = storedVariants[String(item.productId)];
                     return {
                         productId: item.productId,
-                        quantity: item.quantity,
                         productTypeId: variant?.productTypeId || null,
-                        typeId: variant?.productTypeId || null, // Backwards compatibility fallback
-                        unitPrice: item.displayPrice, // Final selling price
-                        discountPrice: item.displayPrice, // Final selling price matching variant
-                        basePrice: item.originalPrice // Original price before discount
+                        quantity: item.quantity
                     };
                 })
             };

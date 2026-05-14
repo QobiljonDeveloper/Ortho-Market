@@ -1,6 +1,6 @@
 import { X, Package, Clock, CheckCircle2, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface OrderHistoryProps {
     open: boolean;
@@ -9,6 +9,7 @@ interface OrderHistoryProps {
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { fetchProductById } from '../services/api';
 import { useAuthContext } from '../context/AuthContext';
 
 export function OrderHistory({ open, onClose }: OrderHistoryProps) {
@@ -26,6 +27,53 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
         },
         enabled: !!user?.id && open,
     });
+
+    // Fetch product details for all unique productIds in orders
+    const [productsMap, setProductsMap] = useState<Record<string, any>>({});
+
+    useEffect(() => {
+        if (!orders || orders.length === 0) return;
+        // Collect all unique productIds from all order items
+        const allProductIds = new Set<string>();
+        orders.forEach((order: any) => {
+            order.items?.forEach((item: any) => {
+                if (item.productId) allProductIds.add(item.productId);
+            });
+        });
+
+        // Fetch each product's details
+        const fetchAll = async () => {
+            const map: Record<string, any> = {};
+            await Promise.all(
+                Array.from(allProductIds).map(async (pid) => {
+                    try {
+                        const product = await fetchProductById(pid);
+                        map[pid] = product;
+                    } catch (e) {
+                        console.warn("Failed to fetch product:", pid, e);
+                    }
+                })
+            );
+            setProductsMap(map);
+        };
+        fetchAll();
+    }, [orders]);
+
+    // Helper: reconstruct full price using fetched product data
+    const getFullPrice = (item: any) => {
+        const rawPrice = item.unitPrice || 0;
+        const hasVariant = !!(item.productTypeId || item.typeId);
+        if (!hasVariant) return rawPrice;
+
+        const product = productsMap[item.productId];
+        if (!product) return rawPrice;
+
+        const prodBase = product.basePrice || 0;
+        const prodDiscount = product.discountPrice;
+        const activePrice = (prodDiscount !== undefined && prodDiscount < prodBase)
+            ? prodDiscount : prodBase;
+        return rawPrice + activePrice;
+    };
 
     useEffect(() => {
         if (!open) return;
@@ -76,18 +124,9 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
-                                // Reconstruct full price for each item (backend saves variant price only as unitPrice)
+                                // Use getFullPrice helper (fetched product data from productsMap)
                                 const actualTotal = order.items?.reduce((sum: number, item: any) => {
-                                    const rawPrice = item.unitPrice || 0;
-                                    const hasVariant = !!(item.productTypeId || item.typeId);
-                                    let fullPrice = rawPrice;
-                                    if (hasVariant && item.product) {
-                                        const prodBase = item.product.basePrice || 0;
-                                        const prodDiscount = item.product.discountPrice;
-                                        const activePrice = (prodDiscount !== undefined && prodDiscount < prodBase) ? prodDiscount : prodBase;
-                                        fullPrice = rawPrice + activePrice;
-                                    }
-                                    return sum + (fullPrice * (item.quantity || 1));
+                                    return sum + (getFullPrice(item) * (item.quantity || 1));
                                 }, 0) || 0;
                                 const totalStr = actualTotal > 0 ? `${actualTotal.toLocaleString()} so'm` : "Hisoblanmoqda >";
 

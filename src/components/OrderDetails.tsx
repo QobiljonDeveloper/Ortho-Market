@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, MapPin, CreditCard, Package } from 'lucide-react';
+import { fetchProductById } from '../services/api';
 
 const REGION_MAP: Record<number, string> = {
     0: "Toshkent",
@@ -22,6 +23,7 @@ const REGION_MAP: Record<number, string> = {
 export function OrderDetails() {
     const [open, setOpen] = useState(false);
     const [order, setOrder] = useState<any>(null);
+    const [productsMap, setProductsMap] = useState<Record<string, any>>({});
 
     useEffect(() => {
         const handler = (e: any) => {
@@ -33,6 +35,31 @@ export function OrderDetails() {
         window.addEventListener('open-order-details', handler);
         return () => window.removeEventListener('open-order-details', handler);
     }, []);
+
+    // Fetch product details for all items in the order
+    useEffect(() => {
+        if (!order?.items || order.items.length === 0) return;
+        const productIds = new Set<string>();
+        order.items.forEach((item: any) => {
+            if (item.productId) productIds.add(item.productId);
+        });
+
+        const fetchAll = async () => {
+            const map: Record<string, any> = {};
+            await Promise.all(
+                Array.from(productIds).map(async (pid) => {
+                    try {
+                        const product = await fetchProductById(pid);
+                        map[pid] = product;
+                    } catch (e) {
+                        console.warn("Failed to fetch product:", pid, e);
+                    }
+                })
+            );
+            setProductsMap(map);
+        };
+        fetchAll();
+    }, [order]);
 
     if (!order) return null;
 
@@ -59,32 +86,33 @@ export function OrderDetails() {
         paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">Qaytarilgan</span>;
     }
 
-    // Helper: reconstruct full item price
-    // Backend saves only variant price as unitPrice (e.g. 12,500)
-    // but the real price = variant price + product's active price (e.g. 12,500 + 2,000 = 14,500)
+    // Helper: reconstruct full item price using fetched productsMap
+    // Backend saves only variant (type) price as unitPrice (e.g. 12,500)
+    // Real price = variant price + product's discountPrice or basePrice (e.g. 12,500 + 2,000 = 14,500)
     const getFullItemPrice = (item: any) => {
         const rawPrice = item.unitPrice || 0;
         const hasVariant = !!(item.productTypeId || item.typeId);
+        if (!hasVariant) return rawPrice;
 
-        if (hasVariant && item.product) {
-            const prodBase = item.product.basePrice || 0;
-            const prodDiscount = item.product.discountPrice;
-            const activeProductPrice = (prodDiscount !== undefined && prodDiscount < prodBase)
-                ? prodDiscount
-                : prodBase;
-            return rawPrice + activeProductPrice;
-        }
-        return rawPrice;
+        const product = productsMap[item.productId];
+        if (!product) return rawPrice;
+
+        const prodBase = product.basePrice || 0;
+        const prodDiscount = product.discountPrice;
+        const activeProductPrice = (prodDiscount !== undefined && prodDiscount < prodBase)
+            ? prodDiscount : prodBase;
+        return rawPrice + activeProductPrice;
     };
 
     const getFullBasePrice = (item: any) => {
         const rawPrice = item.unitPrice || 0;
         const hasVariant = !!(item.productTypeId || item.typeId);
+        if (!hasVariant) return rawPrice;
 
-        if (hasVariant && item.product?.basePrice) {
-            return rawPrice + item.product.basePrice;
-        }
-        return rawPrice;
+        const product = productsMap[item.productId];
+        if (!product?.basePrice) return rawPrice;
+
+        return rawPrice + product.basePrice;
     };
 
     const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + ((i.quantity || 1) * getFullItemPrice(i)), 0) || order.totalAmount || 0;
