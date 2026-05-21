@@ -15,7 +15,7 @@ import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store, ShieldCheck, Package } from "lucide-react";
+import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store, ShieldCheck, Package, ChevronDown } from "lucide-react";
 import { AddressPopup } from "./AddressPopup";
 import { useAddress } from "../hooks/useAddress";
 import { api } from "../services/api";
@@ -565,41 +565,52 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                             </RadioGroup>
 
                             {deliveryMethod === "bts" && (
-                                <div className="mt-4 p-4 rounded-2xl border border-slate-200 bg-[#F8FAFC] space-y-4 animate-in fade-in slide-in-from-top-2 shadow-sm">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="bts-region" className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Viloyat (Viloyatni tanlang)</Label>
-                                        <Select value={btsRegionId} onValueChange={handleBtsRegionChange}>
-                                            <SelectTrigger id="bts-region" className="w-full h-12 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-[#007AFF]/20 transition-all font-medium text-slate-900 shadow-sm px-4">
-                                                <SelectValue placeholder="Viloyatni tanlang" />
-                                            </SelectTrigger>
-                                            <SelectContent className="max-h-[200px] border-slate-100 shadow-xl rounded-xl bg-white z-50">
+                                <div className="w-full mt-4 p-4 rounded-2xl border border-slate-200 bg-[#F8FAFC] space-y-4 animate-in fade-in slide-in-from-top-2 shadow-sm">
+                                    <div className="space-y-1.5 w-full">
+                                        <Label htmlFor="bts-region" className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Viloyat</Label>
+                                        <div className="relative w-full">
+                                            <select
+                                                id="bts-region"
+                                                value={btsRegionId}
+                                                onChange={(e) => handleBtsRegionChange(e.target.value)}
+                                                className="w-full h-12 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] text-slate-900 font-bold shadow-sm px-4 appearance-none cursor-pointer pr-10 text-sm"
+                                            >
+                                                <option value="" disabled hidden>Viloyatni tanlang</option>
                                                 {btsRegions.map((region) => (
-                                                    <SelectItem key={region.id.toString()} value={region.id.toString()} className="font-medium cursor-pointer focus:bg-slate-50">
+                                                    <option key={region.id} value={region.id} className="font-semibold text-slate-900">
                                                         {region.name}
-                                                    </SelectItem>
+                                                    </option>
                                                 ))}
-                                            </SelectContent>
-                                        </Select>
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                                <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="bts-branch" className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Filial (BTS filiali)</Label>
-                                        <Select 
-                                            value={btsBranchId} 
-                                            onValueChange={setBtsBranchId}
-                                            disabled={!btsRegionId}
-                                        >
-                                            <SelectTrigger id="bts-branch" className="w-full h-12 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-[#007AFF]/20 transition-all font-medium text-slate-900 shadow-sm px-4 disabled:opacity-50 disabled:cursor-not-allowed">
-                                                <SelectValue placeholder={btsRegionId ? "Filialni tanlang" : "Avval viloyatni tanlang"} />
-                                            </SelectTrigger>
-                                            <SelectContent className="max-h-[200px] border-slate-100 shadow-xl rounded-xl bg-white z-50">
+                                    <div className="space-y-1.5 w-full">
+                                        <Label htmlFor="bts-branch" className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Filial</Label>
+                                        <div className="relative w-full">
+                                            <select
+                                                id="bts-branch"
+                                                value={btsBranchId}
+                                                onChange={(e) => setBtsBranchId(e.target.value)}
+                                                disabled={!btsRegionId}
+                                                className="w-full h-12 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] text-slate-900 font-bold shadow-sm px-4 appearance-none cursor-pointer pr-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <option value="" disabled hidden>
+                                                    {btsRegionId ? "Filialni tanlang" : "Avval viloyatni tanlang"}
+                                                </option>
                                                 {activeBtsBranches.map((branch) => (
-                                                    <SelectItem key={branch.id.toString()} value={branch.id.toString()} className="font-medium cursor-pointer focus:bg-slate-50">
+                                                    <option key={branch.id} value={branch.id} className="font-semibold text-slate-900">
                                                         {branch.name}
-                                                    </SelectItem>
+                                                    </option>
                                                 ))}
-                                            </SelectContent>
-                                        </Select>
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                                <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
