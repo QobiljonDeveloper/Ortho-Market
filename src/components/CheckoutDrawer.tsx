@@ -14,6 +14,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Textarea } from "./ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store, ShieldCheck, Package } from "lucide-react";
 import { AddressPopup } from "./AddressPopup";
 import { useAddress } from "../hooks/useAddress";
@@ -37,6 +38,50 @@ const REGION_MAP: Record<number, string> = {
     13: "Qoraqalpog'iston"
 };
 
+interface BtsRegion {
+    id: number;
+    name: string;
+}
+
+interface BtsBranch {
+    id: number;
+    name: string;
+}
+
+const btsRegions: BtsRegion[] = [
+  { id: 1, name: "Toshkent shahri" },
+  { id: 2, name: "Toshkent viloyati" },
+  { id: 3, name: "Sirdaryo viloyati" },
+  { id: 4, name: "Jizzax viloyati" },
+  { id: 5, name: "Samarqand viloyati" },
+  { id: 6, name: "Farg'ona viloyati" },
+  { id: 7, name: "Namangan viloyati" },
+  { id: 8, name: "Andijon viloyati" },
+  { id: 9, name: "Qashqadaryo viloyati" },
+  { id: 10, name: "Surxondaryo viloyati" },
+  { id: 11, name: "Buxoro viloyati" },
+  { id: 12, name: "Navoiy viloyati" },
+  { id: 13, name: "Xorazm viloyati" },
+  { id: 14, name: "Qoraqalpog'iston Respublikasi" }
+];
+
+const btsBranches: Record<number, BtsBranch[]> = {
+  1: [{ id: 101, name: "Chilonzor filiali" }, { id: 102, name: "Yunusobod filiali" }],
+  2: [{ id: 201, name: "Chirchiq filiali" }, { id: 202, name: "Olmaliq filiali" }],
+  3: [{ id: 301, name: "Guliston filiali" }],
+  4: [{ id: 401, name: "Jizzax filiali" }],
+  5: [{ id: 501, name: "Samarqand filiali" }],
+  6: [{ id: 601, name: "Farg'ona filiali" }, { id: 602, name: "Qo'qon filiali" }],
+  7: [{ id: 701, name: "Namangan filiali" }],
+  8: [{ id: 801, name: "Andijon filiali" }],
+  9: [{ id: 901, name: "Qarshi filiali" }],
+  10: [{ id: 1001, name: "Termiz filiali" }],
+  11: [{ id: 1101, name: "Buxoro filiali" }],
+  12: [{ id: 1201, name: "Navoiy filiali" }],
+  13: [{ id: 1301, name: "Urganch filiali" }],
+  14: [{ id: 1401, name: "Nukus filiali" }]
+};
+
 interface CheckoutDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -58,7 +103,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [paymentMethod, setPaymentMethod] = useState("online");
+        const [paymentMethod, setPaymentMethod] = useState("online");
     const [deliveryMethod, setDeliveryMethod] = useState("delivery");
 
     // Address UI State
@@ -71,6 +116,20 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
     // Custom note from user
     const [customNote, setCustomNote] = useState("");
+
+    // BTS Delivery State
+    const [btsRegionId, setBtsRegionId] = useState<string>("");
+    const [btsBranchId, setBtsBranchId] = useState<string>("");
+
+    const activeBtsBranches = useMemo(() => {
+        if (!btsRegionId) return [];
+        return btsBranches[Number(btsRegionId)] || [];
+    }, [btsRegionId]);
+
+    const handleBtsRegionChange = (val: string) => {
+        setBtsRegionId(val);
+        setBtsBranchId("");
+    };
 
     const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
@@ -136,6 +195,8 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             setFullName(user?.fullName || "");
             setPhone(user?.phone || "+998");
             setCustomNote("");
+            setBtsRegionId("");
+            setBtsBranchId("");
         }
     }, [open, user]);
 
@@ -202,6 +263,16 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             toast.error("Iltimos, yetkazib berish manzilini tanlang.");
             return;
         }
+        if (deliveryMethod === "bts") {
+            if (!btsRegionId) {
+                toast.error("Iltimos, viloyatni tanlang.");
+                return;
+            }
+            if (!btsBranchId) {
+                toast.error("Iltimos, BTS filialini tanlang.");
+                return;
+            }
+        }
         if (!cart || cart.length === 0) {
             toast.error("Savatingiz bo'sh.");
             return;
@@ -225,15 +296,30 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
         setIsSubmitting(true);
         try {
-            // Build the final note combining user's custom note + variant info
+            // Build the final note combining user's custom note + variant info + BTS info
             const variantNote = buildVariantNote();
+            let btsNote = null;
+            if (deliveryMethod === "bts") {
+                const reg = btsRegions.find(r => r.id.toString() === btsRegionId)?.name;
+                const branchList = btsBranches[Number(btsRegionId)] || [];
+                const br = branchList.find(b => b.id.toString() === btsBranchId)?.name;
+                btsNote = `[BTS yetkazib berish | Viloyat: ${reg} | Filial: ${br}]`;
+            }
+
             let finalNote = null;
-            if (customNote.trim() && variantNote) {
-                finalNote = `${customNote.trim()}\n\n--- Selected Variants ---\n${variantNote}`;
-            } else if (customNote.trim()) {
-                finalNote = customNote.trim();
-            } else if (variantNote) {
-                finalNote = variantNote;
+            const noteParts = [];
+            if (customNote.trim()) {
+                noteParts.push(customNote.trim());
+            }
+            if (btsNote) {
+                noteParts.push(btsNote);
+            }
+            if (variantNote) {
+                noteParts.push(`--- Selected Variants ---\n${variantNote}`);
+            }
+
+            if (noteParts.length > 0) {
+                finalNote = noteParts.join('\n\n');
             }
 
             const payload: any = {
@@ -241,7 +327,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 telegramId: (user as any).telegramId || "",
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
                 paymentMethod: 1, // Card/Onlayn-o'tkazma
-                deliveryMethod: deliveryMethod === "delivery" ? 1 : 0,
+                deliveryMethod: deliveryMethod === "delivery" ? 1 : (deliveryMethod === "bts" ? 2 : 0),
                 subtotal: dynamicCartTotal,
                 totalPrice: dynamicCartTotal,
                 items: cartItemsWithDynamicPrices.map((item: any) => {
@@ -443,6 +529,23 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                     </Label>
                                 </div>
                                 <div>
+                                    <RadioGroupItem value="bts" id="bts" className="peer sr-only" />
+                                    <Label
+                                        htmlFor="bts"
+                                        className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 peer-data-[state=checked]:border-[#007AFF] peer-data-[state=checked]:bg-[#007AFF]/5 transition-all cursor-pointer shadow-sm group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-data-[state=checked]:text-[#007AFF] group-data-[state=checked]:bg-[#007AFF]/10 transition-colors border border-slate-100 group-data-[state=checked]:border-[#007AFF]/20">
+                                                <Truck className="w-5 h-5" strokeWidth={2} />
+                                            </div>
+                                            <span className="font-bold text-slate-600 group-data-[state=checked]:text-slate-900">BTS orqali yetkazib berish</span>
+                                        </div>
+                                        <div className="w-6 h-6 rounded-full border-2 border-slate-200 peer-data-[state=checked]:border-[#007AFF] transition-all flex items-center justify-center bg-white">
+                                            <div className="w-3 h-3 rounded-full bg-[#007AFF] scale-0 peer-data-[state=checked]:scale-100 transition-transform" />
+                                        </div>
+                                    </Label>
+                                </div>
+                                <div>
                                     <RadioGroupItem value="pickup" id="pickup" className="peer sr-only" />
                                     <Label
                                         htmlFor="pickup"
@@ -460,6 +563,46 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                     </Label>
                                 </div>
                             </RadioGroup>
+
+                            {deliveryMethod === "bts" && (
+                                <div className="mt-4 p-4 rounded-2xl border border-slate-200 bg-[#F8FAFC] space-y-4 animate-in fade-in slide-in-from-top-2 shadow-sm">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="bts-region" className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Viloyat (Viloyatni tanlang)</Label>
+                                        <Select value={btsRegionId} onValueChange={handleBtsRegionChange}>
+                                            <SelectTrigger id="bts-region" className="w-full h-12 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-[#007AFF]/20 transition-all font-medium text-slate-900 shadow-sm px-4">
+                                                <SelectValue placeholder="Viloyatni tanlang" />
+                                            </SelectTrigger>
+                                            <SelectContent className="max-h-[200px] border-slate-100 shadow-xl rounded-xl bg-white z-50">
+                                                {btsRegions.map((region) => (
+                                                    <SelectItem key={region.id.toString()} value={region.id.toString()} className="font-medium cursor-pointer focus:bg-slate-50">
+                                                        {region.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="bts-branch" className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Filial (BTS filiali)</Label>
+                                        <Select 
+                                            value={btsBranchId} 
+                                            onValueChange={setBtsBranchId}
+                                            disabled={!btsRegionId}
+                                        >
+                                            <SelectTrigger id="bts-branch" className="w-full h-12 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-[#007AFF]/20 transition-all font-medium text-slate-900 shadow-sm px-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <SelectValue placeholder={btsRegionId ? "Filialni tanlang" : "Avval viloyatni tanlang"} />
+                                            </SelectTrigger>
+                                            <SelectContent className="max-h-[200px] border-slate-100 shadow-xl rounded-xl bg-white z-50">
+                                                {activeBtsBranches.map((branch) => (
+                                                    <SelectItem key={branch.id.toString()} value={branch.id.toString()} className="font-medium cursor-pointer focus:bg-slate-50">
+                                                        {branch.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Personal Info */}
