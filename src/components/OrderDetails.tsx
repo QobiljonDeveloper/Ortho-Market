@@ -68,26 +68,9 @@ export function OrderDetails() {
     };
 
     const isDelivery = order.deliveryMethod === 1;
-    const isBts = order.deliveryMethod === 2;
-
-    let deliveryTitle = "O'zi olib ketish (Samarqand filial)";
-    let fullAddress = "Samarqand (O'zi olib ketish)";
-
-    if (isDelivery) {
-        deliveryTitle = order.address?.label || "Uy manzili";
-        const regionName = order.address?.region !== undefined ? (REGION_MAP[order.address.region] || order.address.region) : "Samarqand";
-        fullAddress = `${regionName}, ${order.address.city || ""}, ${order.address.street || ""}`;
-    } else if (isBts) {
-        deliveryTitle = "BTS orqali yetkazib berish";
-        let btsInfo = "";
-        if (order.note) {
-            const match = order.note.match(/\[BTS yetkazib berish \| Viloyat: ([^|]+) \| Filial: ([^\]]+)\]/);
-            if (match) {
-                btsInfo = `${match[1].trim()}, ${match[2].trim()}`;
-            }
-        }
-        fullAddress = btsInfo || "BTS filiali";
-    }
+    // In actual response or payload, we map address dynamically. If it was a generic payload map we guess
+    const regionName = order.address?.region !== undefined ? (REGION_MAP[order.address.region] || order.address.region) : "Samarqand";
+    const fullAddress = order.address ? `${regionName}, ${order.address.city || ""}, ${order.address.street || ""}` : "Samarqand (O'zi olib ketish)";
 
     // Status mapping
     const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Qabul qilindi";
@@ -246,7 +229,7 @@ export function OrderDetails() {
                                 <MapPin className="w-4 h-4 text-[#007AFF]" /> Yetkazib berish
                             </h3>
                             <div className="bg-white rounded-3xl border border-slate-100 p-4 shadow-sm flex flex-col gap-1">
-                                <span className="text-sm font-bold text-slate-900">{deliveryTitle}</span>
+                                <span className="text-sm font-bold text-slate-900">{isDelivery ? (order.address?.label || "Uy manzili") : "O'zi olib ketish (Samarqand filial)"}</span>
                                 <span className="text-xs font-medium text-slate-500 leading-relaxed">{fullAddress}</span>
                             </div>
                         </div>
