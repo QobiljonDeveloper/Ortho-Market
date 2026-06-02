@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useCart } from "../context/CartContext";
 import { Button } from "./ui/button";
 import {
