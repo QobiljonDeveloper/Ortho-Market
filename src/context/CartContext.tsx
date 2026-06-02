@@ -6,10 +6,17 @@ import { useQueries } from "@tanstack/react-query";
 import { fetchProductTypes, fetchProductById } from "../services/api";
 
 interface VariantSelection {
-    parentName: string;
+    parentName?: string;
     parentPrice?: number;
     childName?: string;
     childPrice?: number;
+    productTypeId?: string;
+    selections?: {
+        productTypeId: string | number;
+        name: string;
+        priceExtra: number;
+        quantity: number;
+    }[];
 }
 
 interface CartContextType {
@@ -101,9 +108,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const cartTotal = useMemo(() => {
         return safeCart.reduce((total: number, item: any) => {
-            return total + (getItemPrice(item.productId) * (item.quantity || 0));
+            const variant = variantMap[String(item.productId)];
+            const product = productsMap[String(item.productId)];
+
+            let basePrice = item.basePrice || item.unitPrice || 0;
+            let unitPrice = item.unitPrice || item.basePrice || 0;
+
+            if (product) {
+                basePrice = product.basePrice || basePrice;
+                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                    ? product.discountPrice
+                    : product.basePrice;
+            }
+
+            if (variant?.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
+                const selectionsTotal = variant.selections.reduce((sum: number, sel: any) => {
+                    const selQty = sel.quantity || 0;
+                    const selExtraPrice = sel.priceExtra || 0;
+                    return sum + (selQty * (unitPrice + selExtraPrice));
+                }, 0);
+                return total + selectionsTotal;
+            } else {
+                const extraPrice = (variant?.parentPrice || 0) + (variant?.childPrice || 0);
+                return total + ((item.quantity || 0) * (unitPrice + extraPrice));
+            }
         }, 0);
-    }, [safeCart, getItemPrice]);
+    }, [safeCart, variantMap, productsMap]);
 
     const getItemQuantity = useCallback((productId: string) => {
         if (!productId) return 0;

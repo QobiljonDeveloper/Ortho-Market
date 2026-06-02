@@ -73,18 +73,29 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             const finalUnitPrice = unitPrice + extraPrice;
             const hasDiscount = unitPrice < basePrice;
 
+            // Calculate item total price accounting for every selected type's quantity
+            let itemTotal = 0;
+            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
+                itemTotal = variantData.selections.reduce((sum: number, s: any) => {
+                    return sum + (s.quantity * (unitPrice + (s.priceExtra || 0)));
+                }, 0);
+            } else {
+                itemTotal = (item.quantity || 0) * finalUnitPrice;
+            }
+
             return {
                 ...item,
                 displayPrice: finalUnitPrice,
                 originalPrice: finalBasePrice,
                 hasDiscount,
-                variantData
+                variantData,
+                itemTotal
             };
         });
     }, [cart, refreshCartTrigger, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
-        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + item.itemTotal, 0);
     }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {

@@ -123,6 +123,16 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             let finalBasePrice = 0;
             let finalUnitPrice = 0;
 
+            let basePrice = item.basePrice || item.unitPrice || 0;
+            let unitPrice = item.unitPrice || item.basePrice || 0;
+
+            if (product) {
+                basePrice = product.basePrice || basePrice;
+                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                    ? product.discountPrice
+                    : product.basePrice;
+            }
+
             if (variantData?.productTypeId !== "multi" && variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
                 // Scenario A: Variant defines full absolute pricing
                 finalBasePrice = variantBasePrice;
@@ -131,34 +141,35 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                     : variantBasePrice;
             } else {
                 // Scenario B: Fallback to global product additive pricing
-                let basePrice = item.basePrice || item.unitPrice || 0;
-                let unitPrice = item.unitPrice || item.basePrice || 0;
-
-                if (product) {
-                    basePrice = product.basePrice || basePrice;
-                    unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                        ? product.discountPrice
-                        : product.basePrice;
-                }
-                
                 finalBasePrice = basePrice + extraPrice;
                 finalUnitPrice = unitPrice + extraPrice;
             }
 
             const hasDiscount = finalUnitPrice < finalBasePrice;
 
+            // Calculate item total price accounting for every selected type's quantity
+            let itemTotal = 0;
+            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
+                itemTotal = variantData.selections.reduce((sum: number, s: any) => {
+                    return sum + (s.quantity * (unitPrice + (s.priceExtra || 0)));
+                }, 0);
+            } else {
+                itemTotal = (item.quantity || 0) * finalUnitPrice;
+            }
+
             return {
                 ...item,
                 displayPrice: finalUnitPrice,
                 originalPrice: finalBasePrice,
                 hasDiscount,
-                variantData
+                variantData,
+                itemTotal
             };
         });
     }, [cart, refreshCartTrigger, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
-        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + item.itemTotal, 0);
     }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {
@@ -450,7 +461,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                                     </div>
                                                 </div>
                                                 <span className="text-sm font-bold text-slate-900 shrink-0">
-                                                    {formatPrice(item.displayPrice * item.quantity)}
+                                                    {formatPrice(item.itemTotal)}
                                                 </span>
                                             </div>
                                         );
