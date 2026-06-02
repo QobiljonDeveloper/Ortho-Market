@@ -103,8 +103,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
 
         return cart.map((item: any) => {
-            const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
-            const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
+            const variantData = storedVariants[String(item.productId)];
             
             // Extract variant-specific absolute prices directly from variant data
             const variantBasePrice = variantData?.childBasePrice || variantData?.parentBasePrice;

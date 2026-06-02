@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Minus, ShoppingBag, ShoppingCart, Sparkles, HelpCircle, Layers, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 // 1. Definition of the nested Variant Interfaces
 export interface SubTypeVariant {
@@ -82,8 +81,7 @@ export function MultiVariantSelector({
             const saved = localStorage.getItem('tg_cart_variants');
             if (!saved) return;
             const savedMap = JSON.parse(saved);
-            const lookupKey = Object.keys(savedMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
-            const productData = lookupKey ? savedMap[lookupKey] : undefined;
+            const productData = savedMap[String(productId)];
             if (productData && productData.productTypeId === "multi" && Array.isArray(productData.selections)) {
                 const initialQty: Record<string, number> = {};
                 productData.selections.forEach((sel: any) => {
@@ -190,17 +188,6 @@ export function MultiVariantSelector({
         (sum, item) => sum + (basePrice + item.priceExtra) * item.quantity,
         0
     );
-
-    const totalVariantsStock = React.useMemo(() => {
-        return variants?.reduce((sum: number, parent: any) => {
-            const parentStock = parent.stock || 0;
-            const childrenList = parent.children || parent.subTypes || [];
-            const childrenStock = childrenList.reduce((cSum: number, child: any) => cSum + (child.stock || 0), 0);
-            return sum + parentStock + childrenStock;
-        }, 0) || 0;
-    }, [variants]);
-
-    const isOutOfStock = variants && variants.length > 0 && totalVariantsStock === 0;
 
     // 4. Submit handler filtering out zero-quantity selections and returning formatted array
     const handleSubmit = () => {
@@ -478,26 +465,14 @@ export function MultiVariantSelector({
             {/* Submission Action Button */}
             <button
                 type="button"
-                disabled={isOutOfStock}
                 onClick={handleSubmit}
-                className={cn(
-                    "w-full h-13 rounded-full font-black text-sm transition-all flex items-center justify-center gap-2",
-                    isOutOfStock 
-                        ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none" 
-                        : "bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)]"
-                )}
+                className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2"
             >
-                {isOutOfStock ? (
-                    "Bu mahsulot qolmagan"
-                ) : (
-                    <>
-                        <ShoppingCart className="w-4.5 h-4.5" />
-                        {totalSelectedQuantity > 0 
-                            ? `Savatga qo'shish (${totalSelectedQuantity} dona)` 
-                            : "Savatga qo'shish"
-                        }
-                    </>
-                )}
+                <ShoppingCart className="w-4.5 h-4.5" />
+                {totalSelectedQuantity > 0 
+                    ? `Savatga qo'shish (${totalSelectedQuantity} dona)` 
+                    : "Savatga qo'shish"
+                }
             </button>
         </div>
     );

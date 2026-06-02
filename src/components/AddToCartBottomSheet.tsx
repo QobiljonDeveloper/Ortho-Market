@@ -88,7 +88,7 @@ export function AddToCartDrawer({
         const saved = localStorage.getItem('tg_cart_variants');
         const savedMap = saved ? JSON.parse(saved) : {};
         
-        savedMap[String(product.id).toLowerCase()] = {
+        savedMap[String(product.id)] = {
             productTypeId: "multi",
             selections: selectedItems.map(item => ({
                 productTypeId: item.id,

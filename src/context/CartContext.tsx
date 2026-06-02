@@ -92,8 +92,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (!item) return 0;
 
         let price = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
-        const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
-        const variant = lookupKey ? variantMap[lookupKey] : undefined;
+        const variant = variantMap[String(productId)];
         if (variant) {
             price += (variant.parentPrice || 0) + (variant.childPrice || 0);
         }
@@ -129,8 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const getVariantForItem = useCallback((productId: string): VariantSelection | undefined => {
-        const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
-        return lookupKey ? variantMap[lookupKey] : undefined;
+        return variantMap[productId];
     }, [variantMap]);
 
     const addToCart = useCallback((product: Product) => {

@@ -44,8 +44,7 @@ export function ProductVariants({
             const saved = localStorage.getItem(VARIANTS_KEY);
             if (saved) {
                 const existingData = JSON.parse(saved);
-                const lookupKey = Object.keys(existingData).find(k => k.toLowerCase() === String(productId).toLowerCase());
-                const currentVariant = lookupKey ? existingData[lookupKey] : undefined;
+                const currentVariant = existingData[productId];
 
                 if (currentVariant && currentVariant.parentName) {
                     const parent = (productTypes as VariantItem[]).find(p => p.name === currentVariant.parentName);
@@ -77,7 +76,7 @@ export function ProductVariants({
             const child = parent?.children?.find(c => c.id === selectedChildId);
 
             if (parent) {
-                existingData[String(productId).toLowerCase()] = {
+                existingData[productId] = {
                     parentName: parent.name,
                     parentPrice: parent.price || 0,
                     parentBasePrice: parent.basePrice || null,
@@ -95,9 +94,8 @@ export function ProductVariants({
             }
         } else {
             // Handling Unselection
-            const lookupKey = Object.keys(existingData).find(k => k.toLowerCase() === String(productId).toLowerCase());
-            if (lookupKey) {
-                delete existingData[lookupKey];
+            if (existingData[productId]) {
+                delete existingData[productId];
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
                 window.dispatchEvent(new Event('storage'));
                 window.dispatchEvent(new Event('variantSaved'));

@@ -35,17 +35,6 @@ export function ProductCard({ product }: ProductCardProps) {
     const { data: variantsData = [], isLoading: isVariantsLoading } = useProductVariants(product.id);
     const hasVariants = (variantsData && variantsData.length > 0) || isVariantsLoading;
 
-    const totalVariantsStock = variantsData?.reduce((sum: number, parent: any) => {
-        const parentStock = parent.stock || 0;
-        const childrenList = parent.children || parent.subTypes || [];
-        const childrenStock = childrenList.reduce((cSum: number, child: any) => cSum + (child.stock || 0), 0);
-        return sum + parentStock + childrenStock;
-    }, 0) || 0;
-
-    const isOutOfStock = hasVariants
-        ? (variantsData.length > 0 && totalVariantsStock === 0 && !isVariantsLoading)
-        : (product.stock === '0' || Number(product.stock) === 0 || product.stock === 'qolmagan' || product.stock === 'Qolmagan');
-
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
 
     const handleCardClick = async () => {
@@ -100,11 +89,6 @@ export function ProductCard({ product }: ProductCardProps) {
 
                 {/* Image Area with soft medical blue backing */}
                 <div className="relative w-full aspect-square bg-[#F1F5F9] group-hover:bg-[#E0F2F1]/50 rounded-xl overflow-hidden mb-3 shrink-0 transition-colors duration-300 flex items-center justify-center p-4">
-                    {isOutOfStock && (
-                        <span className="absolute top-2 left-2 z-10 px-2 py-0.5 text-[9px] font-black text-white bg-rose-500 rounded-lg shadow-sm tracking-wider uppercase">
-                            Qolmagan
-                        </span>
-                    )}
                     {primaryImageUrl ? (
                         <img
                             src={primaryImageUrl}
@@ -191,30 +175,21 @@ export function ProductCard({ product }: ProductCardProps) {
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.15 }}
                                 >
-                                    {isOutOfStock ? (
-                                        <Button
-                                            disabled
-                                            className="h-10 w-full bg-slate-100 text-slate-400 rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 shadow-none p-0"
-                                        >
-                                            Qolmagan
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                if (hasVariants) {
-                                                    setIsBottomSheetOpen(true);
-                                                } else {
-                                                    addToCart(product);
-                                                }
-                                            }}
-                                            className="h-10 w-full bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all p-0 shadow-sm"
-                                        >
-                                            <ShoppingCart className="w-4 h-4" strokeWidth={2.5} />
-                                            Savatga
-                                        </Button>
-                                    )}
+                                    <Button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            if (hasVariants) {
+                                                setIsBottomSheetOpen(true);
+                                            } else {
+                                                addToCart(product);
+                                            }
+                                        }}
+                                        className="h-10 w-full bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all p-0 shadow-sm"
+                                    >
+                                        <ShoppingCart className="w-4 h-4" strokeWidth={2.5} />
+                                        Savatga
+                                    </Button>
                                 </motion.div>
                             ) : (
                                 <motion.div
