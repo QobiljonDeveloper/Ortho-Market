@@ -157,9 +157,33 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         });
     }, [cart, refreshCartTrigger, productsMap]);
 
+    const getCartItemPrice = useCallback((item: any) => {
+        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
+        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+        const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
+        const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
+
+        if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
+            // Precise sum of selected variants divided by quantity to yield accurate unit pricing
+            return variantData.selections.reduce((sum: number, sel: any) => sum + ((sel.priceExtra || 0) * (sel.quantity || 0)), 0) / (item.quantity || 1);
+        } else {
+            const product = productsMap[String(item.productId)];
+            let unitPrice = item.unitPrice || item.basePrice || 0;
+
+            if (product) {
+                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                    ? product.discountPrice
+                    : product.basePrice;
+            }
+
+            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            return unitPrice + extraPrice;
+        }
+    }, [productsMap]);
+
     const dynamicCartTotal = useMemo(() => {
-        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
-    }, [cartItemsWithDynamicPrices]);
+        return cart.reduce((total: number, item: any) => total + (getCartItemPrice(item) * item.quantity), 0);
+    }, [cart, getCartItemPrice]);
 
     useEffect(() => {
         if (open) {
@@ -439,18 +463,18 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                                                     {formatPrice(item.originalPrice)}
                                                                 </span>
                                                                 <span className="text-[11px] font-bold text-[#007AFF]">
-                                                                    {formatPrice(item.displayPrice)}
+                                                                    {formatPrice(getCartItemPrice(item))}
                                                                 </span>
                                                             </>
                                                         ) : (
                                                             <span className="text-[11px] text-slate-600 font-semibold">
-                                                                {formatPrice(item.displayPrice)}
+                                                                {formatPrice(getCartItemPrice(item))}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
                                                 <span className="text-sm font-bold text-slate-900 shrink-0">
-                                                    {formatPrice(item.displayPrice * item.quantity)}
+                                                    {formatPrice(getCartItemPrice(item) * item.quantity)}
                                                 </span>
                                             </div>
                                         );
