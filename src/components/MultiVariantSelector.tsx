@@ -177,6 +177,12 @@ export function MultiVariantSelector({
     }, [variants, quantities]);
 
     const totalSelectedQuantity = selectedItemsList.reduce((sum, item) => sum + item.quantity, 0);
+
+    // 3. Inspect currently selected variants / quantities state in console
+    React.useEffect(() => {
+        console.log("🎯 [DEBUG-VARIANTS-SELECTIONS] Selected items quantities map:", quantities);
+        console.log("🛒 [DEBUG-VARIANTS-FORMATTED] Selected items list to be added to cart:", selectedItemsList);
+    }, [quantities, selectedItemsList]);
     
     const totalPricing = selectedItemsList.reduce(
         (sum, item) => sum + (basePrice + item.priceExtra) * item.quantity,
