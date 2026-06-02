@@ -74,7 +74,7 @@ export function calculateCartItemTotal(item: CartItem, variantMap?: Record<strin
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
-    const { cart, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
+    const { cart: apiCart, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
 
     // Client-side variant selection storage persisted to localStorage
     const [variantMap, setVariantMap] = useState<Record<string, VariantSelection>>(() => {
@@ -87,50 +87,98 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     });
 
-    const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
+    // Client-side cart items state (including separate variants)
+    const [clientCart, setClientCart] = useState<CartItem[]>(() => {
+        try {
+            const saved = localStorage.getItem('tg_cart_client_items');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
 
-    const hydratedCart = useMemo(() => {
-        return safeCart.map((item: any) => {
-            const variant = variantMap[String(item.productId)];
+    // Synchronize clientCart with apiCart whenever apiCart changes (self-healing / alignment)
+    useEffect(() => {
+        const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
+        
+        setClientCart(prev => {
+            const nextCart = [...prev];
             
-            let selectedParentType = variant?.selectedParentType || null;
-            let selectedChildType = variant?.selectedChildType || null;
-
-            // Re-hydrate details from flat properties if not stored explicitly
-            if (!selectedParentType && variant?.parentName) {
-                selectedParentType = {
-                    id: variant.productTypeId || "",
-                    name: variant.parentName,
-                    price: variant.parentPrice || 0
-                };
+            // 1. Group client-side items by productId
+            const clientGroups: Record<string, CartItem[]> = {};
+            nextCart.forEach(item => {
+                if (!clientGroups[item.productId]) {
+                    clientGroups[item.productId] = [];
+                }
+                clientGroups[item.productId].push(item);
+            });
+            
+            // 2. Map server items and sync
+            const newClientCart: CartItem[] = [];
+            
+            safeApiCart.forEach((apiItem: any) => {
+                const productId = apiItem.productId;
+                const serverQty = apiItem.quantity || 0;
+                const existingItems = clientGroups[productId] || [];
+                
+                if (existingItems.length > 0) {
+                    const clientQty = existingItems.reduce((sum, item) => sum + item.quantity, 0);
+                    
+                    if (clientQty === serverQty) {
+                        // Perfect match, keep all variants as is
+                        newClientCart.push(...existingItems);
+                    } else {
+                        // Quantity mismatch! Let's adjust
+                        if (serverQty === 0) {
+                            // Do nothing
+                        } else if (existingItems.length === 1) {
+                            // Only 1 item, update its quantity
+                            newClientCart.push({
+                                ...existingItems[0],
+                                quantity: serverQty
+                            });
+                        } else {
+                            // Multiple variants. Adjust first item's quantity to make the sum match
+                            const firstItem = existingItems[0];
+                            const otherQty = existingItems.slice(1).reduce((sum, item) => sum + item.quantity, 0);
+                            const adjustedFirstQty = Math.max(1, serverQty - otherQty);
+                            
+                            newClientCart.push({
+                                ...firstItem,
+                                quantity: adjustedFirstQty
+                            });
+                            newClientCart.push(...existingItems.slice(1));
+                        }
+                    }
+                } else {
+                    // Not in client cart, create a default base item (no variants)
+                    const newItem: CartItem = {
+                        id: `${productId}--`,
+                        productId: productId,
+                        productNameUz: apiItem.productNameUz || '',
+                        quantity: serverQty,
+                        unitPrice: apiItem.unitPrice || apiItem.basePrice || 0,
+                        basePrice: apiItem.basePrice || 0,
+                        discountPrice: apiItem.discountPrice,
+                        primaryImageUrl: apiItem.primaryImageUrl || null,
+                        selectedParentType: null,
+                        selectedChildType: null
+                    };
+                    newClientCart.push(newItem);
+                }
+            });
+            
+            // Save to localStorage and return
+            try {
+                localStorage.setItem('tg_cart_client_items', JSON.stringify(newClientCart));
+            } catch (err) {
+                console.error("Failed to save synced cart to localStorage:", err);
             }
-            if (!selectedChildType && variant?.childName) {
-                selectedChildType = {
-                    id: variant.productTypeId || "",
-                    name: variant.childName,
-                    price: variant.childPrice || 0
-                };
-            }
-
-            return {
-                ...item,
-                selectedParentType,
-                selectedChildType
-            };
+            return newClientCart;
         });
-    }, [safeCart, variantMap]);
+    }, [apiCart]);
 
-    const cartCount = useMemo(() => {
-        return hydratedCart.reduce((total: number, item: any) => {
-            const variant = variantMap[String(item.productId)];
-            if (variant?.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
-                const totalQty = variant.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
-                return total + (totalQty * (item.quantity || 0));
-            } else {
-                return total + (item.quantity || 0);
-            }
-        }, 0);
-    }, [hydratedCart, variantMap]);
+    const safeCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
 
     const productIds: string[] = useMemo(() => Array.from(new Set(safeCart.map((i: any) => String(i.productId)))), [safeCart]);
 
@@ -301,40 +349,52 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [productTypesMap]);
 
     const getItemPrice = useCallback((productId: string) => {
-        const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
-        if (!item) return 0;
+        const items = clientCart.filter(item => item.productId === productId);
+        if (items.length === 0) return 0;
+        
+        const item = items[0];
+        const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
+            ? item.discountPrice
+            : (item.basePrice || item.unitPrice || 0);
 
-        let price = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
-        const variant = variantMap[String(productId)];
-        if (variant) {
-            price += (variant.parentPrice || 0) + (variant.childPrice || 0);
-        }
-        return price;
-    }, [safeCart, variantMap]);
+        const parentPrice = item.selectedParentType?.price || 0;
+        const childPrice = item.selectedChildType?.price || 0;
+        return basePrice + parentPrice + childPrice;
+    }, [clientCart]);
 
     const cartTotal = useMemo(() => {
-        return hydratedCart.reduce((total: number, item: any) => {
-            return total + calculateCartItemTotal(item, variantMap);
+        return clientCart.reduce((total, item) => {
+            const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
+                ? item.discountPrice
+                : (item.basePrice || item.unitPrice || 0);
+            
+            const parentPrice = item.selectedParentType?.price || 0;
+            const childPrice = item.selectedChildType?.price || 0;
+            
+            const unitPrice = basePrice + parentPrice + childPrice;
+            return total + (unitPrice * item.quantity);
         }, 0);
-    }, [hydratedCart, variantMap]);
+    }, [clientCart]);
+
+    const cartCount = useMemo(() => {
+        return clientCart.reduce((total, item) => total + (item.quantity || 0), 0);
+    }, [clientCart]);
 
     const getItemQuantity = useCallback((productId: string) => {
         if (!productId) return 0;
-        const item = safeCart.find((item: any) => item?.productId === productId);
-        return item ? item.quantity : 0;
-    }, [safeCart]);
+        return clientCart
+            .filter(item => item.productId === productId)
+            .reduce((sum, item) => sum + item.quantity, 0);
+    }, [clientCart]);
 
     const setVariantForItem = useCallback((productId: string, parentName: string, childName?: string) => {
         setVariantMap(prev => {
             const next = { ...prev };
-
-            // If parentName is empty, it means "clear selection"
             if (!parentName) {
                 delete next[productId];
             } else {
                 next[String(productId)] = { parentName, parentPrice: 0, childName, childPrice: 0 };
             }
-
             localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(next));
             return next;
         });
@@ -358,79 +418,294 @@ export function CartProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        // Always sync with the latest localStorage first
+        const basePrice = product.discountPrice !== undefined && product.discountPrice !== null && product.discountPrice < product.basePrice
+            ? product.discountPrice
+            : product.basePrice;
+
+        // Check if there is a multi-variant selection saved in localStorage for this product
+        let multiSelections: any[] = [];
         try {
-            const saved = localStorage.getItem(VARIANTS_STORAGE_KEY);
-            const currentVariants = saved ? JSON.parse(saved) : {};
-            
-            // If explicit types are passed, let's merge them
-            if (selectedParentType || selectedChildType) {
-                currentVariants[String(product.id)] = {
-                    ...currentVariants[String(product.id)],
-                    parentName: selectedParentType?.name || undefined,
-                    parentPrice: selectedParentType?.price || 0,
-                    childName: selectedChildType?.name || undefined,
-                    childPrice: selectedChildType?.price || 0,
-                    productTypeId: String(selectedChildType?.id || selectedParentType?.id || ""),
-                    selectedParentType,
-                    selectedChildType
-                };
-                localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(currentVariants));
+            const savedVariants = localStorage.getItem('tg_cart_variants');
+            const variantsMap = savedVariants ? JSON.parse(savedVariants) : {};
+            const saved = variantsMap[product.id];
+            if (saved && saved.productTypeId === "multi" && Array.isArray(saved.selections)) {
+                multiSelections = saved.selections;
             }
-            
-            setVariantMap(currentVariants);
         } catch (err) {
-            console.error("Error syncing variant map in addToCart:", err);
+            console.error("Failed to load multi variants in addToCart:", err);
         }
 
+        if (multiSelections.length > 0) {
+            setClientCart(prev => {
+                // Remove existing client items for this product
+                const nextCart = prev.filter(item => item.productId !== product.id);
+                
+                multiSelections.forEach(sel => {
+                    const hasSub = sel.name.includes(" ➔ ");
+                    let parentType: SelectedTypeDetail | null = null;
+                    let childType: SelectedTypeDetail | null = null;
+                    let parentId = '';
+                    let childId = '';
+
+                    if (hasSub) {
+                        const parts = sel.name.split(" ➔ ");
+                        parentId = 'parent';
+                        childId = String(sel.productTypeId);
+                        parentType = { id: parentId, name: parts[0], price: 0 };
+                        childType = { id: childId, name: parts[1], price: sel.priceExtra || 0 };
+                    } else {
+                        parentId = String(sel.productTypeId);
+                        parentType = { id: parentId, name: sel.name, price: sel.priceExtra || 0 };
+                    }
+
+                    const compositeKey = `${product.id}-${parentId}-${childId}`;
+                    const unitPrice = basePrice + (sel.priceExtra || 0);
+
+                    nextCart.push({
+                        id: compositeKey,
+                        productId: product.id,
+                        productNameUz: product.nameUz || product.name || '',
+                        quantity: sel.quantity || 1,
+                        unitPrice: unitPrice,
+                        basePrice: product.basePrice,
+                        discountPrice: product.discountPrice,
+                        primaryImageUrl: product.primaryImageUrl || product.images?.find(i => i.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
+                        selectedParentType: parentType,
+                        selectedChildType: childType
+                    });
+                });
+
+                try {
+                    localStorage.setItem('tg_cart_client_items', JSON.stringify(nextCart));
+                } catch (err) {
+                    console.error("Failed to save cart to localStorage:", err);
+                }
+                return nextCart;
+            });
+        } else {
+            // Flat / single variant selection
+            let finalParent = selectedParentType;
+            let finalChild = selectedChildType;
+
+            if (!finalParent && !finalChild) {
+                try {
+                    const savedVariants = localStorage.getItem('tg_cart_variants');
+                    const variantsMap = savedVariants ? JSON.parse(savedVariants) : {};
+                    const saved = variantsMap[product.id];
+                    if (saved && saved.productTypeId !== "multi") {
+                        if (saved.selectedParentType) {
+                            finalParent = saved.selectedParentType;
+                        } else if (saved.parentName) {
+                            finalParent = {
+                                id: saved.productTypeId || '',
+                                name: saved.parentName,
+                                price: saved.parentPrice || 0
+                            };
+                        }
+                        if (saved.selectedChildType) {
+                            finalChild = saved.selectedChildType;
+                        } else if (saved.childName) {
+                            finalChild = {
+                                id: saved.productTypeId || '',
+                                name: saved.childName,
+                                price: saved.childPrice || 0
+                            };
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to load options from local storage in addToCart:", err);
+                }
+            }
+
+            const parentId = finalParent?.id ? String(finalParent.id) : '';
+            const childId = finalChild?.id ? String(finalChild.id) : '';
+            const compositeKey = `${product.id}-${parentId}-${childId}`;
+
+            const parentPrice = finalParent?.price || 0;
+            const childPrice = finalChild?.price || 0;
+            const unitPrice = basePrice + parentPrice + childPrice;
+
+            setClientCart(prev => {
+                const nextCart = [...prev];
+                const existingIdx = nextCart.findIndex(item => item.id === compositeKey);
+
+                if (existingIdx > -1) {
+                    nextCart[existingIdx] = {
+                        ...nextCart[existingIdx],
+                        quantity: nextCart[existingIdx].quantity + 1
+                    };
+                } else {
+                    const newItem: CartItem = {
+                        id: compositeKey,
+                        productId: product.id,
+                        productNameUz: product.nameUz || product.name || '',
+                        quantity: 1,
+                        unitPrice: unitPrice,
+                        basePrice: product.basePrice,
+                        discountPrice: product.discountPrice,
+                        primaryImageUrl: product.primaryImageUrl || product.images?.find(i => i.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
+                        selectedParentType: finalParent || null,
+                        selectedChildType: finalChild || null
+                    };
+                    nextCart.push(newItem);
+                }
+
+                try {
+                    localStorage.setItem('tg_cart_client_items', JSON.stringify(nextCart));
+                } catch (err) {
+                    console.error("Failed to save cart to localStorage:", err);
+                }
+                return nextCart;
+            });
+        }
+
+        // Trigger backend API call
         try {
             if (addToCartMutation && typeof addToCartMutation.mutate === 'function') {
                 addToCartMutation.mutate(product);
-            } else {
-                console.error("addToCartMutation is undefined or uninitialized");
             }
         } catch (err) {
             console.error("Error executing addToCart mutation:", err);
         }
     }, [addToCartMutation, user?.id]);
 
-    const removeFromCart = useCallback((productId: string) => {
-        if (!user?.id || !productId) return;
-        try {
-            const item = safeCart.find((i: any) => i?.productId === productId);
-            if (item) {
-                removeCartItemMutation.mutate(item.id);
-                // Clean up variant selection
-                setVariantMap(prev => {
-                    const next = { ...prev };
-                    if (next[productId]) {
-                        delete next[productId];
-                        localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(next));
-                    }
-                    return next;
-                });
+    const removeFromCart = useCallback((compositeKey: string) => {
+        if (!user?.id || !compositeKey) return;
+        setClientCart(prev => {
+            const nextCart = [...prev];
+            const idx = nextCart.findIndex(item => item.id === compositeKey);
+            
+            let productId = '';
+            if (idx > -1) {
+                productId = nextCart[idx].productId;
+                nextCart.splice(idx, 1);
+            } else {
+                productId = compositeKey;
+                const filtered = nextCart.filter(item => item.productId !== productId);
+                if (filtered.length === nextCart.length) return prev;
+                nextCart.length = 0;
+                nextCart.push(...filtered);
             }
-        } catch (err) {
-            console.error("Error executing removeFromCart mutation:", err);
-        }
-    }, [user?.id, safeCart, removeCartItemMutation]);
 
-    const updateQuantity = useCallback((productId: string, quantity: number) => {
-        if (!user?.id || !productId) return;
-        if (quantity <= 0) {
-            removeFromCart(productId);
-        } else {
-            const item = safeCart.find((i: any) => i?.productId === productId);
-            if (item) {
-                updateQuantityMutation.mutate({ cartItemId: item.id, quantity });
-            } else if (quantity === 1) {
-                // Failsafe in case product isn't mapped but update was fired
+            try {
+                localStorage.setItem('tg_cart_client_items', JSON.stringify(nextCart));
+            } catch (err) {
+                console.error("Failed to save updated cart to localStorage:", err);
             }
-        }
-    }, [user?.id, safeCart, removeFromCart, updateQuantityMutation]);
+
+            // Sync with backend
+            const remainingQty = nextCart
+                .filter(i => i.productId === productId)
+                .reduce((sum, i) => sum + i.quantity, 0);
+
+            const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
+            const apiItem = safeApiCart.find((i: any) => i.productId === productId);
+
+            if (apiItem) {
+                if (remainingQty === 0) {
+                    removeCartItemMutation.mutate(apiItem.id);
+                } else {
+                    updateQuantityMutation.mutate({ cartItemId: apiItem.id, quantity: remainingQty });
+                }
+            }
+
+            return nextCart;
+        });
+    }, [apiCart, user?.id, removeCartItemMutation, updateQuantityMutation]);
+
+    const updateQuantity = useCallback((keyOrId: string, quantity: number) => {
+        if (!user?.id || !keyOrId) return;
+
+        setClientCart(prev => {
+            const nextCart = [...prev];
+            let idx = nextCart.findIndex(item => item.id === keyOrId);
+            
+            if (idx === -1) {
+                const items = nextCart.filter(i => i.productId === keyOrId);
+                if (items.length > 0) {
+                    const currentSum = items.reduce((sum, i) => sum + i.quantity, 0);
+                    if (currentSum === quantity) {
+                        return prev;
+                    }
+                    const firstItem = items[0];
+                    const firstIdx = nextCart.findIndex(i => i.id === firstItem.id);
+                    const otherQty = items.slice(1).reduce((sum, i) => sum + i.quantity, 0);
+                    const newFirstQty = Math.max(0, quantity - otherQty);
+                    
+                    if (newFirstQty === 0) {
+                        nextCart.splice(firstIdx, 1);
+                    } else {
+                        nextCart[firstIdx] = {
+                            ...firstItem,
+                            quantity: newFirstQty
+                        };
+                    }
+                    
+                    const remainingQty = nextCart
+                        .filter(i => i.productId === keyOrId)
+                        .reduce((sum, i) => sum + i.quantity, 0);
+
+                    const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
+                    const apiItem = safeApiCart.find((i: any) => i.productId === keyOrId);
+
+                    if (apiItem) {
+                        if (remainingQty === 0) {
+                            removeCartItemMutation.mutate(apiItem.id);
+                        } else {
+                            updateQuantityMutation.mutate({ cartItemId: apiItem.id, quantity: remainingQty });
+                        }
+                    }
+                    
+                    try {
+                        localStorage.setItem('tg_cart_client_items', JSON.stringify(nextCart));
+                    } catch (err) {
+                        console.error("Failed to save updated cart to localStorage:", err);
+                    }
+                    return nextCart;
+                }
+                return prev;
+            }
+
+            const item = nextCart[idx];
+            const newQty = Math.max(0, quantity);
+
+            if (newQty === 0) {
+                nextCart.splice(idx, 1);
+            } else {
+                nextCart[idx] = {
+                    ...item,
+                    quantity: newQty
+                };
+            }
+
+            try {
+                localStorage.setItem('tg_cart_client_items', JSON.stringify(nextCart));
+            } catch (err) {
+                console.error("Failed to save updated cart to localStorage:", err);
+            }
+
+            const remainingQty = nextCart
+                .filter(i => i.productId === item.productId)
+                .reduce((sum, i) => sum + i.quantity, 0);
+
+            const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
+            const apiItem = safeApiCart.find((i: any) => i.productId === item.productId);
+
+            if (apiItem) {
+                if (remainingQty === 0) {
+                    removeCartItemMutation.mutate(apiItem.id);
+                } else {
+                    updateQuantityMutation.mutate({ cartItemId: apiItem.id, quantity: remainingQty });
+                }
+            }
+
+            return nextCart;
+        });
+    }, [apiCart, user?.id, removeCartItemMutation, updateQuantityMutation]);
 
     const clearCart = useCallback(() => {
-        console.warn("Backend clear cart endpoint not yet configured.");
+        setClientCart([]);
+        localStorage.removeItem('tg_cart_client_items');
         setVariantMap({});
         localStorage.removeItem(VARIANTS_STORAGE_KEY);
     }, []);
@@ -464,7 +739,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return (
         <CartContext.Provider
             value={{
-                cart: hydratedCart,
+                cart: clientCart,
                 addToCart,
                 removeFromCart,
                 updateQuantity,
