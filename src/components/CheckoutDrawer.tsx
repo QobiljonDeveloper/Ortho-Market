@@ -19,6 +19,27 @@ import { AddressPopup } from "./AddressPopup";
 import { useAddress } from "../hooks/useAddress";
 import { api } from "../services/api";
 import { toast } from "sonner";
+import { BtsDeliverySelector } from "./BtsDeliverySelector";
+
+const BTS_REGIONS_MAP: Record<string, string> = {
+    tashkent: "Toshkent shahri",
+    samarkand: "Samarqand viloyati",
+    fergana: "Farg'ona viloyati",
+    bukhara: "Buxoro viloyati"
+};
+
+const BTS_BRANCHES_MAP: Record<string, { name: string; address: string; phone: string }> = {
+    "bts-tashkent-1": { name: "BTS Yunusobod filiali", address: "Yunusobod tumani, 19-kvartal, 4-uy", phone: "+998 71 207-00-50" },
+    "bts-tashkent-2": { name: "BTS Chilonzor filiali", address: "Chilonzor tumani, Qatortol ko'chasi, 24-uy", phone: "+998 71 207-00-51" },
+    "bts-tashkent-3": { name: "BTS Mirobod (Bosh ofis)", address: "Mirobod tumani, Taras Shevchenko ko'chasi, 38-uy", phone: "+998 71 207-00-52" },
+    "bts-sam-1": { name: "BTS Samarqand markaziy filiali", address: "Samarqand shahri, Gagarin ko'chasi, 85-uy", phone: "+998 66 233-00-50" },
+    "bts-sam-2": { name: "BTS Registon filiali", address: "Samarqand shahri, Registon ko'chasi, 12-uy", phone: "+998 66 233-00-51" },
+    "bts-fer-1": { name: "BTS Farg'ona shahar filiali", address: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 45-uy", phone: "+998 73 244-00-50" },
+    "bts-fer-2": { name: "BTS Qo'qon filiali", address: "Qo'qon shahri, Turon ko'chasi, 110-uy", phone: "+998 73 542-00-51" },
+    "bts-fer-3": { name: "BTS Marg'ilon filiali", address: "Marg'ilon shahri, Mustaqillik ko'chasi, 5-uy", phone: "+998 73 237-00-52" },
+    "bts-bux-1": { name: "BTS Buxoro markaziy filiali", address: "Buxoro shahri, Navoiy shoh ko'chasi, 18-uy", phone: "+998 65 221-00-50" },
+    "bts-bux-2": { name: "BTS G'ijduvon filiali", address: "G'ijduvon tumani, Yusuf Hamadoniy ko'chasi, 3-uy", phone: "+998 65 572-00-51" }
+};
 
 const REGION_MAP: Record<number, string> = {
     0: "Toshkent",
@@ -60,6 +81,8 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
     const [paymentMethod, setPaymentMethod] = useState("online");
     const [deliveryMethod, setDeliveryMethod] = useState("delivery");
+    const [btsRegionId, setBtsRegionId] = useState<string | null>(null);
+    const [btsBranchId, setBtsBranchId] = useState<string | null>(null);
 
     // Address UI State
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -202,6 +225,16 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             toast.error("Iltimos, yetkazib berish manzilini tanlang.");
             return;
         }
+        if (deliveryMethod === "bts") {
+            if (!btsRegionId) {
+                toast.error("Iltimos, BTS yetkazib berish viloyatini tanlang.");
+                return;
+            }
+            if (!btsBranchId) {
+                toast.error("Iltimos, BTS filialini tanlang.");
+                return;
+            }
+        }
         if (!cart || cart.length === 0) {
             toast.error("Savatingiz bo'sh.");
             return;
@@ -225,15 +258,32 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
         setIsSubmitting(true);
         try {
-            // Build the final note combining user's custom note + variant info
+            // Build the final note combining user's custom note + variant info + BTS details
             const variantNote = buildVariantNote();
+            
+            let btsNote = null;
+            if (deliveryMethod === "bts" && btsRegionId && btsBranchId) {
+                const regionName = BTS_REGIONS_MAP[btsRegionId] || btsRegionId;
+                const branchObj = BTS_BRANCHES_MAP[btsBranchId];
+                if (branchObj) {
+                    btsNote = `--- BTS Yetkazib Berish ---\n📍 Viloyat: ${regionName}\n🏦 Filial: ${branchObj.name}\n🏠 Manzil: ${branchObj.address}\n📞 Aloqa: ${branchObj.phone}`;
+                }
+            }
+
             let finalNote = null;
-            if (customNote.trim() && variantNote) {
-                finalNote = `${customNote.trim()}\n\n--- Selected Variants ---\n${variantNote}`;
-            } else if (customNote.trim()) {
-                finalNote = customNote.trim();
-            } else if (variantNote) {
-                finalNote = variantNote;
+            const noteParts = [];
+            if (customNote.trim()) {
+                noteParts.push(customNote.trim());
+            }
+            if (variantNote) {
+                noteParts.push(`--- Selected Variants ---\n${variantNote}`);
+            }
+            if (btsNote) {
+                noteParts.push(btsNote);
+            }
+
+            if (noteParts.length > 0) {
+                finalNote = noteParts.join("\n\n");
             }
 
             const payload: any = {
@@ -241,7 +291,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 telegramId: (user as any).telegramId || "",
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
                 paymentMethod: 1, // Card/Onlayn-o'tkazma
-                deliveryMethod: deliveryMethod === "delivery" ? 1 : 0,
+                deliveryMethod: deliveryMethod === "pickup" ? 0 : 1, // Map pickup to 0, both delivery & BTS to 1 (standard delivery payload indicator)
                 subtotal: dynamicCartTotal,
                 totalPrice: dynamicCartTotal,
                 items: cartItemsWithDynamicPrices.map((item: any) => {
@@ -416,51 +466,17 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                             </RadioGroup>
                         </div>
 
-                        {/* Delivery Method */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 mb-2 ml-1">
-                                <div className="w-8 h-8 rounded-lg bg-[#E0F2F1] flex items-center justify-center text-[#007AFF] border border-[#007AFF]/10">
-                                    <Truck className="w-4 h-4" strokeWidth={2} />
-                                </div>
-                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Yetkazish usuli</h3>
-                            </div>
-                            <RadioGroup value={deliveryMethod} onValueChange={handleDeliveryChange} className="grid gap-3">
-                                <div>
-                                    <RadioGroupItem value="delivery" id="delivery" className="peer sr-only" />
-                                    <Label
-                                        htmlFor="delivery"
-                                        className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 peer-data-[state=checked]:border-[#007AFF] peer-data-[state=checked]:bg-[#007AFF]/5 transition-all cursor-pointer shadow-sm group"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-data-[state=checked]:text-[#007AFF] group-data-[state=checked]:bg-[#007AFF]/10 transition-colors border border-slate-100 group-data-[state=checked]:border-[#007AFF]/20">
-                                                <Truck className="w-5 h-5" strokeWidth={2} />
-                                            </div>
-                                            <span className="font-bold text-slate-600 group-data-[state=checked]:text-slate-900">Yetkazib berish</span>
-                                        </div>
-                                        <div className="w-6 h-6 rounded-full border-2 border-slate-200 peer-data-[state=checked]:border-[#007AFF] transition-all flex items-center justify-center bg-white">
-                                            <div className="w-3 h-3 rounded-full bg-[#007AFF] scale-0 peer-data-[state=checked]:scale-100 transition-transform" />
-                                        </div>
-                                    </Label>
-                                </div>
-                                <div>
-                                    <RadioGroupItem value="pickup" id="pickup" className="peer sr-only" />
-                                    <Label
-                                        htmlFor="pickup"
-                                        className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 peer-data-[state=checked]:border-[#007AFF] peer-data-[state=checked]:bg-[#007AFF]/5 transition-all cursor-pointer shadow-sm group"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-data-[state=checked]:text-[#007AFF] group-data-[state=checked]:bg-[#007AFF]/10 transition-colors border border-slate-100 group-data-[state=checked]:border-[#007AFF]/20">
-                                                <Store className="w-5 h-5" strokeWidth={2} />
-                                            </div>
-                                            <span className="font-bold text-slate-600 group-data-[state=checked]:text-slate-900">O'zi olib ketish</span>
-                                        </div>
-                                        <div className="w-6 h-6 rounded-full border-2 border-slate-200 peer-data-[state=checked]:border-[#007AFF] transition-all flex items-center justify-center bg-white">
-                                            <div className="w-3 h-3 rounded-full bg-[#007AFF] scale-0 peer-data-[state=checked]:scale-100 transition-transform" />
-                                        </div>
-                                    </Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
+                        {/* Delivery Method Selector (Standard, Pickup, BTS Dependent Selector) */}
+                        <BtsDeliverySelector 
+                            onChange={(data) => {
+                                setDeliveryMethod(data.method);
+                                setBtsRegionId(data.regionId);
+                                setBtsBranchId(data.branchId);
+                                if (data.method === "delivery" && addresses.length === 0) {
+                                    setIsAddressPopupOpen(true);
+                                }
+                            }}
+                        />
 
                         {/* Personal Info */}
                         <div className="space-y-6 pt-2">
