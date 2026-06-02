@@ -97,75 +97,72 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
     const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
-    const cartItemsWithDynamicPrices = useMemo(() => {
-        const _trigger = refreshCartTrigger; // register dependency
+    const calculateCorrectItemPrice = useCallback((item: any) => {
         const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
         const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+        const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
+        const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
 
+        if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
+            let total = 0;
+            for (const sel of variantData.selections) {
+                const variantPrice = Number(sel.priceExtra) || 0;
+                const variantQty = Number(sel.quantity) || 0;
+                total += variantPrice * variantQty;
+            }
+            return total;
+        }
+
+        const product = productsMap[String(item.productId)];
+        let basePrice = item.unitPrice || item.basePrice || 0;
+        
+        if (product) {
+            basePrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                ? product.discountPrice
+                : product.basePrice;
+        }
+        
+        const variantBasePrice = variantData?.childBasePrice || variantData?.parentBasePrice;
+        const variantDiscountPrice = variantData?.childDiscountPrice || variantData?.parentDiscountPrice;
+        
+        if (variantData?.productTypeId !== "multi" && variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
+            const finalUnitPrice = (variantDiscountPrice !== undefined && variantDiscountPrice !== null && variantDiscountPrice < variantBasePrice)
+                ? variantDiscountPrice 
+                : variantBasePrice;
+            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            return (finalUnitPrice + extraPrice) * (item.quantity || 1);
+        }
+
+        return basePrice * (item.quantity || 1);
+    }, [productsMap]);
+
+    const cartItemsWithDynamicPrices = useMemo(() => {
+        const _trigger = refreshCartTrigger; // register dependency
+        
         return cart.map((item: any) => {
+            const itemTotal = calculateCorrectItemPrice(item);
+            const displayPrice = itemTotal / (item.quantity || 1);
+            const originalPrice = displayPrice; 
+            const hasDiscount = false; 
+
+            const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
+            const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
             const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
             const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
-            
-            let itemTotal = 0;
-            let originalItemTotal = 0;
-
-            // Resolve product base price from productsMap
-            const product = productsMap[String(item.productId)];
-            let basePrice = item.basePrice || item.unitPrice || 0;
-            let unitPrice = item.unitPrice || item.basePrice || 0;
-
-            if (product) {
-                basePrice = product.basePrice || basePrice;
-                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                    ? product.discountPrice
-                    : product.basePrice;
-            }
-
-            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
-                // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
-                itemTotal = variantData.selections.reduce((sum: number, sel: any) => {
-                    const fullPrice = unitPrice + (sel.priceExtra || 0);
-                    return sum + (fullPrice * (sel.quantity || 0));
-                }, 0);
-                originalItemTotal = variantData.selections.reduce((sum: number, sel: any) => {
-                    const fullPrice = basePrice + (sel.priceExtra || 0);
-                    return sum + (fullPrice * (sel.quantity || 0));
-                }, 0);
-            } else {
-                const variantBasePrice = variantData?.childBasePrice || variantData?.parentBasePrice;
-                const variantDiscountPrice = variantData?.childDiscountPrice || variantData?.parentDiscountPrice;
-                
-                if (variantData?.productTypeId !== "multi" && variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
-                    const finalBasePrice = variantBasePrice;
-                    const finalUnitPrice = (variantDiscountPrice !== undefined && variantDiscountPrice !== null && variantDiscountPrice < variantBasePrice)
-                        ? variantDiscountPrice 
-                        : variantBasePrice;
-                    const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-                    itemTotal = (finalUnitPrice + extraPrice) * (item.quantity || 0);
-                    originalItemTotal = (finalBasePrice + extraPrice) * (item.quantity || 0);
-                } else {
-                    const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-                    itemTotal = (unitPrice + extraPrice) * (item.quantity || 0);
-                    originalItemTotal = (basePrice + extraPrice) * (item.quantity || 0);
-                }
-            }
-
-            const displayPrice = itemTotal / (item.quantity || 1);
-            const originalPrice = originalItemTotal / (item.quantity || 1);
-            const hasDiscount = displayPrice < originalPrice;
 
             return {
                 ...item,
                 displayPrice,
                 originalPrice,
                 hasDiscount,
-                variantData
+                variantData,
+                itemTotal
             };
         });
-    }, [cart, refreshCartTrigger, productsMap]);
+    }, [cart, refreshCartTrigger, calculateCorrectItemPrice]);
 
     const dynamicCartTotal = useMemo(() => {
-        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * (item.quantity || 0)), 0);
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + item.itemTotal, 0);
     }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {
@@ -318,13 +315,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                     const variant = storedVariants[String(item.productId)];
                     if (variant?.productTypeId === "multi" && Array.isArray(variant.selections)) {
                         return variant.selections.map((sel: any) => {
-                            // Recover clean base product price without other selections' weighted extra
-                            const product = productsMap[String(item.productId)];
-                            const baseProductPrice = product
-                                ? ((product.discountPrice !== undefined && product.discountPrice < product.basePrice) ? product.discountPrice : product.basePrice)
-                                : (item.unitPrice || 0);
-                            
-                            const unitPrice = baseProductPrice + (sel.priceExtra || 0);
+                            const unitPrice = Number(sel.priceExtra) || 0;
                             return {
                                 productId: item.productId,
                                 productTypeId: Number(sel.productTypeId) || null,
