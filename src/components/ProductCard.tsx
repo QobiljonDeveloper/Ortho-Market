@@ -37,7 +37,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
 
-    const isBaseOutOfStock = product.stock === '0' || Number(product.stock) === 0 || (product as any).inStock === false || product.stock === 'Qolmagan';
+    const isBaseOutOfStock = product.stock === 0 || product.stock === '0' || (product as any).inStock === false || product.stock === 'Qolmagan';
     const isAllVariantsOutOfStock = hasVariants && variantsData.length > 0 && variantsData.every((parent: any) => {
         const parentNoStock = (parent.stock ?? 0) === 0;
         const children = parent.children || parent.subTypes || [];
