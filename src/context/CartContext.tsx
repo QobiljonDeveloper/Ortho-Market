@@ -36,7 +36,7 @@ export const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
-    const { cart, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
+    const { cart, isLoading, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
 
     // Client-side variant selection storage persisted to localStorage
     const [variantMap, setVariantMap] = useState<Record<string, VariantSelection>>(() => {
@@ -51,9 +51,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
 
-    const cartCount = safeCart.length;
+    // --- NEW: Local cart hydrated from storage, and synced with API/variants ---
+    const [localCart, setLocalCart] = useState<CartItem[]>(() => {
+        try {
+            const saved = localStorage.getItem('cart');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
 
-    const productIds: string[] = useMemo(() => Array.from(new Set(safeCart.map((i: any) => String(i.productId)))), [safeCart]);
+    useEffect(() => {
+        if (isLoading && safeCart.length === 0) {
+            return; // Wait for initial API load to avoid wiping hydrated data
+        }
+
+        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
+        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+
+        const mergedCart = safeCart.map((item: any) => {
+            const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
+            const vData = lookupKey ? storedVariants[lookupKey] : undefined;
+
+            return {
+                ...item,
+                selectedVariants: vData?.selections || [],
+                variantData: vData
+            };
+        });
+
+        setLocalCart(mergedCart);
+        localStorage.setItem('cart', JSON.stringify(mergedCart));
+    }, [safeCart, isLoading, variantMap]);
+
+    const cartCount = localCart.length;
+
+    const productIds: string[] = useMemo(() => Array.from(new Set(localCart.map((i: any) => String(i.productId)))), [localCart]);
 
     const typeQueries = useQueries({
         queries: productIds.map(id => ({
@@ -88,7 +121,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [productQueries, productIds]);
 
     const getItemTotal = useCallback((productId: string) => {
-        const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
+        const item = localCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
 
         // Resolve product base price
@@ -120,26 +153,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         // No variants: Base Price * Item Quantity
         return unitPrice * (item.quantity || 0);
-    }, [safeCart, variantMap, productsMap]);
+    }, [localCart, variantMap, productsMap]);
 
     const getItemPrice = useCallback((productId: string) => {
-        const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
+        const item = localCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
         const total = getItemTotal(productId);
         return total / (item.quantity || 1);
-    }, [safeCart, getItemTotal]);
+    }, [localCart, getItemTotal]);
 
     const cartTotal = useMemo(() => {
-        return safeCart.reduce((total: number, item: any) => {
+        return localCart.reduce((total: number, item: any) => {
             return total + getItemTotal(item.productId);
         }, 0);
-    }, [safeCart, getItemTotal]);
+    }, [localCart, getItemTotal]);
 
     const getItemQuantity = useCallback((productId: string) => {
         if (!productId) return 0;
-        const item = safeCart.find((item: any) => item?.productId === productId);
+        const item = localCart.find((item: any) => item?.productId === productId);
         return item ? item.quantity : 0;
-    }, [safeCart]);
+    }, [localCart]);
 
     const setVariantForItem = useCallback((productId: string, parentName: string, childName?: string) => {
         setVariantMap(prev => {
@@ -185,7 +218,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const removeFromCart = useCallback((productId: string) => {
         if (!user?.id || !productId) return;
         try {
-            const item = safeCart.find((i: any) => i?.productId === productId);
+            const item = localCart.find((i: any) => i?.productId === productId);
             if (item) {
                 removeCartItemMutation.mutate(item.id);
                 // Clean up variant selection
@@ -201,21 +234,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             console.error("Error executing removeFromCart mutation:", err);
         }
-    }, [user?.id, safeCart, removeCartItemMutation]);
+    }, [user?.id, localCart, removeCartItemMutation]);
 
     const updateQuantity = useCallback((productId: string, quantity: number) => {
         if (!user?.id || !productId) return;
         if (quantity <= 0) {
             removeFromCart(productId);
         } else {
-            const item = safeCart.find((i: any) => i?.productId === productId);
+            const item = localCart.find((i: any) => i?.productId === productId);
             if (item) {
                 updateQuantityMutation.mutate({ cartItemId: item.id, quantity });
             } else if (quantity === 1) {
                 // Failsafe in case product isn't mapped but update was fired
             }
         }
-    }, [user?.id, safeCart, removeFromCart, updateQuantityMutation]);
+    }, [user?.id, localCart, removeFromCart, updateQuantityMutation]);
 
     const clearCart = useCallback(() => {
         console.warn("Backend clear cart endpoint not yet configured.");
@@ -241,7 +274,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return (
         <CartContext.Provider
             value={{
-                cart: safeCart,
+                cart: localCart,
                 addToCart,
                 removeFromCart,
                 updateQuantity,
