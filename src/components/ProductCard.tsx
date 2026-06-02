@@ -167,7 +167,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     {/* Action Area */}
                     <div className="mt-3 h-10">
                         <AnimatePresence mode="wait" initial={false}>
-                            {(quantity === 0 || hasVariants) ? (
+                            {quantity === 0 ? (
                                 <motion.div
                                     key="add-btn"
                                     initial={{ opacity: 0 }}
@@ -204,8 +204,12 @@ export function ProductCard({ product }: ProductCardProps) {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             e.preventDefault();
-                                            const newQuantity = Math.max(0, quantity - 1);
-                                            updateQuantity(product.id, newQuantity);
+                                            if (hasVariants) {
+                                                setIsBottomSheetOpen(true);
+                                            } else {
+                                                const newQuantity = Math.max(0, quantity - 1);
+                                                updateQuantity(product.id, newQuantity);
+                                            }
                                         }}
                                         className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors active:scale-95 shrink-0"
                                     >
@@ -220,8 +224,12 @@ export function ProductCard({ product }: ProductCardProps) {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             e.preventDefault();
-                                            const newQuantity = quantity + 1;
-                                            updateQuantity(product.id, newQuantity);
+                                            if (hasVariants) {
+                                                setIsBottomSheetOpen(true);
+                                            } else {
+                                                const newQuantity = quantity + 1;
+                                                updateQuantity(product.id, newQuantity);
+                                            }
                                         }}
                                         className="w-8 h-8 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-lg transition-colors active:scale-95 shrink-0"
                                     >
