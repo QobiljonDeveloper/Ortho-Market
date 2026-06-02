@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Minus, ShoppingBag, ShoppingCart, Sparkles, HelpCircle, Layers, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useCart } from "../context/CartContext";
 
 // 1. Definition of the nested Variant Interfaces
 export interface SubTypeVariant {
@@ -69,16 +70,27 @@ const DEFAULT_NESTED_VARIANTS: ParentVariant[] = [
 export function MultiVariantSelector({
     productId = "prod-99",
     productName = "Premium Medical Specimen Drawer",
-    basePrice = 150000, // 150,000 UZS baseline
+    basePrice = 150000,
     variants = DEFAULT_NESTED_VARIANTS,
     onAddToCart,
 }: MultiVariantSelectorProps) {
+    const { cart } = useCart();
+
     // 3. State tracking chosen quantities for BOTH parents and sub-types: { "parent-1": 2, "sub-101": 1 }
     const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-    // Hydrate quantities from localStorage on mount/sync
+    // Hydrate quantities from localStorage on mount/sync and synchronize with Global Cart
     useEffect(() => {
         try {
+            // 1. Check if the product exists in the global cart
+            const cartItem = cart.find(item => String(item.productId).toLowerCase() === String(productId).toLowerCase());
+            if (!cartItem) {
+                // If not in cart, reset quantities to empty
+                setQuantities({});
+                return;
+            }
+
+            // 2. Read selections from localStorage
             const saved = localStorage.getItem('tg_cart_variants');
             if (!saved) return;
             const savedMap = JSON.parse(saved);
@@ -99,7 +111,7 @@ export function MultiVariantSelector({
         } catch (e) {
             console.error("Error reading initial variant quantities:", e);
         }
-    }, [productId, variants]);
+    }, [productId, variants, cart]);
 
     // Increment Handler
     const increment = (type: "parent" | "sub", id: string | number, stock: number) => {
