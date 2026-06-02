@@ -37,6 +37,18 @@ export function ProductCard({ product }: ProductCardProps) {
 
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
 
+    const isBaseOutOfStock = product.stock === '0' || Number(product.stock) === 0 || (product as any).inStock === false || product.stock === 'Qolmagan';
+    const isAllVariantsOutOfStock = hasVariants && variantsData.length > 0 && variantsData.every((parent: any) => {
+        const parentNoStock = (parent.stock ?? 0) === 0;
+        const children = parent.children || parent.subTypes || [];
+        if (children.length > 0) {
+            return children.every((child: any) => (child.stock ?? 0) === 0);
+        }
+        return parentNoStock;
+    });
+    const isOutOfStock = hasVariants && variantsData.length > 0 ? isAllVariantsOutOfStock : isBaseOutOfStock;
+
+
     const handleCardClick = async () => {
         // Telegram haptic feedback
         try {
@@ -175,21 +187,27 @@ export function ProductCard({ product }: ProductCardProps) {
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.15 }}
                                 >
-                                    <Button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            e.preventDefault();
-                                            if (hasVariants) {
-                                                setIsBottomSheetOpen(true);
-                                            } else {
-                                                addToCart(product);
-                                            }
-                                        }}
-                                        className="h-10 w-full bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all p-0 shadow-sm"
-                                    >
-                                        <ShoppingCart className="w-4 h-4" strokeWidth={2.5} />
-                                        Savatga
-                                    </Button>
+                                    {isOutOfStock ? (
+                                        <div className="h-10 w-full bg-slate-100 text-slate-400 rounded-xl text-[12px] font-bold flex items-center justify-center transition-all p-0 shadow-sm cursor-not-allowed">
+                                            Sotuvda yo'q
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                if (hasVariants) {
+                                                    setIsBottomSheetOpen(true);
+                                                } else {
+                                                    addToCart(product);
+                                                }
+                                            }}
+                                            className="h-10 w-full bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all p-0 shadow-sm"
+                                        >
+                                            <ShoppingCart className="w-4 h-4" strokeWidth={2.5} />
+                                            Savatga
+                                        </Button>
+                                    )}
                                 </motion.div>
                             ) : (
                                 <motion.div
