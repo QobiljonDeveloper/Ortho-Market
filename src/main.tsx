@@ -4,9 +4,6 @@ import axios from 'axios'
 import './index.css'
 import App from './App.tsx'
 
-// 1. Forced Cache Clear on Startup
-localStorage.clear();
-sessionStorage.clear();
 
 
 // Global Axios Logging Interceptor for Raw Queries
