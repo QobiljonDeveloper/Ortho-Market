@@ -6,6 +6,7 @@ import { ShoppingCart, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "../context/CartContext";
 import { ProductVariants } from "./ProductVariants";
+import { MultiVariantSelector } from "./MultiVariantSelector";
 import { useProductVariants } from "../hooks/useProductVariants";
 import type { Product } from "../types";
 
@@ -37,10 +38,12 @@ export function AddToCartDrawer({
     onOpenChange,
     product,
 }: AddToCartDrawerProps) {
-    const { addToCart } = useCart();
-    const { data: variants } = useProductVariants(product.id);
+    const { addToCart, updateQuantity } = useCart();
+    const { data: variantsData = [], isLoading: isVariantsLoading } = useProductVariants(product.id);
     const [selected, setSelected] = useState<Record<string, string>>({});
     const [showErrors, setShowErrors] = useState(false);
+
+    const hasVariants = variantsData && variantsData.length > 0;
 
     // Reset state on open
     useEffect(() => {
@@ -57,8 +60,8 @@ export function AddToCartDrawer({
 
     const handleConfirm = useCallback(() => {
         // Validation: Ensure all categories are selected
-        const mainTypes = variants?.filter((v: any) => v.typeId === null) || [];
-        const isFlat = mainTypes.length > 0 && mainTypes.every((m: any) => !variants?.some((v: any) => v.typeId === m.id));
+        const mainTypes = variantsData?.filter((v: any) => v.typeId === null) || [];
+        const isFlat = mainTypes.length > 0 && mainTypes.every((m: any) => !variantsData?.some((v: any) => v.typeId === m.id));
 
         if (isFlat) {
             if (!selected["type"]) {
@@ -67,7 +70,7 @@ export function AddToCartDrawer({
                 return;
             }
         } else {
-            const requiredTypes = mainTypes.filter((m: any) => variants?.some((v: any) => v.typeId === m.id));
+            const requiredTypes = mainTypes.filter((m: any) => variantsData?.some((v: any) => v.typeId === m.id));
             const missingSelections = requiredTypes.filter((m: any) => !selected[m.name]);
 
             if (missingSelections.length > 0) {
@@ -79,7 +82,7 @@ export function AddToCartDrawer({
 
         addToCart(product);
         onOpenChange(false);
-    }, [variants, selected, addToCart, product, onOpenChange]);
+    }, [variantsData, selected, addToCart, product, onOpenChange]);
 
     const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -155,33 +158,111 @@ export function AddToCartDrawer({
 
                         {/* ── Variant Selector ─────────────────────── */}
                         <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-hide">
-                            <ProductVariants
-                                productId={product.id}
-                                onOptionChange={setSelected}
-                                initialSelectedOptions={selected}
-                            />
-                            {showErrors && (
+                            {hasVariants ? (
+                                <MultiVariantSelector
+                                    productId={String(product.id)}
+                                    productName={product.nameUz}
+                                    basePrice={product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice}
+                                    variants={variantsData.flatMap((parent: any) => {
+                                        const children = parent.children || parent.subTypes || [];
+                                        if (children.length > 0) {
+                                            return children.map((child: any) => ({
+                                                id: String(child.id),
+                                                name: `${parent.name} - ${child.name}`,
+                                                stock: child.stock ?? 0,
+                                                priceExtra: (parent.price || 0) + (child.price || 0),
+                                            }));
+                                        }
+                                        return {
+                                            id: String(parent.id),
+                                            name: parent.name,
+                                            stock: parent.stock ?? 0,
+                                            priceExtra: parent.price || 0,
+                                        };
+                                    })}
+                                    onAddToCart={(selectedItems) => {
+                                        if (selectedItems.length === 0) return;
+                                        
+                                        // 1. Calculate total quantity selected
+                                        const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+                                        
+                                        // 2. Save selections to tg_cart_variants
+                                        const saved = localStorage.getItem('tg_cart_variants');
+                                        const savedMap = saved ? JSON.parse(saved) : {};
+                                        
+                                        savedMap[String(product.id)] = {
+                                            productTypeId: "multi",
+                                            selections: selectedItems.map(item => {
+                                                // Find variant details for name and price
+                                                let vName = item.variantId;
+                                                let priceExtra = 0;
+                                                variantsData.forEach((parent: any) => {
+                                                    const children = parent.children || parent.subTypes || [];
+                                                    if (children.length > 0) {
+                                                        const child = children.find((c: any) => String(c.id) === String(item.variantId));
+                                                        if (child) {
+                                                            vName = `${parent.name} - ${child.name}`;
+                                                            priceExtra = (parent.price || 0) + (child.price || 0);
+                                                        }
+                                                    } else if (String(parent.id) === String(item.variantId)) {
+                                                        vName = parent.name;
+                                                        priceExtra = parent.price || 0;
+                                                    }
+                                                });
+                                                
+                                                return {
+                                                    productTypeId: item.variantId,
+                                                    name: vName,
+                                                    priceExtra,
+                                                    quantity: item.quantity
+                                                };
+                                            })
+                                        };
+                                        
+                                        localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
+                                        
+                                        // 3. Add to cart & set target quantity
+                                        addToCart(product);
+                                        setTimeout(() => {
+                                            updateQuantity(product.id, totalQuantity);
+                                            // Fire events to update standard context
+                                            window.dispatchEvent(new Event('storage'));
+                                            window.dispatchEvent(new Event('variantSaved'));
+                                            onOpenChange(false);
+                                        }, 200);
+                                    }}
+                                />
+                            ) : (
+                                <ProductVariants
+                                    productId={product.id}
+                                    onOptionChange={setSelected}
+                                    initialSelectedOptions={selected}
+                                />
+                            )}
+                            {showErrors && !hasVariants && (
                                 <p className="text-red-500 text-sm font-medium mt-4 animate-in fade-in slide-in-from-top-1">
                                     Iltimos, barcha variantlarni tanlang
                                 </p>
                             )}
                         </div>
 
-                        {/* ── Sticky Confirm Button ────────────────── */}
-                        <div className="p-5 pt-3 shrink-0 border-t border-slate-100 bg-white">
-                            <button
-                                onClick={handleConfirm}
-                                className={cn(
-                                    "w-full h-[52px] rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all duration-200 outline-none",
-                                    "bg-blue-500 text-white shadow-sm",
-                                    "hover:bg-blue-600",
-                                    "active:scale-[0.97]"
-                                )}
-                            >
-                                <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
-                                Tasdiqlash
-                            </button>
-                        </div>
+                        {/* ── Sticky Confirm Button - Hide when has variants ── */}
+                        {!hasVariants && (
+                            <div className="p-5 pt-3 shrink-0 border-t border-slate-100 bg-white">
+                                <button
+                                    onClick={handleConfirm}
+                                    className={cn(
+                                        "w-full h-[52px] rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all duration-200 outline-none",
+                                        "bg-blue-500 text-white shadow-sm",
+                                        "hover:bg-blue-600",
+                                        "active:scale-[0.97]"
+                                    )}
+                                >
+                                    <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
+                                    Tasdiqlash
+                                </button>
+                            </div>
+                        )}
                     </motion.div>
                 </div>
             )}

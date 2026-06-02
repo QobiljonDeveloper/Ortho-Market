@@ -13,6 +13,8 @@ import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
 import { useCart } from "../context/CartContext";
 import { ProductVariants } from "./ProductVariants";
+import { MultiVariantSelector } from "./MultiVariantSelector";
+import { useProductVariants } from "../hooks/useProductVariants";
 
 interface ProductDetailsDrawerProps {
     open: boolean;
@@ -31,6 +33,8 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
     const [_selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
     const [extraVariantPrice, setExtraVariantPrice] = useState(0);
 
+    const { data: variantsData = [], isLoading: isVariantsLoading } = useProductVariants(product.id);
+    const hasVariants = variantsData && variantsData.length > 0;
 
     // Reset default selected image when opened
     useEffect(() => {
@@ -57,7 +61,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                 <SheetDescription className="sr-only">Mahsulot haqida batafsil ma'lumot</SheetDescription>
 
                 {/* Loading Spinner Overlay */}
-                {isLoading && (
+                {(isLoading || isVariantsLoading) && (
                     <div className="absolute inset-0 z-[60] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 rounded-t-[2.5rem]">
                         <Loader2 className="w-8 h-8 text-[#007AFF] animate-spin" />
                         <span className="text-sm font-semibold text-slate-500">Yuklanmoqda...</span>
@@ -189,11 +193,88 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                             })()}
                         </div>
 
-                        <ProductVariants
-                            productId={product.id}
-                            onOptionChange={setSelectedOptions}
-                            onPriceChange={setExtraVariantPrice}
-                        />
+                        {hasVariants ? (
+                            <MultiVariantSelector
+                                productId={String(product.id)}
+                                productName={product.nameUz}
+                                basePrice={product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice}
+                                variants={variantsData.flatMap((parent: any) => {
+                                    const children = parent.children || parent.subTypes || [];
+                                    if (children.length > 0) {
+                                        return children.map((child: any) => ({
+                                            id: String(child.id),
+                                            name: `${parent.name} - ${child.name}`,
+                                            stock: child.stock ?? 0,
+                                            priceExtra: (parent.price || 0) + (child.price || 0),
+                                        }));
+                                    }
+                                    return {
+                                        id: String(parent.id),
+                                        name: parent.name,
+                                        stock: parent.stock ?? 0,
+                                        priceExtra: parent.price || 0,
+                                    };
+                                })}
+                                onAddToCart={(selectedItems) => {
+                                    if (selectedItems.length === 0) return;
+                                    
+                                    // 1. Calculate total quantity selected
+                                    const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+                                    
+                                    // 2. Save selections to tg_cart_variants
+                                    const saved = localStorage.getItem('tg_cart_variants');
+                                    const savedMap = saved ? JSON.parse(saved) : {};
+                                    
+                                    savedMap[String(product.id)] = {
+                                        productTypeId: "multi",
+                                        selections: selectedItems.map(item => {
+                                            // Find variant details for name and price
+                                            let vName = item.variantId;
+                                            let priceExtra = 0;
+                                            variantsData.forEach((parent: any) => {
+                                                const children = parent.children || parent.subTypes || [];
+                                                if (children.length > 0) {
+                                                    const child = children.find((c: any) => String(c.id) === String(item.variantId));
+                                                    if (child) {
+                                                        vName = `${parent.name} - ${child.name}`;
+                                                        priceExtra = (parent.price || 0) + (child.price || 0);
+                                                    }
+                                                } else if (String(parent.id) === String(item.variantId)) {
+                                                    vName = parent.name;
+                                                    priceExtra = parent.price || 0;
+                                                }
+                                            });
+                                            
+                                            return {
+                                                productTypeId: item.variantId,
+                                                name: vName,
+                                                priceExtra,
+                                                quantity: item.quantity
+                                            };
+                                        })
+                                    };
+                                    
+                                    localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
+                                    
+                                    // 3. Add to cart & set target quantity
+                                    addToCart(product);
+                                    // Set actual quantity to the accumulated total
+                                    setTimeout(() => {
+                                        updateQuantity(product.id, totalQuantity);
+                                        // Fire events to update standard context
+                                        window.dispatchEvent(new Event('storage'));
+                                        window.dispatchEvent(new Event('variantSaved'));
+                                        onOpenChange(false);
+                                    }, 200);
+                                }}
+                            />
+                        ) : (
+                            <ProductVariants
+                                productId={product.id}
+                                onOptionChange={setSelectedOptions}
+                                onPriceChange={setExtraVariantPrice}
+                            />
+                        )}
 
                         {/* Description */}
                         {(product.descriptionUz || product.description) && (
@@ -241,39 +322,41 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                     <div className="h-[80px]"></div>
                 </ScrollArea>
 
-                {/* Sticky CTA Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 rounded-b-[2.5rem] sm:rounded-b-none z-50">
-                    {(() => {
-                        const quantity = getItemQuantity(product.id);
-                        return quantity === 0 ? (
-                            <button
-                                onClick={() => addToCart(product)}
-                                className="w-full h-[52px] bg-[#007AFF] text-white rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#0062cc] active:scale-[0.98] transition-all shadow-sm"
-                            >
-                                <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
-                                Savatga
-                            </button>
-                        ) : (
-                            <div className="w-full h-[52px] bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between p-1.5 shadow-inner">
+                {/* Sticky CTA Footer - Hide when product has variants */}
+                {!hasVariants && (
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 rounded-b-[2.5rem] sm:rounded-b-none z-50">
+                        {(() => {
+                            const quantity = getItemQuantity(product.id);
+                            return quantity === 0 ? (
                                 <button
-                                    onClick={() => updateQuantity(product.id, Math.max(0, quantity - 1))}
-                                    className="w-12 h-10 flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-slate-200"
+                                    onClick={() => addToCart(product)}
+                                    className="w-full h-[52px] bg-[#007AFF] text-white rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#0062cc] active:scale-[0.98] transition-all shadow-sm"
                                 >
-                                    <Minus className="h-5 w-5" strokeWidth={2} />
+                                    <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
+                                    Savatga
                                 </button>
-                                <span className="text-lg font-black text-slate-900 tracking-wider">
-                                    {quantity}
-                                </span>
-                                <button
-                                    onClick={() => updateQuantity(product.id, quantity + 1)}
-                                    className="w-12 h-10 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-[#007AFF]/20"
-                                >
-                                    <Plus className="h-5 w-5" strokeWidth={2} />
-                                </button>
-                            </div>
-                        );
-                    })()}
-                </div>
+                            ) : (
+                                <div className="w-full h-[52px] bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between p-1.5 shadow-inner">
+                                    <button
+                                        onClick={() => updateQuantity(product.id, Math.max(0, quantity - 1))}
+                                        className="w-12 h-10 flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-slate-200"
+                                    >
+                                        <Minus className="h-5 w-5" strokeWidth={2} />
+                                    </button>
+                                    <span className="text-lg font-black text-slate-900 tracking-wider">
+                                        {quantity}
+                                    </span>
+                                    <button
+                                        onClick={() => updateQuantity(product.id, quantity + 1)}
+                                        className="w-12 h-10 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-[#007AFF]/20"
+                                    >
+                                        <Plus className="h-5 w-5" strokeWidth={2} />
+                                    </button>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
             </SheetContent>
         </Sheet>
     );

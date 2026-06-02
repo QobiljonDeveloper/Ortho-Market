@@ -48,7 +48,14 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
         return cart.map((item: any) => {
             const variantData = storedVariants[String(item.productId)];
-            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            let extraPrice = 0;
+            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
+                const totalQty = variantData.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
+                const totalExtra = variantData.selections.reduce((sum: number, s: any) => sum + (s.priceExtra || 0) * s.quantity, 0);
+                extraPrice = totalQty > 0 ? (totalExtra / totalQty) : 0;
+            } else {
+                extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            }
 
             const product = productsMap[String(item.productId)];
 
@@ -200,9 +207,22 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                                 </h4>
                                                                 {/* Variant display */}
                                                                 {variant && (
-                                                                    <p className="text-sm text-slate-500 mt-1 font-medium leading-relaxed">
-                                                                        Variant: {variant.parentName} {variant.childName ? `➔ ${variant.childName}` : ''}
-                                                                    </p>
+                                                                    <div className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+                                                                        {variant.productTypeId === "multi" && Array.isArray(variant.selections) ? (
+                                                                            <div className="flex flex-col gap-0.5">
+                                                                                <span className="font-bold text-slate-400 uppercase text-[9px] tracking-wider">Tanlanganlar:</span>
+                                                                                {variant.selections.map((sel: any, sIdx: number) => (
+                                                                                    <span key={sIdx} className="text-slate-600 font-semibold block">
+                                                                                        • {sel.name} <span className="text-[#007AFF]">({sel.quantity} ta)</span>
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <p>
+                                                                                Variant: {variant.parentName} {variant.childName ? `➔ ${variant.childName}` : ''}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                             <button

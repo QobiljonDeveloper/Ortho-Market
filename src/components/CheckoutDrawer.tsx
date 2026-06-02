@@ -109,14 +109,21 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             const variantBasePrice = variantData?.childBasePrice || variantData?.parentBasePrice;
             const variantDiscountPrice = variantData?.childDiscountPrice || variantData?.parentDiscountPrice;
             
-            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            let extraPrice = 0;
+            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
+                const totalQty = variantData.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
+                const totalExtra = variantData.selections.reduce((sum: number, s: any) => sum + (s.priceExtra || 0) * s.quantity, 0);
+                extraPrice = totalQty > 0 ? (totalExtra / totalQty) : 0;
+            } else {
+                extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            }
 
             const product = productsMap[String(item.productId)];
 
             let finalBasePrice = 0;
             let finalUnitPrice = 0;
 
-            if (variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
+            if (variantData?.productTypeId !== "multi" && variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
                 // Scenario A: Variant defines full absolute pricing
                 finalBasePrice = variantBasePrice;
                 finalUnitPrice = (variantDiscountPrice !== undefined && variantDiscountPrice !== null && variantDiscountPrice < variantBasePrice)
@@ -206,6 +213,12 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 .filter((item) => savedMap[item.productId])
                 .map((item) => {
                     const v = savedMap[item.productId];
+                    if (v.productTypeId === "multi" && Array.isArray(v.selections)) {
+                        const selectionsStr = v.selections
+                            .map((s: any) => `${s.name} (${s.quantity}x)`)
+                            .join(", ");
+                        return `[Product: ${item.productNameUz} | Variants: ${selectionsStr}]`;
+                    }
                     const childPart = v.childName ? `-> ${v.childName}` : '';
                     return `[Product: ${item.productNameUz} | Variant: ${v.parentName} ${childPart}]`.trim().replace(' ]', ']');
                 });
@@ -294,8 +307,26 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 deliveryMethod: deliveryMethod === "pickup" ? 0 : 1, // Map pickup to 0, both delivery & BTS to 1 (standard delivery payload indicator)
                 subtotal: dynamicCartTotal,
                 totalPrice: dynamicCartTotal,
-                items: cartItemsWithDynamicPrices.map((item: any) => {
+                items: cartItemsWithDynamicPrices.flatMap((item: any) => {
                     const variant = storedVariants[String(item.productId)];
+                    if (variant?.productTypeId === "multi" && Array.isArray(variant.selections)) {
+                        return variant.selections.map((sel: any) => {
+                            // Recover clean base product price without other selections' weighted extra
+                            const product = productsMap[String(item.productId)];
+                            const baseProductPrice = product
+                                ? ((product.discountPrice !== undefined && product.discountPrice < product.basePrice) ? product.discountPrice : product.basePrice)
+                                : (item.unitPrice || 0);
+                            
+                            const unitPrice = baseProductPrice + (sel.priceExtra || 0);
+                            return {
+                                productId: item.productId,
+                                productTypeId: Number(sel.productTypeId) || null,
+                                quantity: sel.quantity,
+                                unitPrice: unitPrice,
+                                totalPrice: unitPrice * sel.quantity
+                            };
+                        });
+                    }
                     return {
                         productId: item.productId,
                         productTypeId: variant?.productTypeId || null,
