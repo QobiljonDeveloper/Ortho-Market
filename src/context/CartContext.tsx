@@ -58,7 +58,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
 
-    const cartCount = safeCart.length;
+    const cartCount = useMemo(() => {
+        return safeCart.reduce((total: number, item: any) => {
+            const variant = variantMap[String(item.productId)];
+            if (variant?.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
+                const totalQty = variant.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
+                return total + (totalQty * (item.quantity || 0));
+            } else {
+                return total + (item.quantity || 0);
+            }
+        }, 0);
+    }, [safeCart, variantMap]);
 
     const productIds: string[] = useMemo(() => Array.from(new Set(safeCart.map((i: any) => String(i.productId)))), [safeCart]);
 
@@ -127,7 +137,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     const selExtraPrice = sel.priceExtra || 0;
                     return sum + (selQty * (unitPrice + selExtraPrice));
                 }, 0);
-                return total + selectionsTotal;
+                return total + (selectionsTotal * (item.quantity || 0));
             } else {
                 const extraPrice = (variant?.parentPrice || 0) + (variant?.childPrice || 0);
                 return total + ((item.quantity || 0) * (unitPrice + extraPrice));

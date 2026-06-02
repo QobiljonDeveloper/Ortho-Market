@@ -73,14 +73,22 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             const finalUnitPrice = unitPrice + extraPrice;
             const hasDiscount = unitPrice < basePrice;
 
-            // Calculate item total price accounting for every selected type's quantity
+            // Calculate item total price accounting for every selected type's quantity * overall item quantity
             let itemTotal = 0;
+            let originalTotal = 0;
             if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
-                itemTotal = variantData.selections.reduce((sum: number, s: any) => {
+                const selectionsTotal = variantData.selections.reduce((sum: number, s: any) => {
                     return sum + (s.quantity * (unitPrice + (s.priceExtra || 0)));
                 }, 0);
+                itemTotal = selectionsTotal * (item.quantity || 0);
+
+                const selectionsOriginalTotal = variantData.selections.reduce((sum: number, s: any) => {
+                    return sum + (s.quantity * (basePrice + (s.priceExtra || 0)));
+                }, 0);
+                originalTotal = selectionsOriginalTotal * (item.quantity || 0);
             } else {
                 itemTotal = (item.quantity || 0) * finalUnitPrice;
+                originalTotal = (item.quantity || 0) * finalBasePrice;
             }
 
             return {
@@ -89,7 +97,8 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 originalPrice: finalBasePrice,
                 hasDiscount,
                 variantData,
-                itemTotal
+                itemTotal,
+                originalTotal
             };
         });
     }, [cart, refreshCartTrigger, productsMap]);
@@ -252,15 +261,15 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                                 {item.hasDiscount ? (
                                                                     <>
                                                                         <span className="text-[11px] text-slate-400 line-through font-medium leading-none">
-                                                                            {formatPrice(item.originalPrice)}
+                                                                            {formatPrice(item.originalTotal)}
                                                                         </span>
                                                                         <span className="font-bold text-[#007AFF] text-sm leading-tight mt-0.5">
-                                                                            {formatPrice(item.displayPrice)}
+                                                                            {formatPrice(item.itemTotal)}
                                                                         </span>
                                                                     </>
                                                                 ) : (
                                                                     <span className="font-bold text-[#007AFF] text-sm leading-tight">
-                                                                        {formatPrice(item.displayPrice)}
+                                                                        {formatPrice(item.itemTotal)}
                                                                     </span>
                                                                 )}
                                                             </div>
