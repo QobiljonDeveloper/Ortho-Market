@@ -185,9 +185,28 @@ export function MultiVariantSelector({
 
     // 4. Submit handler filtering out zero-quantity selections and returning formatted array
     const handleSubmit = () => {
+        // Rule 1: Must select at least one variant
         if (selectedItemsList.length === 0) {
             toast.error("Iltimos, mahsulot variantini tanlang!");
             return;
+        }
+
+        // Rule 2: Parent-Child Dependency Rule
+        for (const parent of variants) {
+            const parentKey = `parent-${parent.id}`;
+            const parentQty = quantities[parentKey] || 0;
+            
+            const childrenList = parent.children || parent.subTypes || [];
+            const hasChildren = childrenList.length > 0;
+
+            if (parentQty > 0 && hasChildren) {
+                // Check if any of the sub-types under this parent has a quantity > 0
+                const hasSelectedChild = childrenList.some(child => (quantities[`sub-${child.id}`] || 0) > 0);
+                if (!hasSelectedChild) {
+                    toast.error(`Iltimos, "${parent.name}" uchun kichik turni tanlang!`);
+                    return;
+                }
+            }
         }
 
         console.log("🛒 [Nested Cart Payload Generated]:", selectedItemsList);
