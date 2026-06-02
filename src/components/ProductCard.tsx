@@ -249,8 +249,16 @@ export function ProductCard({ product }: ProductCardProps) {
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.15 }}
-                                    className="h-10 w-full rounded-xl flex items-center justify-between p-1 bg-white border border-slate-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                                    className="flex gap-1.5 w-full h-10"
                                 >
+                                    <Button
+                                        onClick={handleBuyNow}
+                                        className="h-10 flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all p-0 shadow-sm border border-slate-200/50"
+                                    >
+                                        <ShoppingBag className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                                        <span className="truncate leading-none">1 klikda</span>
+                                    </Button>
+                                    <div className="flex-1 h-10 rounded-xl flex items-center justify-between p-1 bg-white border border-slate-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -286,6 +294,7 @@ export function ProductCard({ product }: ProductCardProps) {
                                     >
                                         <Plus className="h-4 w-4" strokeWidth={2.5} />
                                     </button>
+                                    </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>

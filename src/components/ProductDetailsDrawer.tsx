@@ -157,19 +157,44 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
     };
 
     const handleBuyNowFlat = () => {
+        const hasTypes = (product as any).types && (product as any).types.length > 0;
+        
+        // 1. Validation for flat types
+        if (hasTypes) {
+            const hasSelection = Object.keys(_selectedOptions).length > 0;
+            if (!hasSelection) {
+                toast.error("Iltimos, xarid qilish uchun mahsulot turini tanlang");
+                return;
+            }
+        }
+
+        // 2. Construct Payload
         const qty = Math.max(1, getItemQuantity(product.id));
+        
+        let selectedParentType = null;
+        if (hasTypes && Object.keys(_selectedOptions).length > 0) {
+            const combinedName = Object.values(_selectedOptions).join(', ');
+            selectedParentType = {
+                id: String(product.id),
+                name: combinedName,
+                price: extraVariantPrice
+            };
+        }
+
         const payload = [{
             id: `${product.id}--`,
             productId: String(product.id),
             productNameUz: product.nameUz,
             quantity: qty,
-            unitPrice: product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice,
-            basePrice: product.basePrice,
-            discountPrice: product.discountPrice,
+            unitPrice: (product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice) + extraVariantPrice,
+            basePrice: product.basePrice + extraVariantPrice,
+            discountPrice: product.discountPrice !== undefined ? product.discountPrice + extraVariantPrice : undefined,
             primaryImageUrl: product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
-            selectedParentType: null,
+            selectedParentType: selectedParentType,
             selectedChildType: null
         }];
+        
+        // 3. Navigation
         window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: payload } }));
         onOpenChange(false);
     };
