@@ -194,8 +194,12 @@ export function MultiVariantSelector({
         // 1. Global Variant Check
         const hasVariants = variants && variants.length > 0;
         if (hasVariants) {
-            if (selectedItemsList.length === 0) {
-                toast.error("Iltimos, kamida bitta variant tanlang.");
+            const keys = Object.keys(quantities);
+            const totalQty = keys.reduce((sum, key) => sum + (quantities[key] || 0), 0);
+
+            // Strict object length check, raw total sum, and array length check
+            if (keys.length === 0 || totalQty === 0 || selectedItemsList.length === 0) {
+                toast.error("Iltimos, mahsulot turini tanlang");
                 return; // STOP execution completely
             }
 
@@ -208,8 +212,10 @@ export function MultiVariantSelector({
                 const hasChildren = childrenList.length > 0;
 
                 if (parentQty > 0 && hasChildren) {
-                    const hasSelectedChild = childrenList.some(child => (quantities[`sub-${child.id}`] || 0) > 0);
-                    if (!hasSelectedChild) {
+                    const childKeys = childrenList.map(child => `sub-${child.id}`);
+                    const childQty = childKeys.reduce((sum, key) => sum + (quantities[key] || 0), 0);
+                    
+                    if (childKeys.length === 0 || childQty === 0) {
                         toast.error(`Iltimos, "${parent.name}" uchun kichik turni tanlang.`);
                         return; // STOP execution completely
                     }

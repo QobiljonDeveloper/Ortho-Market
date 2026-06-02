@@ -43,8 +43,10 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
         const hasVariantsActual = variantsData && variantsData.length > 0;
         if (hasVariantsActual) {
             const totalQty = selectedItems ? selectedItems.reduce((sum, item) => sum + item.quantity, 0) : 0;
+            
+            // Strict check: array is completely empty, null/undefined, or sum of quantities is exactly 0
             if (!selectedItems || selectedItems.length === 0 || totalQty === 0) {
-                toast.error("Iltimos, kamida bitta variant tanlang.");
+                toast.error("Iltimos, mahsulot turini tanlang");
                 return; // STOP execution completely
             }
 
@@ -57,13 +59,14 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                 const hasChildren = childrenList.length > 0;
 
                 if (parentQty > 0 && hasChildren) {
-                    const hasSelectedChild = selectedItems.some(item => 
+                    const selectedChildren = selectedItems.filter(item => 
                         item.type === "subType" && 
-                        String(item.parentId) === String(parent.id) && 
-                        item.quantity > 0
+                        String(item.parentId) === String(parent.id)
                     );
-                    
-                    if (!hasSelectedChild) {
+                    const childQty = selectedChildren.reduce((sum, item) => sum + item.quantity, 0);
+
+                    // Strict check: child array is empty, or child quantity sum is 0
+                    if (selectedChildren.length === 0 || childQty === 0) {
                         toast.error(`Iltimos, "${parent.name}" uchun kichik turni tanlang.`);
                         return; // STOP execution completely
                     }
