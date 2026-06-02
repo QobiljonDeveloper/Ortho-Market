@@ -26,6 +26,8 @@ export interface ProductType {
     name: string;
     logoUrl?: string; // Optional URL for color swatches
     stock?: number;
+    price?: number | null;
+    priceExtra?: number | null;
     children?: ProductType[];
     subTypes?: ProductType[];
 }

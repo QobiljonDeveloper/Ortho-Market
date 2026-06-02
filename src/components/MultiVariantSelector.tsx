@@ -8,16 +8,16 @@ export interface SubTypeVariant {
     name: string;
     stock?: number;         // Optional to match API structure
     priceModifier?: string; // e.g. "+30 000 UZS"
-    priceExtra?: number;    // Numerical extra price
-    price?: number;         // Alternate price property
+    priceExtra?: number | null;    // Numerical extra price
+    price?: number | null;         // Alternate price property
 }
 
 export interface ParentVariant {
     id: string | number;
     name: string;
     stock?: number;         // Optional to match API structure
-    priceExtra?: number;    // Numerical extra price
-    price?: number;         // Alternate price property
+    priceExtra?: number | null;    // Numerical extra price
+    price?: number | null;         // Alternate price property
     colorCode?: string;     // Optional Hex code for beautiful visual chips
     children?: SubTypeVariant[];
     subTypes?: SubTypeVariant[]; // Support both children and subTypes keys

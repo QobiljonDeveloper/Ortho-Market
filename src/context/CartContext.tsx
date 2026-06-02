@@ -74,7 +74,7 @@ export function calculateCartItemTotal(item: CartItem, variantMap?: Record<strin
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
-    const { cart: apiCart, isLoading: isCartLoading, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
+    const { cart: apiCart, isLoading: isCartLoading, isSuccess: isCartSuccess, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
 
     // Client-side variant selection storage persisted to localStorage
     const [variantMap, setVariantMap] = useState<Record<string, VariantSelection>>(() => {
@@ -100,7 +100,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Synchronize clientCart with apiCart whenever apiCart changes (self-healing / alignment)
     useEffect(() => {
         // Prevent synchronizing or overwriting clientCart when user is logged out or server cart is loading
-        if (!user?.id || isCartLoading) return;
+        if (!user?.id || !isCartSuccess || isCartLoading) return;
 
         const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
         
@@ -179,7 +179,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             }
             return newClientCart;
         });
-    }, [apiCart, isCartLoading, user?.id]);
+    }, [apiCart, isCartLoading, isCartSuccess, user?.id]);
 
     const safeCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
 

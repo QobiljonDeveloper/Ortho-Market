@@ -8,7 +8,7 @@ export const useCartApi = (userId: string | undefined | null) => {
     const safeUserId = userId ? String(userId) : null;
 
     // Fetch cart
-    const { data: cart = [], isLoading, refetch } = useQuery({
+    const { data: cart = [], isLoading, isSuccess, refetch } = useQuery({
         queryKey: ['cart', safeUserId],
         queryFn: async (): Promise<CartItem[]> => {
             if (!safeUserId || safeUserId === 'undefined' || safeUserId === 'null') return [];
@@ -214,6 +214,7 @@ export const useCartApi = (userId: string | undefined | null) => {
     return {
         cart,
         isLoading,
+        isSuccess,
         refetch,
         addToCartMutation,
         updateQuantityMutation,

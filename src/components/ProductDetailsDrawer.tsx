@@ -84,6 +84,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
             productTypeId: "multi",
             selections: selectedItems.map(item => ({
                 productTypeId: item.id,
+                parentId: item.parentId,
                 name: item.name,
                 priceExtra: item.priceExtra,
                 quantity: item.quantity

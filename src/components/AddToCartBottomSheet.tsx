@@ -92,6 +92,7 @@ export function AddToCartDrawer({
             productTypeId: "multi",
             selections: selectedItems.map(item => ({
                 productTypeId: item.id,
+                parentId: item.parentId,
                 name: item.name,
                 priceExtra: item.priceExtra,
                 quantity: item.quantity
@@ -144,7 +145,26 @@ export function AddToCartDrawer({
             }
         }
 
-        addToCart(product);
+        // Find selected parent and child objects to pass to addToCart
+        const parentObj = variantsData.find((v: any) => v.name === selected["type"]);
+        const childObj = parentObj
+            ? ((parentObj.children || []).find((c: any) => c.name === selected["subType"]) ||
+               (parentObj.subTypes || []).find((c: any) => c.name === selected["subType"]))
+            : null;
+
+        const selectedParentDetail = parentObj ? {
+            id: String(parentObj.id),
+            name: parentObj.name,
+            price: parentObj.price || 0
+        } : null;
+
+        const selectedChildDetail = childObj ? {
+            id: String(childObj.id),
+            name: childObj.name,
+            price: childObj.price || 0
+        } : null;
+
+        addToCart(product, selectedParentDetail, selectedChildDetail);
         onOpenChange(false);
     }, [variantsData, selected, addToCart, product, onOpenChange]);
 
