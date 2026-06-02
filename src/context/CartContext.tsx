@@ -36,7 +36,7 @@ export const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
-    const { cart, isLoading, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
+    const { cart, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
 
     // Client-side variant selection storage persisted to localStorage
     const [variantMap, setVariantMap] = useState<Record<string, VariantSelection>>(() => {
@@ -51,42 +51,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
 
-    // --- NEW: Local cart hydrated from storage, and synced with API/variants ---
-    const [localCart, setLocalCart] = useState<CartItem[]>(() => {
-        try {
-            const saved = localStorage.getItem('cart');
-            return saved ? JSON.parse(saved) : [];
-        } catch {
-            return [];
-        }
-    });
+    const cartCount = safeCart.length;
 
-    useEffect(() => {
-        if (isLoading && safeCart.length === 0) {
-            return; // Wait for initial API load to avoid wiping hydrated data
-        }
-
-        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
-        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
-
-        const mergedCart = safeCart.map((item: any) => {
-            const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
-            const vData = lookupKey ? storedVariants[lookupKey] : undefined;
-
-            return {
-                ...item,
-                selectedVariants: vData?.selections || [],
-                variantData: vData
-            };
-        });
-
-        setLocalCart(mergedCart);
-        localStorage.setItem('cart', JSON.stringify(mergedCart));
-    }, [safeCart, isLoading, variantMap]);
-
-    const cartCount = localCart.length;
-
-    const productIds: string[] = useMemo(() => Array.from(new Set(localCart.map((i: any) => String(i.productId)))), [localCart]);
+    const productIds: string[] = useMemo(() => Array.from(new Set(safeCart.map((i: any) => String(i.productId)))), [safeCart]);
 
     const typeQueries = useQueries({
         queries: productIds.map(id => ({
@@ -120,59 +87,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return map;
     }, [productQueries, productIds]);
 
-    const getItemTotal = useCallback((productId: string) => {
-        const item = localCart.find((i: any) => String(i?.productId) === String(productId));
-        if (!item) return 0;
-
-        // Resolve product base price
-        const product = productsMap[String(productId)];
-        let unitPrice = item.unitPrice || item.basePrice || 0;
-        if (product) {
-            unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                ? product.discountPrice
-                : product.basePrice;
-        }
-
-        const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
-        const variant = (lookupKey ? variantMap[lookupKey] : undefined) as any;
-
-        if (variant) {
-            if (variant.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
-                // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
-                const selectedVariantsTotal = variant.selections.reduce((sum: number, sel: any) => {
-                    const fullPrice = unitPrice + (sel.priceExtra || 0);
-                    return sum + (fullPrice * (sel.quantity || 0));
-                }, 0);
-                return selectedVariantsTotal;
-            } else {
-                // Flat variants
-                const extraPrice = (variant.parentPrice || 0) + (variant.childPrice || 0);
-                return (unitPrice + extraPrice) * (item.quantity || 0);
-            }
-        }
-
-        // No variants: Base Price * Item Quantity
-        return unitPrice * (item.quantity || 0);
-    }, [localCart, variantMap, productsMap]);
-
     const getItemPrice = useCallback((productId: string) => {
-        const item = localCart.find((i: any) => String(i?.productId) === String(productId));
+        const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
-        const total = getItemTotal(productId);
-        return total / (item.quantity || 1);
-    }, [localCart, getItemTotal]);
+
+        let price = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
+        const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
+        const variant = lookupKey ? variantMap[lookupKey] : undefined;
+        if (variant) {
+            price += (variant.parentPrice || 0) + (variant.childPrice || 0);
+        }
+        return price;
+    }, [safeCart, variantMap]);
 
     const cartTotal = useMemo(() => {
-        return localCart.reduce((total: number, item: any) => {
-            return total + getItemTotal(item.productId);
+        return safeCart.reduce((total: number, item: any) => {
+            return total + (getItemPrice(item.productId) * (item.quantity || 0));
         }, 0);
-    }, [localCart, getItemTotal]);
+    }, [safeCart, getItemPrice]);
 
     const getItemQuantity = useCallback((productId: string) => {
         if (!productId) return 0;
-        const item = localCart.find((item: any) => item?.productId === productId);
+        const item = safeCart.find((item: any) => item?.productId === productId);
         return item ? item.quantity : 0;
-    }, [localCart]);
+    }, [safeCart]);
 
     const setVariantForItem = useCallback((productId: string, parentName: string, childName?: string) => {
         setVariantMap(prev => {
@@ -218,7 +156,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const removeFromCart = useCallback((productId: string) => {
         if (!user?.id || !productId) return;
         try {
-            const item = localCart.find((i: any) => i?.productId === productId);
+            const item = safeCart.find((i: any) => i?.productId === productId);
             if (item) {
                 removeCartItemMutation.mutate(item.id);
                 // Clean up variant selection
@@ -234,21 +172,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             console.error("Error executing removeFromCart mutation:", err);
         }
-    }, [user?.id, localCart, removeCartItemMutation]);
+    }, [user?.id, safeCart, removeCartItemMutation]);
 
     const updateQuantity = useCallback((productId: string, quantity: number) => {
         if (!user?.id || !productId) return;
         if (quantity <= 0) {
             removeFromCart(productId);
         } else {
-            const item = localCart.find((i: any) => i?.productId === productId);
+            const item = safeCart.find((i: any) => i?.productId === productId);
             if (item) {
                 updateQuantityMutation.mutate({ cartItemId: item.id, quantity });
             } else if (quantity === 1) {
                 // Failsafe in case product isn't mapped but update was fired
             }
         }
-    }, [user?.id, localCart, removeFromCart, updateQuantityMutation]);
+    }, [user?.id, safeCart, removeFromCart, updateQuantityMutation]);
 
     const clearCart = useCallback(() => {
         console.warn("Backend clear cart endpoint not yet configured.");
@@ -274,7 +212,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return (
         <CartContext.Provider
             value={{
-                cart: localCart,
+                cart: safeCart,
                 addToCart,
                 removeFromCart,
                 updateQuantity,

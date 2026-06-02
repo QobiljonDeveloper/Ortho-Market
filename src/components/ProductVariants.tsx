@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useProductVariants } from "../hooks/useProductVariants";
-import { useCart } from "../context/CartContext";
 
 interface ProductVariantsProps {
     productId: string | number;
@@ -30,7 +29,6 @@ export function ProductVariants({
     onPriceChange,
     className,
 }: ProductVariantsProps) {
-    const { cart } = useCart();
     const { data: productTypes = [], isLoading } = useProductVariants(productId);
     const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
     const [selectedChildId, setSelectedChildId] = useState<number | null>(null);
@@ -40,17 +38,9 @@ export function ProductVariants({
 
     const VARIANTS_KEY = 'tg_cart_variants';
 
-    // 1. Initialize from LocalStorage and sync with Global Cart
+    // 1. Initialize from LocalStorage
     useEffect(() => {
         if (!isLoading && productTypes.length > 0 && !isInitialized) {
-            const cartItem = cart.find(item => String(item.productId).toLowerCase() === String(productId).toLowerCase());
-            if (!cartItem) {
-                setSelectedParentId(null);
-                setSelectedChildId(null);
-                setIsInitialized(true);
-                return;
-            }
-
             const saved = localStorage.getItem(VARIANTS_KEY);
             if (saved) {
                 const existingData = JSON.parse(saved);
@@ -70,18 +60,7 @@ export function ProductVariants({
             }
             setIsInitialized(true);
         }
-    }, [isLoading, productTypes, productId, isInitialized, cart]);
-
-    // 1b. Listen for removals from the cart
-    useEffect(() => {
-        if (isInitialized) {
-            const cartItem = cart.find(item => String(item.productId).toLowerCase() === String(productId).toLowerCase());
-            if (!cartItem) {
-                setSelectedParentId(null);
-                setSelectedChildId(null);
-            }
-        }
-    }, [cart, productId, isInitialized]);
+    }, [isLoading, productTypes, productId, isInitialized]);
 
     // 2. Sync to LocalStorage requested by user
     useEffect(() => {

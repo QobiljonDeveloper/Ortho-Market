@@ -106,58 +106,52 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
             const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
             
-            let itemTotal = 0;
-            let originalItemTotal = 0;
-
-            // Resolve product base price from productsMap
-            const product = productsMap[String(item.productId)];
-            let basePrice = item.basePrice || item.unitPrice || 0;
-            let unitPrice = item.unitPrice || item.basePrice || 0;
-
-            if (product) {
-                basePrice = product.basePrice || basePrice;
-                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                    ? product.discountPrice
-                    : product.basePrice;
-            }
-
-            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
-                // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
-                itemTotal = variantData.selections.reduce((sum: number, sel: any) => {
-                    const fullPrice = unitPrice + (sel.priceExtra || 0);
-                    return sum + (fullPrice * (sel.quantity || 0));
-                }, 0);
-                originalItemTotal = variantData.selections.reduce((sum: number, sel: any) => {
-                    const fullPrice = basePrice + (sel.priceExtra || 0);
-                    return sum + (fullPrice * (sel.quantity || 0));
-                }, 0);
+            // Extract variant-specific absolute prices directly from variant data
+            const variantBasePrice = variantData?.childBasePrice || variantData?.parentBasePrice;
+            const variantDiscountPrice = variantData?.childDiscountPrice || variantData?.parentDiscountPrice;
+            
+            let extraPrice = 0;
+            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
+                const totalQty = variantData.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
+                const totalExtra = variantData.selections.reduce((sum: number, s: any) => sum + (s.priceExtra || 0) * s.quantity, 0);
+                extraPrice = totalQty > 0 ? (totalExtra / totalQty) : 0;
             } else {
-                const variantBasePrice = variantData?.childBasePrice || variantData?.parentBasePrice;
-                const variantDiscountPrice = variantData?.childDiscountPrice || variantData?.parentDiscountPrice;
-                
-                if (variantData?.productTypeId !== "multi" && variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
-                    const finalBasePrice = variantBasePrice;
-                    const finalUnitPrice = (variantDiscountPrice !== undefined && variantDiscountPrice !== null && variantDiscountPrice < variantBasePrice)
-                        ? variantDiscountPrice 
-                        : variantBasePrice;
-                    const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-                    itemTotal = (finalUnitPrice + extraPrice) * (item.quantity || 0);
-                    originalItemTotal = (finalBasePrice + extraPrice) * (item.quantity || 0);
-                } else {
-                    const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-                    itemTotal = (unitPrice + extraPrice) * (item.quantity || 0);
-                    originalItemTotal = (basePrice + extraPrice) * (item.quantity || 0);
-                }
+                extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
             }
 
-            const displayPrice = itemTotal / (item.quantity || 1);
-            const originalPrice = originalItemTotal / (item.quantity || 1);
-            const hasDiscount = displayPrice < originalPrice;
+            const product = productsMap[String(item.productId)];
+
+            let finalBasePrice = 0;
+            let finalUnitPrice = 0;
+
+            if (variantData?.productTypeId !== "multi" && variantBasePrice !== undefined && variantBasePrice !== null && variantBasePrice > 0) {
+                // Scenario A: Variant defines full absolute pricing
+                finalBasePrice = variantBasePrice;
+                finalUnitPrice = (variantDiscountPrice !== undefined && variantDiscountPrice !== null && variantDiscountPrice < variantBasePrice)
+                    ? variantDiscountPrice 
+                    : variantBasePrice;
+            } else {
+                // Scenario B: Fallback to global product additive pricing
+                let basePrice = item.basePrice || item.unitPrice || 0;
+                let unitPrice = item.unitPrice || item.basePrice || 0;
+
+                if (product) {
+                    basePrice = product.basePrice || basePrice;
+                    unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                        ? product.discountPrice
+                        : product.basePrice;
+                }
+                
+                finalBasePrice = basePrice + extraPrice;
+                finalUnitPrice = unitPrice + extraPrice;
+            }
+
+            const hasDiscount = finalUnitPrice < finalBasePrice;
 
             return {
                 ...item,
-                displayPrice,
-                originalPrice,
+                displayPrice: finalUnitPrice,
+                originalPrice: finalBasePrice,
                 hasDiscount,
                 variantData
             };
@@ -165,7 +159,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     }, [cart, refreshCartTrigger, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
-        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * (item.quantity || 0)), 0);
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
     }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {

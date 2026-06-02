@@ -16,6 +16,7 @@ import { ProductVariants } from "./ProductVariants";
 import { MultiVariantSelector } from "./MultiVariantSelector";
 import { useProductVariants } from "../hooks/useProductVariants";
 import { toast } from "sonner";
+import VConsole from "vconsole";
 
 interface ProductDetailsDrawerProps {
     open: boolean;
@@ -100,7 +101,16 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
         }, 200);
     };
 
-
+    // 1. Initialize vConsole temporarily for debugging and destroy on unmount
+    useEffect(() => {
+        const vConsole = new VConsole();
+        console.log("🛠️ [vConsole Initialized] on ProductDetailsDrawer mount.");
+        
+        return () => {
+            vConsole.destroy();
+            console.log("🛠️ [vConsole Destroyed] on ProductDetailsDrawer unmount.");
+        };
+    }, []);
 
     // 2. Explicitly print the full product and nested variantsData structure
     useEffect(() => {

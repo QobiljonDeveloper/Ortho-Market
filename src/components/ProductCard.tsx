@@ -44,7 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
     const isOutOfStock = hasVariants
         ? (variantsData.length > 0 && totalVariantsStock === 0 && !isVariantsLoading)
-        : (product.stock === '0' || product.stock === 'qolmagan' || product.stock === 'Qolmagan');
+        : (product.stock === '0' || Number(product.stock) === 0 || product.stock === 'qolmagan' || product.stock === 'Qolmagan');
 
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
 

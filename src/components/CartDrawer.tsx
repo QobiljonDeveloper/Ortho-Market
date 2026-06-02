@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCart } from "../context/CartContext";
 import { Button } from "./ui/button";
 import {
@@ -49,11 +49,17 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         return cart.map((item: any) => {
             const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
             const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
-            let itemTotal = 0;
-            let originalItemTotal = 0;
+            let extraPrice = 0;
+            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
+                const totalQty = variantData.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
+                const totalExtra = variantData.selections.reduce((sum: number, s: any) => sum + (s.priceExtra || 0) * s.quantity, 0);
+                extraPrice = totalQty > 0 ? (totalExtra / totalQty) : 0;
+            } else {
+                extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+            }
 
-            // Resolve product base price from productsMap
             const product = productsMap[String(item.productId)];
+
             let basePrice = item.basePrice || item.unitPrice || 0;
             let unitPrice = item.unitPrice || item.basePrice || 0;
 
@@ -64,30 +70,14 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     : product.basePrice;
             }
 
-            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
-                // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
-                itemTotal = variantData.selections.reduce((sum: number, sel: any) => {
-                    const fullPrice = unitPrice + (sel.priceExtra || 0);
-                    return sum + (fullPrice * (sel.quantity || 0));
-                }, 0);
-                originalItemTotal = variantData.selections.reduce((sum: number, sel: any) => {
-                    const fullPrice = basePrice + (sel.priceExtra || 0);
-                    return sum + (fullPrice * (sel.quantity || 0));
-                }, 0);
-            } else {
-                const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-                itemTotal = (unitPrice + extraPrice) * (item.quantity || 0);
-                originalItemTotal = (basePrice + extraPrice) * (item.quantity || 0);
-            }
-
-            const displayPrice = itemTotal / (item.quantity || 1);
-            const originalPrice = originalItemTotal / (item.quantity || 1);
-            const hasDiscount = displayPrice < originalPrice;
+            const finalBasePrice = basePrice + extraPrice;
+            const finalUnitPrice = unitPrice + extraPrice;
+            const hasDiscount = unitPrice < basePrice;
 
             return {
                 ...item,
-                displayPrice,
-                originalPrice,
+                displayPrice: finalUnitPrice,
+                originalPrice: finalBasePrice,
                 hasDiscount,
                 variantData
             };
@@ -95,7 +85,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
     }, [cart, refreshCartTrigger, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
-        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * (item.quantity || 0)), 0);
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * item.quantity), 0);
     }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {
