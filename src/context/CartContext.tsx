@@ -91,13 +91,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
 
-        let price = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
+        let basePrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
         const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
         const variant = lookupKey ? variantMap[lookupKey] : undefined;
+        
         if (variant) {
-            price += (variant.parentPrice || 0) + (variant.childPrice || 0);
+            if (variant.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
+                const totalQty = variant.selections.reduce((sum: number, sel: any) => sum + (sel.quantity || 0), 0);
+                if (totalQty > 0) {
+                    const totalPrice = variant.selections.reduce((sum: number, sel: any) => {
+                        const selPrice = basePrice + (sel.priceExtra || 0);
+                        return sum + (selPrice * (sel.quantity || 0));
+                    }, 0);
+                    return totalPrice / totalQty;
+                }
+            } else {
+                return basePrice + (variant.parentPrice || 0) + (variant.childPrice || 0);
+            }
         }
-        return price;
+        return basePrice;
     }, [safeCart, variantMap]);
 
     const cartTotal = useMemo(() => {

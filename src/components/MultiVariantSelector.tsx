@@ -181,7 +181,7 @@ export function MultiVariantSelector({
                         parentId: parent.id,
                         quantity: childQty,
                         name: `${parent.name} ➔ ${child.name}`,
-                        priceExtra: childPriceExtra
+                        priceExtra: parentPriceExtra + childPriceExtra
                     });
                 }
             });
