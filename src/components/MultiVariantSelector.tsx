@@ -29,6 +29,7 @@ interface MultiVariantSelectorProps {
     basePrice?: number;      // Product baseline price
     variants?: ParentVariant[];
     onAddToCart?: (items: { type: "parent" | "subType"; id: string | number; parentId?: string | number; quantity: number; name: string; priceExtra: number }[]) => void;
+    onBuyNow?: (items: { type: "parent" | "subType"; id: string | number; parentId?: string | number; quantity: number; name: string; priceExtra: number }[]) => void;
 }
 
 // 2. High-fidelity Mock Data matching nested hierarchical parent-child structure
@@ -71,6 +72,7 @@ export function MultiVariantSelector({
     basePrice = 150000, // 150,000 UZS baseline
     variants = DEFAULT_NESTED_VARIANTS,
     onAddToCart,
+    onBuyNow,
 }: MultiVariantSelectorProps) {
     // 3. State tracking chosen quantities for BOTH parents and sub-types: { "parent-1": 2, "sub-101": 1 }
     const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -203,7 +205,7 @@ export function MultiVariantSelector({
 
 
     // 4. Submit handler filtering out zero-quantity selections and returning formatted array
-    const handleSubmit = () => {
+    const handleSubmit = (actionType: "cart" | "buynow") => {
         // 1. Global Variant Check
         const hasVariants = variants && variants.length > 0;
         if (hasVariants) {
@@ -236,12 +238,16 @@ export function MultiVariantSelector({
             }
         }
 
-        console.log("🛒 [Nested Cart Payload Generated]:", selectedItemsList);
+        console.log(`🛒 [Nested ${actionType} Payload Generated]:`, selectedItemsList);
 
-        if (onAddToCart) {
-            onAddToCart(selectedItemsList);
-        } else {
-            toast.success("Savatga muvaffaqiyatli qo'shildi!");
+        if (actionType === "buynow" && onBuyNow) {
+            onBuyNow(selectedItemsList);
+        } else if (actionType === "cart") {
+            if (onAddToCart) {
+                onAddToCart(selectedItemsList);
+            } else {
+                toast.success("Savatga muvaffaqiyatli qo'shildi!");
+            }
         }
     };
 
@@ -481,17 +487,27 @@ export function MultiVariantSelector({
                     Sotuvda qolmagan
                 </div>
             ) : (
-                <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2"
-                >
-                    <ShoppingCart className="w-4.5 h-4.5" />
-                    {totalSelectedQuantity > 0 
-                        ? `Savatga qo'shish (${totalSelectedQuantity} dona)` 
-                        : "Savatga qo'shish"
-                    }
-                </button>
+                <div className="flex flex-col gap-2.5">
+                    <button
+                        type="button"
+                        onClick={() => handleSubmit("buynow")}
+                        className="w-full h-12 rounded-full font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center justify-center gap-2 border border-slate-200"
+                    >
+                        <ShoppingBag className="w-4.5 h-4.5" />
+                        1 klikda xarid qilish
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleSubmit("cart")}
+                        className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2"
+                    >
+                        <ShoppingCart className="w-4.5 h-4.5" />
+                        {totalSelectedQuantity > 0 
+                            ? `Savatga qo'shish (${totalSelectedQuantity} dona)` 
+                            : "Savatga qo'shish"
+                        }
+                    </button>
+                </div>
             )}
         </div>
     );

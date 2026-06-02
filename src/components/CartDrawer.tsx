@@ -56,6 +56,19 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         return () => window.removeEventListener("variantSaved", handler);
     }, []);
 
+    useEffect(() => {
+        const handleOpenCheckout = (e: any) => {
+            if (e.detail?.buyNowItem) {
+                sessionStorage.setItem('tg_buy_now_item', JSON.stringify(e.detail.buyNowItem));
+            } else {
+                sessionStorage.removeItem('tg_buy_now_item');
+            }
+            setIsCheckoutOpen(true);
+        };
+        window.addEventListener('openCheckout', handleOpenCheckout);
+        return () => window.removeEventListener('openCheckout', handleOpenCheckout);
+    }, []);
+
     // Refetch server cart when drawer opens
     useEffect(() => {
         if (open) refetchCart();

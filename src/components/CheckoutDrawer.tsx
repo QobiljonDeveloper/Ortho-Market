@@ -93,12 +93,39 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     const [phone, setPhone] = useState("+998");
 
     // Custom note from user
-    const [customNote, setCustomNote] = useState("");
+    const [customNote, setCustomNote] = useState("");
+    const [buyNowItems, setBuyNowItems] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (open) {
+            setFullName(user?.fullName || "");
+            setPhone(user?.phone || "+998");
+            setCustomNote("");
+            try {
+                const stored = sessionStorage.getItem('tg_buy_now_item');
+                if (stored) {
+                    setBuyNowItems(JSON.parse(stored));
+                } else {
+                    setBuyNowItems([]);
+                }
+            } catch (e) {
+                setBuyNowItems([]);
+            }
+        } else {
+            // Optional: reset buy now items when drawer closes so it doesn't linger
+            // We do this to ensure next time it opens naturally from cart, it's clean
+            setBuyNowItems([]);
+        }
+    }, [open, user]);
+
+    const activeCartItems = useMemo(() => {
+        return buyNowItems.length > 0 ? buyNowItems : cart;
+    }, [buyNowItems, cart]);
 
     const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
     const cartItemsWithDynamicPrices = useMemo(() => {
-        return cart.map((item: any) => {
+        return activeCartItems.map((item: any) => {
             const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
                 ? item.discountPrice
                 : (item.basePrice || item.unitPrice || 0);
@@ -122,7 +149,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 originalTotal
             };
         });
-    }, [cart]);
+    }, [activeCartItems]);
 
     const dynamicCartTotal = useMemo(() => {
         return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + item.itemTotal, 0);
@@ -205,14 +232,14 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 return;
             }
         }
-        if (!cart || cart.length === 0) {
+        if (!activeCartItems || activeCartItems.length === 0) {
             toast.error("Savatingiz bo'sh.");
             return;
         }
 
         const storedVariants = variantMap;
 
-        const invalidItem = cart.find((item: any) => {
+        const invalidItem = activeCartItems.find((item: any) => {
             const types = productTypesMap[item.productId];
             const requiresVariant = types && types.length > 0;
             const hasSelectedVariant = storedVariants[String(item.productId)];
@@ -261,8 +288,8 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
                 paymentMethod: 1, // Card/Onlayn-o'tkazma
                 deliveryMethod: deliveryMethod === "pickup" ? 0 : 1, // Map pickup to 0, both delivery & BTS to 1 (standard delivery payload indicator)
-                subtotal: cartTotal,
-                totalPrice: cartTotal,
+                subtotal: dynamicCartTotal,
+                totalPrice: dynamicCartTotal,
                 items: cartItemsWithDynamicPrices.map((item: any) => {
                     const productTypeId = item.selectedChildType?.id || item.selectedParentType?.id || null;
                     return {
@@ -289,20 +316,36 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 }
             });
 
-            // 4. Cleanup: ONLY AFTER a successful 200/201 API response for order creation
-            localStorage.removeItem(VARIANTS_STORAGE_KEY);
-
-            try {
-                await api.delete(`/api/cart/${user.id}`, {
-                    headers: token ? { Authorization: `Bearer ${token}` } : {}
-                });
-            } catch (err) {
-                console.error("Failed to clear server cart:", err);
-            }
-
-            toast.success("Savat yangilandi", { duration: 2000, position: 'top-right' });
-            clearCart();
+            // 4. Cleanup: ONLY AFTER a successful 200/201 API response for order creation
+            if (buyNowItems.length === 0) {
+                localStorage.removeItem(VARIANTS_STORAGE_KEY);
+                try {
+                    await api.delete(`/api/cart/${user.id}`, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                } catch (err) {
+                    console.error("Failed to clear server cart:", err);
+                }
+                clearCart();
+            } else {
+                sessionStorage.removeItem('tg_buy_now_item');
+                setBuyNowItems([]);
+            }
+            toast.success("Buyurtma qabul qilindi", { duration: 2000, position: 'top-right' });
             onOpenChange(false);
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             window.dispatchEvent(new CustomEvent('open-order-details', { detail: res?.data || payload }));
         } catch (error: any) {
@@ -338,7 +381,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 <ScrollArea className="flex-1 px-5 py-6">
                     <div className="space-y-8">
                         {/* Cart Items Summary */}
-                        {cart && cart.length > 0 && (
+                        {activeCartItems && activeCartItems.length > 0 && (
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3 mb-2 ml-1">
                                     <div className="w-8 h-8 rounded-lg bg-[#E0F2F1] flex items-center justify-center text-[#007AFF] border border-[#007AFF]/10">
@@ -402,7 +445,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                             <div className="absolute top-0 right-0 w-24 h-24 bg-[#007AFF]/5 rounded-full blur-[30px] pointer-events-none" />
                             <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-1">To'lov miqdori</span>
                             <span className="text-slate-900 font-black text-3xl tracking-tight">
-                                {formatPrice(cartTotal)}
+                                {formatPrice(dynamicCartTotal)}
                             </span>
                         </div>
 

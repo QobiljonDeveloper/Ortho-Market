@@ -5,9 +5,10 @@
     SheetDescription,
 } from "./ui/sheet";
 import { type Product } from "../types";
-import { Heart, ShieldCheck, Truck, ArrowLeft, ShoppingCart, Minus, Plus, Loader2 } from "lucide-react";
+import { Heart, ShieldCheck, Truck, ArrowLeft, ShoppingCart, Minus, Plus, Loader2, ShoppingBag } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
@@ -26,6 +27,7 @@ interface ProductDetailsDrawerProps {
 }
 
 export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }: ProductDetailsDrawerProps) {
+    const navigate = useNavigate();
     const { user } = useAuthContext();
     const { isSaved, toggleWishlist } = useWishlist(user?.id);
 
@@ -101,6 +103,77 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
             onOpenChange(false);
         }, 200);
     };
+
+    const handleBuyNow = (selectedItems: any[]) => {
+        // Validation logic is same as handleAddToCart
+        const hasVariantsActual = variantsData && variantsData.length > 0;
+        if (hasVariantsActual) {
+            const totalQty = selectedItems ? selectedItems.reduce((sum, item) => sum + item.quantity, 0) : 0;
+            if (!selectedItems || selectedItems.length === 0 || totalQty === 0) {
+                toast.error("Iltimos, mahsulot turini tanlang");
+                return;
+            }
+            for (const parent of variantsData) {
+                const parentSelection = selectedItems.find(item => item.type === "parent" && String(item.id) === String(parent.id));
+                const parentQty = parentSelection ? parentSelection.quantity : 0;
+                const childrenList = parent.children || parent.subTypes || [];
+                const hasChildren = childrenList.length > 0;
+                if (parentQty > 0 && hasChildren) {
+                    const selectedChildren = selectedItems.filter(item => 
+                        item.type === "subType" && 
+                        String(item.parentId) === String(parent.id)
+                    );
+                    const childQty = selectedChildren.reduce((sum, item) => sum + item.quantity, 0);
+                    if (selectedChildren.length === 0 || childQty === 0) {
+                        toast.error(`Iltimos, "${parent.name}" uchun kichik turni tanlang.`);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Construct buyNowItem payload
+        const buyNowItems = selectedItems.map(item => {
+            const isSub = item.type === 'subType';
+            const parent = isSub ? variantsData.find(p => p.id === item.parentId) : variantsData.find(p => p.id === item.id);
+            const child = isSub ? (parent?.children || parent?.subTypes || []).find((c: any) => c.id === item.id) : null;
+            
+            return {
+                id: `${product.id}-${item.id}-`,
+                productId: String(product.id),
+                productNameUz: product.nameUz,
+                quantity: item.quantity,
+                unitPrice: product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice,
+                basePrice: product.basePrice,
+                discountPrice: product.discountPrice,
+                primaryImageUrl: product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
+                selectedParentType: parent ? { id: String(parent.id), name: parent.name, price: parent.priceExtra || parent.price || 0 } : null,
+                selectedChildType: child ? { id: String(child.id), name: child.name, price: child.priceExtra || child.price || 0 } : null,
+            };
+        });
+
+        window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: buyNowItems } }));
+        onOpenChange(false);
+    };
+
+    const handleBuyNowFlat = () => {
+        const qty = Math.max(1, getItemQuantity(product.id));
+        const payload = [{
+            id: `${product.id}--`,
+            productId: String(product.id),
+            productNameUz: product.nameUz,
+            quantity: qty,
+            unitPrice: product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice,
+            basePrice: product.basePrice,
+            discountPrice: product.discountPrice,
+            primaryImageUrl: product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
+            selectedParentType: null,
+            selectedChildType: null
+        }];
+        window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: payload } }));
+        onOpenChange(false);
+    };
+
 
     // 1. Initialize vConsole temporarily for debugging and destroy on unmount
     useEffect(() => {
@@ -285,6 +358,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                                 basePrice={product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice}
                                 variants={variantsData}
                                 onAddToCart={handleAddToCart}
+                                onBuyNow={handleBuyNow}
                             />
                         ) : (
                             <ProductVariants
@@ -350,30 +424,48 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                         ) : (() => {
                             const quantity = getItemQuantity(product.id);
                             return quantity === 0 ? (
-                                <button
-                                    onClick={() => addToCart(product)}
-                                    className="w-full h-[52px] bg-[#007AFF] text-white rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#0062cc] active:scale-[0.98] transition-all shadow-sm"
-                                >
-                                    <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
-                                    Savatga
-                                </button>
+                                <div className="flex flex-col gap-2.5">
+                                    <button
+                                        onClick={handleBuyNowFlat}
+                                        className="w-full h-12 rounded-full font-bold text-[15px] bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center gap-2 transition-colors border border-slate-200"
+                                    >
+                                        <ShoppingBag className="w-5 h-5" strokeWidth={2.5} />
+                                        1 klikda xarid qilish
+                                    </button>
+                                    <button
+                                        onClick={() => addToCart(product)}
+                                        className="w-full h-13 bg-[#007AFF] text-white rounded-full font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#0062cc] active:scale-[0.98] transition-all shadow-[0_8px_20px_rgba(0,122,255,0.15)]"
+                                    >
+                                        <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
+                                        Savatga qo'shish
+                                    </button>
+                                </div>
                             ) : (
-                                <div className="w-full h-[52px] bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between p-1.5 shadow-inner">
+                                <div className="flex flex-col gap-2.5">
                                     <button
-                                        onClick={() => updateQuantity(product.id, Math.max(0, quantity - 1))}
-                                        className="w-12 h-10 flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-slate-200"
+                                        onClick={handleBuyNowFlat}
+                                        className="w-full h-12 rounded-full font-bold text-[15px] bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center gap-2 transition-colors border border-slate-200"
                                     >
-                                        <Minus className="h-5 w-5" strokeWidth={2} />
+                                        <ShoppingBag className="w-5 h-5" strokeWidth={2.5} />
+                                        1 klikda xarid qilish
                                     </button>
-                                    <span className="text-lg font-black text-slate-900 tracking-wider">
-                                        {quantity}
-                                    </span>
-                                    <button
-                                        onClick={() => updateQuantity(product.id, quantity + 1)}
-                                        className="w-12 h-10 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-[0.8rem] shadow-sm transition-colors active:scale-95 border border-[#007AFF]/20"
-                                    >
-                                        <Plus className="h-5 w-5" strokeWidth={2} />
-                                    </button>
+                                    <div className="w-full h-[52px] bg-slate-50 border border-slate-200 rounded-full flex items-center justify-between p-1.5 shadow-inner">
+                                        <button
+                                            onClick={() => updateQuantity(product.id, Math.max(0, quantity - 1))}
+                                            className="w-12 h-10 flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 rounded-full shadow-sm transition-colors active:scale-95 border border-slate-200"
+                                        >
+                                            <Minus className="h-5 w-5" strokeWidth={2} />
+                                        </button>
+                                        <span className="text-lg font-black text-slate-900 tracking-wider">
+                                            {quantity}
+                                        </span>
+                                        <button
+                                            onClick={() => updateQuantity(product.id, quantity + 1)}
+                                            className="w-12 h-10 flex items-center justify-center bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-full shadow-sm transition-colors active:scale-95 border border-[#007AFF]/20"
+                                        >
+                                            <Plus className="h-5 w-5" strokeWidth={2} />
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })()}
