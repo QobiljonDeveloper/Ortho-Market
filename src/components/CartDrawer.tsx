@@ -47,7 +47,8 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
 
         return cart.map((item: any) => {
-            const variantData = storedVariants[String(item.productId)];
+            const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
+            const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
             let extraPrice = 0;
             if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
                 const totalQty = variantData.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);

@@ -82,7 +82,8 @@ export function MultiVariantSelector({
             const saved = localStorage.getItem('tg_cart_variants');
             if (!saved) return;
             const savedMap = JSON.parse(saved);
-            const productData = savedMap[String(productId)];
+            const lookupKey = Object.keys(savedMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
+            const productData = lookupKey ? savedMap[lookupKey] : undefined;
             if (productData && productData.productTypeId === "multi" && Array.isArray(productData.selections)) {
                 const initialQty: Record<string, number> = {};
                 productData.selections.forEach((sel: any) => {
