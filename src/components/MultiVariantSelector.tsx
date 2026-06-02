@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Minus, ShoppingBag, ShoppingCart, Sparkles, HelpCircle, Layers, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
 
 // 1. Definition of the nested Variant Interfaces
 export interface SubTypeVariant {
@@ -73,6 +74,30 @@ export function MultiVariantSelector({
 }: MultiVariantSelectorProps) {
     // 3. State tracking chosen quantities for BOTH parents and sub-types: { "parent-1": 2, "sub-101": 1 }
     const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+    // Hydrate quantities from localStorage on mount/sync
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('tg_cart_variants');
+            if (!saved) return;
+            const savedMap = JSON.parse(saved);
+            const productData = savedMap[String(productId)];
+            if (productData && productData.productTypeId === "multi" && Array.isArray(productData.selections)) {
+                const initialQty: Record<string, number> = {};
+                productData.selections.forEach((sel: any) => {
+                    // Check if this productTypeId is a sub-type or a parent
+                    const isSub = variants.some(parent => 
+                        (parent.children || parent.subTypes || []).some(child => String(child.id) === String(sel.productTypeId))
+                    );
+                    const key = isSub ? `sub-${sel.productTypeId}` : `parent-${sel.productTypeId}`;
+                    initialQty[key] = sel.quantity;
+                });
+                setQuantities(initialQty);
+            }
+        } catch (e) {
+            console.error("Error reading initial variant quantities:", e);
+        }
+    }, [productId, variants]);
 
     // Increment Handler
     const increment = (type: "parent" | "sub", id: string | number, stock: number) => {
@@ -160,18 +185,17 @@ export function MultiVariantSelector({
 
     // 4. Submit handler filtering out zero-quantity selections and returning formatted array
     const handleSubmit = () => {
-        if (selectedItemsList.length === 0) return;
+        if (selectedItemsList.length === 0) {
+            toast.error("Iltimos, mahsulot variantini tanlang!");
+            return;
+        }
 
         console.log("🛒 [Nested Cart Payload Generated]:", selectedItemsList);
 
         if (onAddToCart) {
             onAddToCart(selectedItemsList);
         } else {
-            alert(
-                `Savatchaga qo'shildi:\n${selectedItemsList
-                    .map((item) => `- ${item.name} (${item.type === "parent" ? "Asosiy" : "Kichik tur"}): ${item.quantity} dona`)
-                    .join("\n")}`
-            );
+            toast.success("Savatga muvaffaqiyatli qo'shildi!");
         }
     };
 
@@ -409,11 +433,13 @@ export function MultiVariantSelector({
             <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={totalSelectedQuantity === 0}
-                className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2 disabled:opacity-55 disabled:cursor-not-allowed disabled:shadow-none"
+                className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2"
             >
                 <ShoppingCart className="w-4.5 h-4.5" />
-                Savatga qo'shish ({totalSelectedQuantity} dona)
+                {totalSelectedQuantity > 0 
+                    ? `Savatga qo'shish (${totalSelectedQuantity} dona)` 
+                    : "Savatga qo'shish"
+                }
             </button>
         </div>
     );
