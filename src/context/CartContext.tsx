@@ -91,33 +91,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
 
-        const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
-        const variant = (lookupKey ? variantMap[lookupKey] : undefined) as any;
-
-        if (variant) {
-            if (variant.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
-                let total = 0;
-                for (const sel of variant.selections) {
-                    const variantPrice = Number(sel.priceExtra) || 0;
-                    const variantQty = Number(sel.quantity) || 0;
-                    total += variantPrice * variantQty;
-                }
-                return total;
-            } else {
-                // Flat variants
-                const product = productsMap[String(productId)];
-                let unitPrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
-                if (product) {
-                    unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                        ? product.discountPrice
-                        : product.basePrice;
-                }
-                const extraPrice = (variant.parentPrice || 0) + (variant.childPrice || 0);
-                return (unitPrice + extraPrice) * (item.quantity || 0);
-            }
-        }
-
-        // No variants: Base Price * Item Quantity
+        // Resolve product base price
         const product = productsMap[String(productId)];
         let unitPrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
         if (product) {
@@ -125,6 +99,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 ? product.discountPrice
                 : product.basePrice;
         }
+
+        const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
+        const variant = (lookupKey ? variantMap[lookupKey] : undefined) as any;
+
+        if (variant) {
+            if (variant.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
+                // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
+                const selectedVariantsTotal = variant.selections.reduce((sum: number, sel: any) => {
+                    const fullPrice = unitPrice + (sel.priceExtra || 0);
+                    return sum + (fullPrice * (sel.quantity || 0));
+                }, 0);
+                return selectedVariantsTotal;
+            } else {
+                // Flat variants
+                const extraPrice = (variant.parentPrice || 0) + (variant.childPrice || 0);
+                return (unitPrice + extraPrice) * (item.quantity || 0);
+            }
+        }
+
+        // No variants: Base Price * Item Quantity
         return unitPrice * (item.quantity || 0);
     }, [safeCart, variantMap, productsMap]);
 
