@@ -23,7 +23,7 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
-    const { cart, updateQuantity, removeFromCart, cartCount, refetchCart, productsMap } = useCart();
+    const { cart, updateQuantity, removeFromCart, cartCount, refetchCart, productsMap, variantMap } = useCart();
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
     // Product details modal state for editing variants
@@ -42,9 +42,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
     }, []);
 
     const cartItemsWithDynamicPrices = useMemo(() => {
-        const _trigger = refreshCartTrigger; // register dependency
-        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
-        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+        const storedVariants = variantMap;
 
         return cart.map((item: any) => {
             const variantData = storedVariants[String(item.productId)];
@@ -101,7 +99,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 originalTotal
             };
         });
-    }, [cart, refreshCartTrigger, productsMap]);
+    }, [cart, variantMap, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
         return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + item.itemTotal, 0);

@@ -8,8 +8,12 @@ import { fetchProductTypes, fetchProductById } from "../services/api";
 interface VariantSelection {
     parentName?: string;
     parentPrice?: number;
+    parentBasePrice?: number | null;
+    parentDiscountPrice?: number | null;
     childName?: string;
     childPrice?: number;
+    childBasePrice?: number | null;
+    childDiscountPrice?: number | null;
     productTypeId?: string;
     selections?: {
         productTypeId: string | number;
@@ -103,6 +107,125 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
         return map;
     }, [productQueries, productIds]);
+
+    // Hydrate variant selection with full names/prices from fetched product types on mount/sync
+    useEffect(() => {
+        if (Object.keys(productTypesMap).length === 0) return;
+
+        setVariantMap(prev => {
+            let changed = false;
+            const nextVariantMap = { ...prev };
+
+            Object.keys(nextVariantMap).forEach((productId) => {
+                const variant = nextVariantMap[productId];
+                const fetchedTypes = productTypesMap[productId];
+                if (!fetchedTypes || !Array.isArray(fetchedTypes)) return;
+
+                if (variant.productTypeId === "multi" && Array.isArray(variant.selections)) {
+                    // Hydrate multi-variant selections
+                    const updatedSelections = variant.selections.map((sel: any) => {
+                        let name = sel.name;
+                        let priceExtra = sel.priceExtra;
+
+                        for (const parent of fetchedTypes) {
+                            if (String(parent.id) === String(sel.productTypeId)) {
+                                name = parent.name;
+                                priceExtra = parent.priceExtra || parent.price || 0;
+                                break;
+                            }
+                            const childrenList = parent.children || parent.subTypes || [];
+                            const child = childrenList.find((c: any) => String(c.id) === String(sel.productTypeId));
+                            if (child) {
+                                name = `${parent.name} ➔ ${child.name}`;
+                                priceExtra = child.priceExtra || child.price || 0;
+                                break;
+                            }
+                        }
+
+                        if (sel.name !== name || sel.priceExtra !== priceExtra) {
+                            changed = true;
+                            return {
+                                ...sel,
+                                name,
+                                priceExtra
+                            };
+                        }
+                        return sel;
+                    });
+
+                    if (changed) {
+                        nextVariantMap[productId] = {
+                            ...variant,
+                            selections: updatedSelections
+                        };
+                    }
+                } else if (variant.productTypeId) {
+                    // Hydrate flat/standard variant selections
+                    let parentObj: any = null;
+                    let childObj: any = null;
+
+                    for (const parent of fetchedTypes) {
+                        if (String(parent.id) === String(variant.productTypeId)) {
+                            parentObj = parent;
+                            break;
+                        }
+                        const childrenList = parent.children || parent.subTypes || [];
+                        const child = childrenList.find((c: any) => String(c.id) === String(variant.productTypeId));
+                        if (child) {
+                            parentObj = parent;
+                            childObj = child;
+                            break;
+                        }
+                    }
+
+                    if (parentObj) {
+                        const parentName = parentObj.name;
+                        const parentPrice = parentObj.price || 0;
+                        const parentBasePrice = parentObj.basePrice || null;
+                        const parentDiscountPrice = parentObj.discountPrice || null;
+                        const childName = childObj ? childObj.name : null;
+                        const childPrice = childObj ? (childObj.price || 0) : 0;
+                        const childBasePrice = childObj ? (childObj.basePrice || null) : null;
+                        const childDiscountPrice = childObj ? (childObj.discountPrice || null) : null;
+
+                        if (
+                            variant.parentName !== parentName ||
+                            variant.parentPrice !== parentPrice ||
+                            variant.parentBasePrice !== parentBasePrice ||
+                            variant.parentDiscountPrice !== parentDiscountPrice ||
+                            variant.childName !== childName ||
+                            variant.childPrice !== childPrice ||
+                            variant.childBasePrice !== childBasePrice ||
+                            variant.childDiscountPrice !== childDiscountPrice
+                        ) {
+                            changed = true;
+                            nextVariantMap[productId] = {
+                                ...variant,
+                                parentName,
+                                parentPrice,
+                                parentBasePrice,
+                                parentDiscountPrice,
+                                childName,
+                                childPrice,
+                                childBasePrice,
+                                childDiscountPrice
+                            };
+                        }
+                    }
+                }
+            });
+
+            if (changed) {
+                try {
+                    localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(nextVariantMap));
+                } catch (err) {
+                    console.error("Failed to write updated variants to localStorage:", err);
+                }
+                return nextVariantMap;
+            }
+            return prev;
+        });
+    }, [productTypesMap]);
 
     const getItemPrice = useCallback((productId: string) => {
         const item = safeCart.find((i: any) => String(i?.productId) === String(productId));

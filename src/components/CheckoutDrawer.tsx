@@ -65,7 +65,7 @@ interface CheckoutDrawerProps {
 }
 
 export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: CheckoutDrawerProps) {
-    const { clearCart, cart, productTypesMap, productsMap } = useCart();
+    const { clearCart, cart, productTypesMap, productsMap, variantMap } = useCart();
 
     // Refresh trigger requested by user for reactivity
     const [refreshCartTrigger, setRefreshCartTrigger] = useState(0);
@@ -98,9 +98,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
     const cartItemsWithDynamicPrices = useMemo(() => {
-        const _trigger = refreshCartTrigger; // register dependency
-        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
-        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+        const storedVariants = variantMap;
 
         return cart.map((item: any) => {
             const variantData = storedVariants[String(item.productId)];
@@ -175,7 +173,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 originalTotal
             };
         });
-    }, [cart, refreshCartTrigger, productsMap]);
+    }, [cart, variantMap, productsMap]);
 
     const dynamicCartTotal = useMemo(() => {
         return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + item.itemTotal, 0);
@@ -220,14 +218,12 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     };
 
     /**
-     * Build a dynamic note string from variant selections directly from localStorage.
+     * Build a dynamic note string from variant selections directly from variantMap.
      * Format: "[Product: {cartItem.name} | Variant: {parentName} -> {childName}]"
      */
     const buildVariantNote = (): string | null => {
         try {
-            const saved = localStorage.getItem(VARIANTS_STORAGE_KEY);
-            if (!saved) return null;
-            const savedMap = JSON.parse(saved);
+            const savedMap = variantMap;
 
             const variantNotes = cart
                 .filter((item) => savedMap[item.productId])
@@ -273,8 +269,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             return;
         }
 
-        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
-        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
+        const storedVariants = variantMap;
 
         const invalidItem = cart.find((item: any) => {
             const types = productTypesMap[item.productId];
@@ -349,7 +344,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                     }
                     return {
                         productId: item.productId,
-                        productTypeId: variant?.productTypeId || null,
+                        productTypeId: variant?.productTypeId ? (Number(variant.productTypeId) || null) : null,
                         quantity: item.quantity,
                         unitPrice: item.displayPrice,  // variant + product narxi (14,500)
                         totalPrice: item.displayPrice * item.quantity
