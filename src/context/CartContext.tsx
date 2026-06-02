@@ -358,12 +358,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        // Save selected types into localStorage / variantMap if provided
-        if (selectedParentType || selectedChildType) {
-            setVariantMap(prev => {
-                const next = { ...prev };
-                next[String(product.id)] = {
-                    ...next[String(product.id)],
+        // Always sync with the latest localStorage first
+        try {
+            const saved = localStorage.getItem(VARIANTS_STORAGE_KEY);
+            const currentVariants = saved ? JSON.parse(saved) : {};
+            
+            // If explicit types are passed, let's merge them
+            if (selectedParentType || selectedChildType) {
+                currentVariants[String(product.id)] = {
+                    ...currentVariants[String(product.id)],
                     parentName: selectedParentType?.name || undefined,
                     parentPrice: selectedParentType?.price || 0,
                     childName: selectedChildType?.name || undefined,
@@ -372,13 +375,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     selectedParentType,
                     selectedChildType
                 };
-                try {
-                    localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(next));
-                } catch (err) {
-                    console.error("Failed to write updated variants to localStorage:", err);
-                }
-                return next;
-            });
+                localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(currentVariants));
+            }
+            
+            setVariantMap(currentVariants);
+        } catch (err) {
+            console.error("Error syncing variant map in addToCart:", err);
         }
 
         try {
@@ -435,17 +437,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Listen for cross-tab or direct localStorage updates
     useEffect(() => {
-        const handleStorage = (e: StorageEvent) => {
-            if (e.key === VARIANTS_STORAGE_KEY) {
-                try {
-                    setVariantMap(e.newValue ? JSON.parse(e.newValue) : {});
-                } catch {
-                    // Ignore parsing errors
-                }
+        const handleSync = () => {
+            try {
+                const saved = localStorage.getItem(VARIANTS_STORAGE_KEY);
+                setVariantMap(saved ? JSON.parse(saved) : {});
+            } catch (err) {
+                console.error("Failed to parse variants in handleSync:", err);
             }
         };
+
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === VARIANTS_STORAGE_KEY) {
+                handleSync();
+            }
+        };
+
         window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
+        window.addEventListener('variantSaved', handleSync);
+        
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('variantSaved', handleSync);
+        };
     }, []);
 
     return (

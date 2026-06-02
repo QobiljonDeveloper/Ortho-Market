@@ -94,7 +94,7 @@ export function ProductVariants({
             }
         } else {
             // Handling Unselection
-            if (existingData[productId]) {
+            if (existingData[productId] && existingData[productId].productTypeId !== "multi") {
                 delete existingData[productId];
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
                 window.dispatchEvent(new Event('storage'));
