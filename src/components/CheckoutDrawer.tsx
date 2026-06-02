@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCart } from "../context/CartContext";
 import { useAuthContext } from "../context/AuthContext";
 import { Button } from "./ui/button";
@@ -164,38 +164,9 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         });
     }, [cart, refreshCartTrigger, productsMap]);
 
-    const getCartItemPrice = useCallback((item: any) => {
-        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
-        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
-        const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
-        const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
-
-        // Resolve product base price from productsMap
-        const product = productsMap[String(item.productId)];
-        let unitPrice = item.unitPrice || item.basePrice || 0;
-
-        if (product) {
-            unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                ? product.discountPrice
-                : product.basePrice;
-        }
-
-        if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
-            // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
-            const totalPrice = variantData.selections.reduce((sum: number, sel: any) => {
-                const fullPrice = unitPrice + (sel.priceExtra || 0);
-                return sum + (fullPrice * (sel.quantity || 0));
-            }, 0);
-            return totalPrice / (item.quantity || 1);
-        } else {
-            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-            return unitPrice + extraPrice;
-        }
-    }, [productsMap]);
-
     const dynamicCartTotal = useMemo(() => {
-        return cart.reduce((total: number, item: any) => total + (getCartItemPrice(item) * item.quantity), 0);
-    }, [cart, getCartItemPrice]);
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * (item.quantity || 0)), 0);
+    }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {
         if (open) {
@@ -475,18 +446,18 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                                                     {formatPrice(item.originalPrice)}
                                                                 </span>
                                                                 <span className="text-[11px] font-bold text-[#007AFF]">
-                                                                    {formatPrice(getCartItemPrice(item))}
+                                                                    {formatPrice(item.displayPrice)}
                                                                 </span>
                                                             </>
                                                         ) : (
                                                             <span className="text-[11px] text-slate-600 font-semibold">
-                                                                {formatPrice(getCartItemPrice(item))}
+                                                                {formatPrice(item.displayPrice)}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
                                                 <span className="text-sm font-bold text-slate-900 shrink-0">
-                                                    {formatPrice(getCartItemPrice(item) * item.quantity)}
+                                                    {formatPrice(item.displayPrice * item.quantity)}
                                                 </span>
                                             </div>
                                         );

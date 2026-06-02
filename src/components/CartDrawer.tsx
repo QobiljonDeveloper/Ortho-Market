@@ -94,38 +94,9 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         });
     }, [cart, refreshCartTrigger, productsMap]);
 
-    const getCartItemPrice = useCallback((item: any) => {
-        const savedVariantsStr = localStorage.getItem(VARIANTS_STORAGE_KEY);
-        const storedVariants = savedVariantsStr ? JSON.parse(savedVariantsStr) : {};
-        const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
-        const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
-
-        // Resolve product base price from productsMap
-        const product = productsMap[String(item.productId)];
-        let unitPrice = item.unitPrice || item.basePrice || 0;
-
-        if (product) {
-            unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                ? product.discountPrice
-                : product.basePrice;
-        }
-
-        if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
-            // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
-            const totalPrice = variantData.selections.reduce((sum: number, sel: any) => {
-                const fullPrice = unitPrice + (sel.priceExtra || 0);
-                return sum + (fullPrice * (sel.quantity || 0));
-            }, 0);
-            return totalPrice / (item.quantity || 1);
-        } else {
-            const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
-            return unitPrice + extraPrice;
-        }
-    }, [productsMap]);
-
     const dynamicCartTotal = useMemo(() => {
-        return cart.reduce((total: number, item: any) => total + (getCartItemPrice(item) * item.quantity), 0);
-    }, [cart, getCartItemPrice]);
+        return cartItemsWithDynamicPrices.reduce((total: number, item: any) => total + (item.displayPrice * (item.quantity || 0)), 0);
+    }, [cartItemsWithDynamicPrices]);
 
     useEffect(() => {
         if (open) {
@@ -284,12 +255,12 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                                             {formatPrice(item.originalPrice)}
                                                                         </span>
                                                                         <span className="font-bold text-[#007AFF] text-sm leading-tight mt-0.5">
-                                                                            {formatPrice(getCartItemPrice(item))}
+                                                                            {formatPrice(item.displayPrice)}
                                                                         </span>
                                                                     </>
                                                                 ) : (
                                                                     <span className="font-bold text-[#007AFF] text-sm leading-tight">
-                                                                        {formatPrice(getCartItemPrice(item))}
+                                                                        {formatPrice(item.displayPrice)}
                                                                     </span>
                                                                 )}
                                                             </div>
