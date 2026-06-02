@@ -93,10 +93,12 @@ export function ProductVariants({
                 window.dispatchEvent(new Event('variantSaved'));
             }
         } else {
-            // Handling Unselection
-            if (existingData[productId]) {
+            // Handling Unselection - only delete if it exists and is NOT a multi-variant configuration
+            const currentItem = existingData[productId];
+            if (currentItem && currentItem.productTypeId !== "multi") {
                 delete existingData[productId];
                 localStorage.setItem(VARIANTS_KEY, JSON.stringify(existingData));
+                // Fire storage event manually so CartContext updates in real-time
                 window.dispatchEvent(new Event('storage'));
                 window.dispatchEvent(new Event('variantSaved'));
             }
