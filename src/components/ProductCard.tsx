@@ -56,12 +56,10 @@ export function ProductCard({ product }: ProductCardProps) {
             console.info("🎯 [DEBUG-TYPES-FETCHED] =>", types);
 
             setProductDetails(details);
-            setProductTypes(types);
         } catch (error) {
             console.error("❌ API Error:", error);
             // Fallback to existing product prop data if API fails
             setProductDetails(product);
-            setProductTypes([]);
         } finally {
             setIsDetailsLoading(false);
         }
@@ -72,7 +70,6 @@ export function ProductCard({ product }: ProductCardProps) {
         if (!open) {
             // Clear fetched details when modal closes
             setProductDetails(null);
-            setProductTypes([]);
             setIsDetailsLoading(false);
         }
     };
