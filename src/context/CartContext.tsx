@@ -126,7 +126,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         // Resolve product base price
         const product = productsMap[String(productId)];
-        let unitPrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
+        let unitPrice = item.unitPrice || item.basePrice || 0;
         if (product) {
             unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
                 ? product.discountPrice
