@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Plus, Minus, ShoppingBag, Sparkles, HelpCircle, Layers, CheckCircle } from "lucide-react";
+import { Plus, Minus, ShoppingBag, ShoppingCart, Sparkles, HelpCircle, Layers, CheckCircle } from "lucide-react";
 
 // 1. Definition of the nested Variant Interfaces
 export interface SubTypeVariant {
     id: string | number;
     name: string;
-    stock: number;
+    stock?: number;         // Optional to match API structure
     priceModifier?: string; // e.g. "+30 000 UZS"
     priceExtra?: number;    // Numerical extra price
     price?: number;         // Alternate price property
@@ -14,7 +14,7 @@ export interface SubTypeVariant {
 export interface ParentVariant {
     id: string | number;
     name: string;
-    stock: number;
+    stock?: number;         // Optional to match API structure
     priceExtra?: number;    // Numerical extra price
     price?: number;         // Alternate price property
     colorCode?: string;     // Optional Hex code for beautiful visual chips
@@ -211,7 +211,7 @@ export function MultiVariantSelector({
                 <div className="space-y-4">
                     {variants.map((parent) => {
                         const parentQty = quantities[`parent-${parent.id}`] || 0;
-                        const isParentOutOfStock = parent.stock === 0;
+                        const isParentOutOfStock = (parent.stock ?? 0) === 0;
                         const isParentSelected = parentQty > 0;
                         const parentPriceExtra = parent.priceExtra || parent.price || 0;
 
@@ -244,7 +244,7 @@ export function MultiVariantSelector({
                                                 </span>
                                                 <span className="w-1 h-1 rounded-full bg-slate-300" />
                                                 <span className="text-[10px] font-semibold text-slate-400">
-                                                    Zaxira: {parent.stock} ta
+                                                    Zaxira: {parent.stock ?? 0} ta
                                                 </span>
                                             </div>
                                         </div>
@@ -274,10 +274,10 @@ export function MultiVariantSelector({
                                             </span>
                                             <button
                                                 type="button"
-                                                onClick={() => increment("parent", parent.id, parent.stock)}
-                                                disabled={parentQty >= parent.stock}
+                                                onClick={() => increment("parent", parent.id, parent.stock ?? 0)}
+                                                disabled={parentQty >= (parent.stock ?? 0)}
                                                 className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                                                    parentQty < parent.stock
+                                                    parentQty < (parent.stock ?? 0)
                                                         ? "text-[#007AFF] hover:bg-[#007AFF]/10 active:scale-90"
                                                         : "text-slate-300 cursor-not-allowed"
                                                 }`}
@@ -293,7 +293,7 @@ export function MultiVariantSelector({
                                     <div className="pl-4 ml-2 border-l-2 border-slate-200/80 pt-2.5 space-y-2.5">
                                         {childrenList.map((child) => {
                                             const childQty = quantities[`sub-${child.id}`] || 0;
-                                            const isChildOutOfStock = child.stock === 0;
+                                            const isChildOutOfStock = (child.stock ?? 0) === 0;
                                             const isChildSelected = childQty > 0;
                                             const childPriceExtra = child.priceExtra || child.price || 0;
 
@@ -323,7 +323,7 @@ export function MultiVariantSelector({
                                                             )}
                                                             <span className="w-1 h-1 rounded-full bg-slate-300" />
                                                             <span className="text-[9px] font-semibold text-slate-400">
-                                                                Zaxira: {child.stock} ta
+                                                                Zaxira: {child.stock ?? 0} ta
                                                             </span>
                                                         </div>
                                                     </div>
@@ -352,10 +352,10 @@ export function MultiVariantSelector({
                                                             </span>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => increment("sub", child.id, child.stock)}
-                                                                disabled={childQty >= child.stock}
+                                                                onClick={() => increment("sub", child.id, child.stock ?? 0)}
+                                                                disabled={childQty >= (child.stock ?? 0)}
                                                                 className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
-                                                                    childQty < child.stock
+                                                                    childQty < (child.stock ?? 0)
                                                                         ? "text-[#007AFF] hover:bg-[#007AFF]/10 active:scale-90"
                                                                         : "text-slate-300 cursor-not-allowed"
                                                                 }`}
