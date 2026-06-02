@@ -196,81 +196,76 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 
 
-    // Synchronize clientCart with apiCart whenever apiCart changes (self-healing / alignment)
+    // Synchronize clientCart quantities with the server cart.
+    // RULES:
+    //   1. NEVER delete or overwrite existing client items that have variant data.
+    //   2. NEVER run when server cart is empty (empty server != user has no items).
+    //   3. ONLY update quantities on existing items; never strip selectedParentType/selectedChildType.
     useEffect(() => {
-        // Prevent synchronizing or overwriting clientCart when user is logged out or server cart is loading
         if (!user?.id || !isCartSuccess || isCartLoading) return;
 
         const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
 
-        // CRITICAL: If the server returned an empty cart, bail out entirely.
-        // The client localStorage is the source of truth for variant data.
-        // An empty server response must NEVER wipe the local cart on mount.
+        // If server returned empty, do nothing. localStorage is source of truth.
         if (safeApiCart.length === 0) return;
 
         setClientCart(prev => {
+            // If client cart is empty, nothing to reconcile.
             if (prev.length === 0) return prev;
-            const nextCart = [...prev];
 
-            // Group client-side items by productId
-            const clientGroups: Record<string, CartItem[]> = {};
-            nextCart.forEach(item => {
-                if (!clientGroups[item.productId]) {
-                    clientGroups[item.productId] = [];
-                }
-                clientGroups[item.productId].push(item);
-            });
-
-            const newClientCart: CartItem[] = [];
-
-            safeApiCart.forEach((apiItem: any) => {
-                const productId = apiItem.productId;
-                const serverQty = apiItem.quantity || 0;
-                const existingItems = clientGroups[productId] || [];
-
-                if (existingItems.length > 0) {
-                    const clientQty = existingItems.reduce((sum, item) => sum + item.quantity, 0);
-
-                    if (clientQty === serverQty) {
-                        // Perfect match: keep ALL existing items exactly as-is.
-                        // This preserves selectedParentType and selectedChildType untouched.
-                        newClientCart.push(...existingItems);
-                    } else if (serverQty === 0) {
-                        // Server says 0 -> remove this product from client cart
-                    } else if (existingItems.length === 1) {
-                        // Single variant row: update quantity but SPREAD to preserve all variant fields
-                        newClientCart.push({ ...existingItems[0], quantity: serverQty });
-                    } else {
-                        // Multiple variant rows: always SPREAD existing items to preserve variant data
-                        const otherQty = existingItems.slice(1).reduce((sum, item) => sum + item.quantity, 0);
-                        const adjustedFirstQty = Math.max(1, serverQty - otherQty);
-                        newClientCart.push({ ...existingItems[0], quantity: adjustedFirstQty });
-                        newClientCart.push(...existingItems.slice(1));
-                    }
-                }
-                // CRITICAL: If the client has no record for this productId, skip creating a
-                // null-variant placeholder. Doing so would permanently overwrite
-                // selectedParentType/selectedChildType with null on the next localStorage write.
-            });
-
-            // Preserve any client items for products the server does not know about yet
+            // Build a lookup of totalClientQty per productId
+            const clientQtyByProduct: Record<string, number> = {};
             prev.forEach(item => {
-                const alreadyIncluded = newClientCart.some(n => n.id === item.id);
-                const serverKnowsProduct = safeApiCart.some((a: any) => a.productId === item.productId);
-                if (!alreadyIncluded && !serverKnowsProduct) {
-                    newClientCart.push(item);
-                }
+                clientQtyByProduct[item.productId] = (clientQtyByProduct[item.productId] || 0) + item.quantity;
             });
 
-            // Only write to localStorage if something actually changed
-            if (JSON.stringify(prev) === JSON.stringify(newClientCart)) return prev;
+            // Check if any server quantities differ from client quantities
+            let hasChanges = false;
+            const serverQtyByProduct: Record<string, number> = {};
+            safeApiCart.forEach((apiItem: any) => {
+                serverQtyByProduct[apiItem.productId] = apiItem.quantity || 0;
+            });
 
+            for (const productId of Object.keys(serverQtyByProduct)) {
+                const clientQty = clientQtyByProduct[productId];
+                const serverQty = serverQtyByProduct[productId];
+                if (clientQty !== undefined && clientQty !== serverQty) {
+                    hasChanges = true;
+                    break;
+                }
+            }
+
+            // If quantities all match, skip entirely to avoid unnecessary re-renders
+            if (!hasChanges) return prev;
+
+            // Reconcile: ONLY adjust quantities on existing items. Never remove, never strip variants.
+            const updated = prev.map(item => {
+                const serverQty = serverQtyByProduct[item.productId];
+                if (serverQty === undefined) {
+                    // Server does not know this product yet — keep client item untouched
+                    return item;
+                }
+
+                const clientTotalForProduct = clientQtyByProduct[item.productId] || 0;
+                if (clientTotalForProduct === serverQty) {
+                    // Perfect match for this product — keep item exactly as-is (preserves variants)
+                    return item;
+                }
+
+                // Quantity mismatch: scale this item proportionally.
+                // We keep all variant fields by spreading the existing item.
+                const ratio = clientTotalForProduct > 0 ? item.quantity / clientTotalForProduct : 1;
+                const newQty = Math.max(1, Math.round(serverQty * ratio));
+                return { ...item, quantity: newQty };
+            });
+
+            // Persist the reconciled cart (quantities updated, variants fully preserved)
             try {
-                localStorage.setItem('tg_cart_client_items', JSON.stringify(newClientCart));
+                localStorage.setItem('tg_cart_client_items', JSON.stringify(updated));
             } catch (err) {
                 console.error('Failed to save synced cart to localStorage:', err);
             }
-            return newClientCart;
+            return updated;
         });
     }, [apiCart, isCartLoading, isCartSuccess, user?.id]);
 
