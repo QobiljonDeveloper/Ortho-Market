@@ -108,17 +108,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return map;
     }, [productQueries, productIds]);
 
-    // Debug log to verify if variants/types survive page reload in storage
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem(VARIANTS_STORAGE_KEY);
-            const cartItems = saved ? JSON.parse(saved) : {};
-            console.log('Cart State from Storage:', cartItems);
-        } catch (e) {
-            console.error("Error loading cart state from localStorage:", e);
-        }
-    }, []);
-
     // Hydrate variant selection with full names/prices from fetched product types on mount/sync
     useEffect(() => {
         if (Object.keys(productTypesMap).length === 0) return;
@@ -130,7 +119,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             Object.keys(nextVariantMap).forEach((productId) => {
                 const variant = nextVariantMap[productId];
                 const fetchedTypes = productTypesMap[productId];
-                if (!fetchedTypes || !Array.isArray(fetchedTypes) || fetchedTypes.length === 0) return;
+                if (!fetchedTypes || !Array.isArray(fetchedTypes)) return;
 
                 if (variant.productTypeId === "multi" && Array.isArray(variant.selections)) {
                     // Hydrate multi-variant selections
