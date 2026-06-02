@@ -91,29 +91,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
 
+        // Resolve product base price
+        const product = productsMap[String(productId)];
+        let unitPrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
+        if (product) {
+            unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                ? product.discountPrice
+                : product.basePrice;
+        }
+
         const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
         const variant = (lookupKey ? variantMap[lookupKey] : undefined) as any;
 
         if (variant) {
             if (variant.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
-                // Precise sum of selected variants
+                // priceExtra is ADDITIVE on top of basePrice: actual price = unitPrice + priceExtra
                 const selectedVariantsTotal = variant.selections.reduce((sum: number, sel: any) => {
-                    const selPrice = sel.priceExtra || 0;
-                    return sum + (selPrice * (sel.quantity || 0));
+                    const fullPrice = unitPrice + (sel.priceExtra || 0);
+                    return sum + (fullPrice * (sel.quantity || 0));
                 }, 0);
                 return selectedVariantsTotal;
             } else {
                 // Flat variants
-                const basePrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
                 const extraPrice = (variant.parentPrice || 0) + (variant.childPrice || 0);
-                return (basePrice + extraPrice) * (item.quantity || 0);
+                return (unitPrice + extraPrice) * (item.quantity || 0);
             }
         }
 
         // No variants: Base Price * Item Quantity
-        const basePrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
-        return basePrice * (item.quantity || 0);
-    }, [safeCart, variantMap]);
+        return unitPrice * (item.quantity || 0);
+    }, [safeCart, variantMap, productsMap]);
 
     const getItemPrice = useCallback((productId: string) => {
         const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
