@@ -267,7 +267,7 @@ export function AddToCartDrawer({
                         {/* ── Sticky Confirm Button - Hide when has variants ── */}
                         {!hasVariants && (
                             <div className="p-5 pt-3 shrink-0 border-t border-slate-100 bg-white">
-                                {(product.stock === 0 || product.stock === '0' || (product as any).inStock === false || product.stock === 'Qolmagan') ? (
+                                {(String(product.stock) === '0' || (product as any).inStock === false || product.stock === 'Qolmagan') ? (
                                     <div className="w-full h-[52px] bg-slate-100 text-slate-400 rounded-2xl font-bold text-[15px] flex items-center justify-center shadow-sm">
                                         Sotuvda qolmagan
                                     </div>
