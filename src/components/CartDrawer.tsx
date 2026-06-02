@@ -70,9 +70,9 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     : product.basePrice;
             }
 
-            const finalBasePrice = basePrice + extraPrice;
-            const finalUnitPrice = unitPrice + extraPrice;
-            const hasDiscount = unitPrice < basePrice;
+            const finalBasePrice = variantData?.productTypeId === "multi" ? extraPrice : (basePrice + extraPrice);
+            const finalUnitPrice = variantData?.productTypeId === "multi" ? extraPrice : (unitPrice + extraPrice);
+            const hasDiscount = variantData?.productTypeId === "multi" ? false : (unitPrice < basePrice);
 
             return {
                 ...item,

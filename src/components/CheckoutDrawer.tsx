@@ -142,8 +142,13 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                         : product.basePrice;
                 }
                 
-                finalBasePrice = basePrice + extraPrice;
-                finalUnitPrice = unitPrice + extraPrice;
+                if (variantData?.productTypeId === "multi") {
+                    finalBasePrice = extraPrice;
+                    finalUnitPrice = extraPrice;
+                } else {
+                    finalBasePrice = basePrice + extraPrice;
+                    finalUnitPrice = unitPrice + extraPrice;
+                }
             }
 
             const hasDiscount = finalUnitPrice < finalBasePrice;
@@ -318,7 +323,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                 ? ((product.discountPrice !== undefined && product.discountPrice < product.basePrice) ? product.discountPrice : product.basePrice)
                                 : (item.unitPrice || 0);
                             
-                            const unitPrice = baseProductPrice + (sel.priceExtra || 0);
+                            const unitPrice = sel.priceExtra || 0;
                             return {
                                 productId: item.productId,
                                 productTypeId: Number(sel.productTypeId) || null,
