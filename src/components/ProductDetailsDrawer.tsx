@@ -152,8 +152,13 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
             };
         });
 
-        window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: buyNowItems } }));
+        // Close the drawer FIRST, then dispatch after a short delay so the
+        // CheckoutDrawer event listener in CartDrawer has time to receive it
+        // without the Sheet unmount animation interfering.
         onOpenChange(false);
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: buyNowItems } }));
+        }, 80);
     };
 
     const handleBuyNowFlat = (e?: React.MouseEvent) => {
@@ -194,17 +199,13 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
             selectedChildType: null
         }];
         
-        // 3. Navigate directly to checkout
+        // 3. Close drawer first, then dispatch after short delay to avoid race condition
+        // with Sheet unmount animation interfering with CheckoutDrawer opening.
         console.log("Navigating to checkout with payload:", buyNowPayload);
-        
-        // NOTE: The app currently uses a Drawer for checkout via events, not a '/checkout' route.
-        // Using the dispatchEvent will correctly open the CheckoutDrawer.
-        window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: buyNowPayload } }));
-        
-        // If you ever implement a dedicated route, you would use:
-        // navigate('/checkout', { state: { buyNowItem: buyNowPayload } });
-        
         onOpenChange(false);
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: buyNowPayload } }));
+        }, 80);
     };
 
 
