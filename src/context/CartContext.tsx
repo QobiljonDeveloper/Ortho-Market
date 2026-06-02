@@ -87,36 +87,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return map;
     }, [productQueries, productIds]);
 
-    const getItemPrice = useCallback((productId: string) => {
+    const getItemTotal = useCallback((productId: string) => {
         const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
         if (!item) return 0;
 
-        let basePrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
         const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
         const variant = (lookupKey ? variantMap[lookupKey] : undefined) as any;
-        
+
         if (variant) {
             if (variant.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
-                const totalQty = variant.selections.reduce((sum: number, sel: any) => sum + (sel.quantity || 0), 0);
-                if (totalQty > 0) {
-                    const totalPrice = variant.selections.reduce((sum: number, sel: any) => {
-                        const selPrice = sel.priceExtra || 0;
-                        return sum + (selPrice * (sel.quantity || 0));
-                    }, 0);
-                    return totalPrice / totalQty;
-                }
+                // Precise sum of selected variants
+                const selectedVariantsTotal = variant.selections.reduce((sum: number, sel: any) => {
+                    const selPrice = sel.priceExtra || 0;
+                    return sum + (selPrice * (sel.quantity || 0));
+                }, 0);
+                return selectedVariantsTotal;
             } else {
-                return basePrice + (variant.parentPrice || 0) + (variant.childPrice || 0);
+                // Flat variants
+                const basePrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
+                const extraPrice = (variant.parentPrice || 0) + (variant.childPrice || 0);
+                return (basePrice + extraPrice) * (item.quantity || 0);
             }
         }
-        return basePrice;
+
+        // No variants: Base Price * Item Quantity
+        const basePrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
+        return basePrice * (item.quantity || 0);
     }, [safeCart, variantMap]);
+
+    const getItemPrice = useCallback((productId: string) => {
+        const item = safeCart.find((i: any) => String(i?.productId) === String(productId));
+        if (!item) return 0;
+        const total = getItemTotal(productId);
+        return total / (item.quantity || 1);
+    }, [safeCart, getItemTotal]);
 
     const cartTotal = useMemo(() => {
         return safeCart.reduce((total: number, item: any) => {
-            return total + (getItemPrice(item.productId) * (item.quantity || 0));
+            return total + getItemTotal(item.productId);
         }, 0);
-    }, [safeCart, getItemPrice]);
+    }, [safeCart, getItemTotal]);
 
     const getItemQuantity = useCallback((productId: string) => {
         if (!productId) return 0;

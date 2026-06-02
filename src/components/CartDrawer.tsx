@@ -49,35 +49,38 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         return cart.map((item: any) => {
             const lookupKey = Object.keys(storedVariants).find(k => k.toLowerCase() === String(item.productId).toLowerCase());
             const variantData = lookupKey ? storedVariants[lookupKey] : undefined;
-            let extraPrice = 0;
-            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections)) {
-                const totalQty = variantData.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
-                const totalExtra = variantData.selections.reduce((sum: number, s: any) => sum + (s.priceExtra || 0) * s.quantity, 0);
-                extraPrice = totalQty > 0 ? (totalExtra / totalQty) : 0;
+            let itemTotal = 0;
+            let originalItemTotal = 0;
+
+            if (variantData?.productTypeId === "multi" && Array.isArray(variantData.selections) && variantData.selections.length > 0) {
+                // Precise sum of selected variants
+                itemTotal = variantData.selections.reduce((sum: number, sel: any) => sum + ((sel.priceExtra || 0) * (sel.quantity || 0)), 0);
+                originalItemTotal = itemTotal;
             } else {
-                extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+                const product = productsMap[String(item.productId)];
+                let basePrice = item.basePrice || item.unitPrice || 0;
+                let unitPrice = item.unitPrice || item.basePrice || 0;
+
+                if (product) {
+                    basePrice = product.basePrice || basePrice;
+                    unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
+                        ? product.discountPrice
+                        : product.basePrice;
+                }
+
+                const extraPrice = (variantData?.parentPrice || 0) + (variantData?.childPrice || 0);
+                itemTotal = (unitPrice + extraPrice) * (item.quantity || 0);
+                originalItemTotal = (basePrice + extraPrice) * (item.quantity || 0);
             }
 
-            const product = productsMap[String(item.productId)];
-
-            let basePrice = item.basePrice || item.unitPrice || 0;
-            let unitPrice = item.unitPrice || item.basePrice || 0;
-
-            if (product) {
-                basePrice = product.basePrice || basePrice;
-                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                    ? product.discountPrice
-                    : product.basePrice;
-            }
-
-            const finalBasePrice = variantData?.productTypeId === "multi" ? extraPrice : (basePrice + extraPrice);
-            const finalUnitPrice = variantData?.productTypeId === "multi" ? extraPrice : (unitPrice + extraPrice);
-            const hasDiscount = variantData?.productTypeId === "multi" ? false : (unitPrice < basePrice);
+            const displayPrice = itemTotal / (item.quantity || 1);
+            const originalPrice = originalItemTotal / (item.quantity || 1);
+            const hasDiscount = displayPrice < originalPrice;
 
             return {
                 ...item,
-                displayPrice: finalUnitPrice,
-                originalPrice: finalBasePrice,
+                displayPrice,
+                originalPrice,
                 hasDiscount,
                 variantData
             };
