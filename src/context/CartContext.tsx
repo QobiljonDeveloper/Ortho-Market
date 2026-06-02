@@ -93,7 +93,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         let basePrice = item.unitPrice || item.basePrice || item.priceValue || item.price || 0;
         const lookupKey = Object.keys(variantMap).find(k => k.toLowerCase() === String(productId).toLowerCase());
-        const variant = lookupKey ? variantMap[lookupKey] : undefined;
+        const variant = (lookupKey ? variantMap[lookupKey] : undefined) as any;
         
         if (variant) {
             if (variant.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
