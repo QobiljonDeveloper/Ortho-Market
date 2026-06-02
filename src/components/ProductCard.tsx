@@ -1,4 +1,4 @@
-import { Heart, ShoppingCart, Minus, Plus, Loader2 } from "lucide-react";
+import { Heart, ShoppingCart, Minus, Plus, Loader2, ShoppingBag } from "lucide-react";
 import { Button } from "./ui/button";
 import { useCart } from "../context/CartContext";
 import type { Product } from "../types";
@@ -11,6 +11,7 @@ import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
 import { fetchProductById, fetchProductTypes } from "../services/api";
 import { useProductVariants } from "../hooks/useProductVariants";
+import { toast } from "sonner";
 
 interface ProductCardProps {
     product: Product;
@@ -47,6 +48,29 @@ export function ProductCard({ product }: ProductCardProps) {
         return parentNoStock;
     });
     const isOutOfStock = hasVariants && variantsData.length > 0 ? isAllVariantsOutOfStock : isBaseOutOfStock;
+    const handleBuyNow = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (hasVariants) {
+            setIsBottomSheetOpen(true);
+            toast.info("Iltimos, xarid qilish uchun mahsulot turini tanlang", { duration: 3000, position: 'top-center' });
+        } else {
+            const qty = Math.max(1, quantity);
+            const payload = [{
+                id: `${product.id}--`,
+                productId: String(product.id),
+                productNameUz: product.nameUz,
+                quantity: qty,
+                unitPrice: product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice,
+                basePrice: product.basePrice,
+                discountPrice: product.discountPrice,
+                primaryImageUrl: primaryImageUrl || null,
+                selectedParentType: null,
+                selectedChildType: null
+            }];
+            window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: payload } }));
+        }
+    };
 
 
     const handleCardClick = async () => {
@@ -192,21 +216,30 @@ export function ProductCard({ product }: ProductCardProps) {
                                             Sotuvda yo'q
                                         </div>
                                     ) : (
-                                        <Button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                if (hasVariants) {
-                                                    setIsBottomSheetOpen(true);
-                                                } else {
-                                                    addToCart(product);
-                                                }
-                                            }}
-                                            className="h-10 w-full bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all p-0 shadow-sm"
-                                        >
-                                            <ShoppingCart className="w-4 h-4" strokeWidth={2.5} />
-                                            Savatga
-                                        </Button>
+                                        <div className="flex gap-1.5 w-full h-10">
+                                            <Button
+                                                onClick={handleBuyNow}
+                                                className="h-10 flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all p-0 shadow-sm border border-slate-200/50"
+                                            >
+                                                <ShoppingBag className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                                                <span className="truncate leading-none">1 klikda</span>
+                                            </Button>
+                                            <Button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                    if (hasVariants) {
+                                                        setIsBottomSheetOpen(true);
+                                                    } else {
+                                                        addToCart(product);
+                                                    }
+                                                }}
+                                                className="h-10 flex-1 bg-[#007AFF] hover:bg-[#005bb5] text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all p-0 shadow-sm"
+                                            >
+                                                <ShoppingCart className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                                                <span className="truncate leading-none">Savatga</span>
+                                            </Button>
+                                        </div>
                                     )}
                                 </motion.div>
                             ) : (
