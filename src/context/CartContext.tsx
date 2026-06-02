@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode, useCallback, useState, useEffect, useMemo } from "react";
-import type { Product, CartItem } from "../types";
+import type { Product, CartItem, SelectedTypeDetail } from "../types";
 import { useAuthContext } from "./AuthContext";
 import { useCartApi } from "../hooks/useCartApi";
 import { useQueries } from "@tanstack/react-query";
@@ -15,6 +15,8 @@ interface VariantSelection {
     childBasePrice?: number | null;
     childDiscountPrice?: number | null;
     productTypeId?: string;
+    selectedParentType?: SelectedTypeDetail | null;
+    selectedChildType?: SelectedTypeDetail | null;
     selections?: {
         productTypeId: string | number;
         name: string;
@@ -25,7 +27,11 @@ interface VariantSelection {
 
 interface CartContextType {
     cart: CartItem[];
-    addToCart: (product: Product) => void;
+    addToCart: (
+        product: Product,
+        selectedParentType?: SelectedTypeDetail | null,
+        selectedChildType?: SelectedTypeDetail | null
+    ) => void;
     removeFromCart: (productId: string) => void;
     updateQuantity: (productId: string, quantity: number) => void;
     clearCart: () => void;
@@ -45,6 +51,27 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
+export function calculateCartItemTotal(item: CartItem, variantMap?: Record<string, any>): number {
+    const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
+        ? item.discountPrice
+        : (item.basePrice || item.unitPrice || 0);
+
+    const variant = variantMap ? variantMap[String(item.productId)] : null;
+
+    if (variant?.productTypeId === "multi" && Array.isArray(variant.selections)) {
+        const selectionsTotal = variant.selections.reduce((sum: number, s: any) => {
+            return sum + (s.quantity * (basePrice + (s.priceExtra || 0)));
+        }, 0);
+        return selectionsTotal * (item.quantity || 0);
+    }
+
+    const parentPrice = item.selectedParentType?.price || 0;
+    const childPrice = item.selectedChildType?.price || 0;
+
+    const unitPrice = basePrice + parentPrice + childPrice;
+    return unitPrice * item.quantity;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
     const { user } = useAuthContext();
     const { cart, refetch, addToCartMutation, updateQuantityMutation, removeCartItemMutation } = useCartApi(user?.id);
@@ -62,8 +89,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const safeCart = Array.isArray(cart) ? cart : (cart as any)?.items || [];
 
+    const hydratedCart = useMemo(() => {
+        return safeCart.map((item: any) => {
+            const variant = variantMap[String(item.productId)];
+            
+            let selectedParentType = variant?.selectedParentType || null;
+            let selectedChildType = variant?.selectedChildType || null;
+
+            // Re-hydrate details from flat properties if not stored explicitly
+            if (!selectedParentType && variant?.parentName) {
+                selectedParentType = {
+                    id: variant.productTypeId || "",
+                    name: variant.parentName,
+                    price: variant.parentPrice || 0
+                };
+            }
+            if (!selectedChildType && variant?.childName) {
+                selectedChildType = {
+                    id: variant.productTypeId || "",
+                    name: variant.childName,
+                    price: variant.childPrice || 0
+                };
+            }
+
+            return {
+                ...item,
+                selectedParentType,
+                selectedChildType
+            };
+        });
+    }, [safeCart, variantMap]);
+
     const cartCount = useMemo(() => {
-        return safeCart.reduce((total: number, item: any) => {
+        return hydratedCart.reduce((total: number, item: any) => {
             const variant = variantMap[String(item.productId)];
             if (variant?.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
                 const totalQty = variant.selections.reduce((sum: number, s: any) => sum + s.quantity, 0);
@@ -72,7 +130,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 return total + (item.quantity || 0);
             }
         }, 0);
-    }, [safeCart, variantMap]);
+    }, [hydratedCart, variantMap]);
 
     const productIds: string[] = useMemo(() => Array.from(new Set(safeCart.map((i: any) => String(i.productId)))), [safeCart]);
 
@@ -188,6 +246,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
                         const childBasePrice = childObj ? (childObj.basePrice || null) : null;
                         const childDiscountPrice = childObj ? (childObj.discountPrice || null) : null;
 
+                        const selectedParentType: SelectedTypeDetail = {
+                            id: parentObj.id,
+                            name: parentObj.name,
+                            price: parentObj.price || parentObj.priceExtra || 0
+                        };
+                        const selectedChildType: SelectedTypeDetail | null = childObj ? {
+                            id: childObj.id,
+                            name: childObj.name,
+                            price: childObj.price || childObj.priceExtra || 0
+                        } : null;
+
                         if (
                             variant.parentName !== parentName ||
                             variant.parentPrice !== parentPrice ||
@@ -196,7 +265,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
                             variant.childName !== childName ||
                             variant.childPrice !== childPrice ||
                             variant.childBasePrice !== childBasePrice ||
-                            variant.childDiscountPrice !== childDiscountPrice
+                            variant.childDiscountPrice !== childDiscountPrice ||
+                            JSON.stringify(variant.selectedParentType) !== JSON.stringify(selectedParentType) ||
+                            JSON.stringify(variant.selectedChildType) !== JSON.stringify(selectedChildType)
                         ) {
                             changed = true;
                             nextVariantMap[productId] = {
@@ -208,7 +279,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
                                 childName,
                                 childPrice,
                                 childBasePrice,
-                                childDiscountPrice
+                                childDiscountPrice,
+                                selectedParentType,
+                                selectedChildType
                             };
                         }
                     }
@@ -240,33 +313,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [safeCart, variantMap]);
 
     const cartTotal = useMemo(() => {
-        return safeCart.reduce((total: number, item: any) => {
-            const variant = variantMap[String(item.productId)];
-            const product = productsMap[String(item.productId)];
-
-            let basePrice = item.basePrice || item.unitPrice || 0;
-            let unitPrice = item.unitPrice || item.basePrice || 0;
-
-            if (product) {
-                basePrice = product.basePrice || basePrice;
-                unitPrice = (product.discountPrice !== undefined && product.discountPrice < product.basePrice)
-                    ? product.discountPrice
-                    : product.basePrice;
-            }
-
-            if (variant?.productTypeId === "multi" && Array.isArray(variant.selections) && variant.selections.length > 0) {
-                const selectionsTotal = variant.selections.reduce((sum: number, sel: any) => {
-                    const selQty = sel.quantity || 0;
-                    const selExtraPrice = sel.priceExtra || 0;
-                    return sum + (selQty * (unitPrice + selExtraPrice));
-                }, 0);
-                return total + (selectionsTotal * (item.quantity || 0));
-            } else {
-                const extraPrice = (variant?.parentPrice || 0) + (variant?.childPrice || 0);
-                return total + ((item.quantity || 0) * (unitPrice + extraPrice));
-            }
+        return hydratedCart.reduce((total: number, item: any) => {
+            return total + calculateCartItemTotal(item, variantMap);
         }, 0);
-    }, [safeCart, variantMap, productsMap]);
+    }, [hydratedCart, variantMap]);
 
     const getItemQuantity = useCallback((productId: string) => {
         if (!productId) return 0;
@@ -294,7 +344,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return variantMap[productId];
     }, [variantMap]);
 
-    const addToCart = useCallback((product: Product) => {
+    const addToCart = useCallback((
+        product: Product,
+        selectedParentType?: SelectedTypeDetail | null,
+        selectedChildType?: SelectedTypeDetail | null
+    ) => {
         if (!user?.id) {
             console.warn("Add to cart blocked: Missing user?.id");
             return;
@@ -303,6 +357,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
             console.warn("Add to cart blocked: Missing product or product.id");
             return;
         }
+
+        // Save selected types into localStorage / variantMap if provided
+        if (selectedParentType || selectedChildType) {
+            setVariantMap(prev => {
+                const next = { ...prev };
+                next[String(product.id)] = {
+                    ...next[String(product.id)],
+                    parentName: selectedParentType?.name || undefined,
+                    parentPrice: selectedParentType?.price || 0,
+                    childName: selectedChildType?.name || undefined,
+                    childPrice: selectedChildType?.price || 0,
+                    productTypeId: String(selectedChildType?.id || selectedParentType?.id || ""),
+                    selectedParentType,
+                    selectedChildType
+                };
+                try {
+                    localStorage.setItem(VARIANTS_STORAGE_KEY, JSON.stringify(next));
+                } catch (err) {
+                    console.error("Failed to write updated variants to localStorage:", err);
+                }
+                return next;
+            });
+        }
+
         try {
             if (addToCartMutation && typeof addToCartMutation.mutate === 'function') {
                 addToCartMutation.mutate(product);
@@ -373,7 +451,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return (
         <CartContext.Provider
             value={{
-                cart: safeCart,
+                cart: hydratedCart,
                 addToCart,
                 removeFromCart,
                 updateQuantity,

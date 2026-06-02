@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useCart } from "../context/CartContext";
+import { useCart, calculateCartItemTotal } from "../context/CartContext";
 import { useAuthContext } from "../context/AuthContext";
 import { Button } from "./ui/button";
 import {
@@ -159,7 +159,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 }, 0);
                 originalTotal = selectionsOriginalTotal * (item.quantity || 0);
             } else {
-                itemTotal = (item.quantity || 0) * finalUnitPrice;
+                itemTotal = calculateCartItemTotal(item, storedVariants);
                 originalTotal = (item.quantity || 0) * finalBasePrice;
             }
 

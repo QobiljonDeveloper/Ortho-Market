@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useCart } from "../context/CartContext";
+import { useCart, calculateCartItemTotal } from "../context/CartContext";
 import { Button } from "./ui/button";
 import {
     Sheet,
@@ -85,7 +85,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 }, 0);
                 originalTotal = selectionsOriginalTotal * (item.quantity || 0);
             } else {
-                itemTotal = (item.quantity || 0) * finalUnitPrice;
+                itemTotal = calculateCartItemTotal(item, storedVariants);
                 originalTotal = (item.quantity || 0) * finalBasePrice;
             }
 
@@ -237,7 +237,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                                                                             </div>
                                                                         ) : (
                                                                             <p>
-                                                                                Variant: {variant.parentName} {variant.childName ? `➔ ${variant.childName}` : ''}
+                                                                                Variant: {item.selectedParentType?.name || variant.parentName} {(item.selectedChildType?.name || variant.childName) ? `➔ ${item.selectedChildType?.name || variant.childName}` : ''}
                                                                             </p>
                                                                         )}
                                                                     </div>

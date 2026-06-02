@@ -89,6 +89,14 @@ export interface CartItem {
     // Client-side variant selections (not persisted to backend cart)
     selectedParentName?: string;
     selectedChildName?: string;
+    selectedParentType?: SelectedTypeDetail | null;
+    selectedChildType?: SelectedTypeDetail | null;
+}
+
+export interface SelectedTypeDetail {
+    id: number | string;
+    name: string;
+    price?: number | null;
 }
 
 export interface WishlistItem {
