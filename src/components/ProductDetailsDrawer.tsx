@@ -156,22 +156,22 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
         onOpenChange(false);
     };
 
-    const handleBuyNowFlat = () => {
-        const hasTypes = (product as any).types && (product as any).types.length > 0;
+    const handleBuyNowFlat = (e?: React.MouseEvent) => {
+        if (e) e.preventDefault();
+
+        const hasTypes = (product as any)?.types && (product as any).types.length > 0;
         
-        // 1. Validation for flat types
-        if (hasTypes) {
-            const hasSelection = Object.keys(_selectedOptions).length > 0;
-            if (!hasSelection) {
-                toast.error("Iltimos, xarid qilish uchun mahsulot turini tanlang");
-                return;
-            }
+        // 1. Validation using the CORRECT state variables
+        if (hasTypes && Object.keys(_selectedOptions).length === 0) {
+            console.log("Validation failed: Type not selected");
+            toast.error("Iltimos, xarid qilish uchun mahsulot turini tanlang");
+            return;
         }
 
-        // 2. Construct Payload
+        // 2. Safely construct the payload
         const qty = Math.max(1, getItemQuantity(product.id));
-        
         let selectedParentType = null;
+        
         if (hasTypes && Object.keys(_selectedOptions).length > 0) {
             const combinedName = Object.values(_selectedOptions).join(', ');
             selectedParentType = {
@@ -181,21 +181,29 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
             };
         }
 
-        const payload = [{
+        const buyNowPayload = [{
             id: `${product.id}--`,
             productId: String(product.id),
-            productNameUz: product.nameUz,
+            productNameUz: product?.nameUz || "",
             quantity: qty,
-            unitPrice: (product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice) + extraVariantPrice,
-            basePrice: product.basePrice + extraVariantPrice,
-            discountPrice: product.discountPrice !== undefined ? product.discountPrice + extraVariantPrice : undefined,
-            primaryImageUrl: product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
+            unitPrice: (product?.discountPrice !== undefined && product.discountPrice < (product?.basePrice || 0) ? product.discountPrice : (product?.basePrice || 0)) + extraVariantPrice,
+            basePrice: (product?.basePrice || 0) + extraVariantPrice,
+            discountPrice: product?.discountPrice !== undefined ? product.discountPrice + extraVariantPrice : undefined,
+            primaryImageUrl: product?.images?.find((img: any) => img.isPrimary)?.url || product?.images?.[0]?.url || product?.image || null,
             selectedParentType: selectedParentType,
             selectedChildType: null
         }];
         
-        // 3. Navigation
-        window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: payload } }));
+        // 3. Navigate directly to checkout
+        console.log("Navigating to checkout with payload:", buyNowPayload);
+        
+        // NOTE: The app currently uses a Drawer for checkout via events, not a '/checkout' route.
+        // Using the dispatchEvent will correctly open the CheckoutDrawer.
+        window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: buyNowPayload } }));
+        
+        // If you ever implement a dedicated route, you would use:
+        // navigate('/checkout', { state: { buyNowItem: buyNowPayload } });
+        
         onOpenChange(false);
     };
 
