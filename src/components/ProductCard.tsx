@@ -263,12 +263,8 @@ export function ProductCard({ product }: ProductCardProps) {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             e.preventDefault();
-                                            if (hasVariants) {
-                                                setIsBottomSheetOpen(true);
-                                            } else {
-                                                const newQuantity = Math.max(0, quantity - 1);
-                                                updateQuantity(product.id, newQuantity);
-                                            }
+                                            const newQuantity = Math.max(0, quantity - 1);
+                                            updateQuantity(product.id, newQuantity);
                                         }}
                                         className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors active:scale-95 shrink-0"
                                     >
