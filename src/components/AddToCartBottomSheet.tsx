@@ -9,6 +9,7 @@ import { ProductVariants } from "./ProductVariants";
 import { MultiVariantSelector } from "./MultiVariantSelector";
 import { useProductVariants } from "../hooks/useProductVariants";
 import type { Product } from "../types";
+import { toast } from "sonner";
 
 interface AddToCartDrawerProps {
     open: boolean;
@@ -43,7 +44,67 @@ export function AddToCartDrawer({
     const [selected, setSelected] = useState<Record<string, string>>({});
     const [showErrors, setShowErrors] = useState(false);
 
-    const hasVariants = variantsData && variantsData.length > 0;
+    const hasVariants = (variantsData && variantsData.length > 0) || isVariantsLoading;
+
+    const handleAddToCart = (selectedItems: any[]) => {
+        // 1. Global Variant Check
+        const hasVariantsActual = variantsData && variantsData.length > 0;
+        if (hasVariantsActual) {
+            const totalQty = selectedItems ? selectedItems.reduce((sum, item) => sum + item.quantity, 0) : 0;
+            if (!selectedItems || selectedItems.length === 0 || totalQty === 0) {
+                toast.error("Iltimos, kamida bitta variant tanlang.");
+                return; // STOP execution completely
+            }
+
+            // 2. Strict Parent-Child Dependency Check
+            for (const parent of variantsData) {
+                const parentSelection = selectedItems.find(item => item.type === "parent" && String(item.id) === String(parent.id));
+                const parentQty = parentSelection ? parentSelection.quantity : 0;
+                
+                const childrenList = parent.children || parent.subTypes || [];
+                const hasChildren = childrenList.length > 0;
+
+                if (parentQty > 0 && hasChildren) {
+                    const hasSelectedChild = selectedItems.some(item => 
+                        item.type === "subType" && 
+                        String(item.parentId) === String(parent.id) && 
+                        item.quantity > 0
+                    );
+                    
+                    if (!hasSelectedChild) {
+                        toast.error(`Iltimos, "${parent.name}" uchun kichik turni tanlang.`);
+                        return; // STOP execution completely
+                    }
+                }
+            }
+        }
+
+        // --- Safe dispatch to cart ---
+        const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+        
+        const saved = localStorage.getItem('tg_cart_variants');
+        const savedMap = saved ? JSON.parse(saved) : {};
+        
+        savedMap[String(product.id)] = {
+            productTypeId: "multi",
+            selections: selectedItems.map(item => ({
+                productTypeId: item.id,
+                name: item.name,
+                priceExtra: item.priceExtra,
+                quantity: item.quantity
+            }))
+        };
+        
+        localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
+        
+        addToCart(product);
+        setTimeout(() => {
+            updateQuantity(product.id, totalQuantity);
+            window.dispatchEvent(new Event('storage'));
+            window.dispatchEvent(new Event('variantSaved'));
+            onOpenChange(false);
+        }, 200);
+    };
 
     // Reset state on open
     useEffect(() => {
@@ -164,38 +225,7 @@ export function AddToCartDrawer({
                                     productName={product.nameUz}
                                     basePrice={product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice}
                                     variants={variantsData}
-                                    onAddToCart={(selectedItems) => {
-                                        if (selectedItems.length === 0) return;
-                                        
-                                        // 1. Calculate total quantity selected
-                                        const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
-                                        
-                                        // 2. Save selections to tg_cart_variants
-                                        const saved = localStorage.getItem('tg_cart_variants');
-                                        const savedMap = saved ? JSON.parse(saved) : {};
-                                        
-                                        savedMap[String(product.id)] = {
-                                            productTypeId: "multi",
-                                            selections: selectedItems.map(item => ({
-                                                productTypeId: item.id,
-                                                name: item.name,
-                                                priceExtra: item.priceExtra,
-                                                quantity: item.quantity
-                                            }))
-                                        };
-                                        
-                                        localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
-                                        
-                                        // 3. Add to cart & set target quantity
-                                        addToCart(product);
-                                        setTimeout(() => {
-                                            updateQuantity(product.id, totalQuantity);
-                                            // Fire events to update standard context
-                                            window.dispatchEvent(new Event('storage'));
-                                            window.dispatchEvent(new Event('variantSaved'));
-                                            onOpenChange(false);
-                                        }, 200);
-                                    }}
+                                    onAddToCart={handleAddToCart}
                                 />
                             ) : (
                                 <ProductVariants
