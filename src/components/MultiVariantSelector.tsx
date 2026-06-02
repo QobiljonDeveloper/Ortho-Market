@@ -189,6 +189,19 @@ export function MultiVariantSelector({
         0
     );
 
+    const isAllOutOfStock = React.useMemo(() => {
+        if (!variants || variants.length === 0) return false;
+        return variants.every(parent => {
+            const parentNoStock = (parent.stock ?? 0) === 0;
+            const children = parent.children || parent.subTypes || [];
+            if (children.length > 0) {
+                return children.every(child => (child.stock ?? 0) === 0);
+            }
+            return parentNoStock;
+        });
+    }, [variants]);
+
+
     // 4. Submit handler filtering out zero-quantity selections and returning formatted array
     const handleSubmit = () => {
         // 1. Global Variant Check
@@ -463,17 +476,23 @@ export function MultiVariantSelector({
             )}
 
             {/* Submission Action Button */}
-            <button
-                type="button"
-                onClick={handleSubmit}
-                className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2"
-            >
-                <ShoppingCart className="w-4.5 h-4.5" />
-                {totalSelectedQuantity > 0 
-                    ? `Savatga qo'shish (${totalSelectedQuantity} dona)` 
-                    : "Savatga qo'shish"
-                }
-            </button>
+            {isAllOutOfStock ? (
+                <div className="w-full h-13 rounded-full font-black text-sm bg-slate-100 text-slate-400 flex items-center justify-center shadow-sm">
+                    Sotuvda qolmagan
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2"
+                >
+                    <ShoppingCart className="w-4.5 h-4.5" />
+                    {totalSelectedQuantity > 0 
+                        ? `Savatga qo'shish (${totalSelectedQuantity} dona)` 
+                        : "Savatga qo'shish"
+                    }
+                </button>
+            )}
         </div>
     );
 }

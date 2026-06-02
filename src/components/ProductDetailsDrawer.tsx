@@ -343,7 +343,11 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
                 {/* Sticky CTA Footer - Hide when product has variants */}
                 {!hasVariants && (
                     <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 rounded-b-[2.5rem] sm:rounded-b-none z-50">
-                        {(() => {
+                        {(product.stock === 0 || product.inStock === false || product.stock === 'Qolmagan') ? (
+                            <div className="w-full h-[52px] bg-slate-100 text-slate-400 rounded-2xl font-bold text-[15px] flex items-center justify-center shadow-sm">
+                                Sotuvda qolmagan
+                            </div>
+                        ) : (() => {
                             const quantity = getItemQuantity(product.id);
                             return quantity === 0 ? (
                                 <button

@@ -267,18 +267,24 @@ export function AddToCartDrawer({
                         {/* ── Sticky Confirm Button - Hide when has variants ── */}
                         {!hasVariants && (
                             <div className="p-5 pt-3 shrink-0 border-t border-slate-100 bg-white">
-                                <button
-                                    onClick={handleConfirm}
-                                    className={cn(
-                                        "w-full h-[52px] rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all duration-200 outline-none",
-                                        "bg-blue-500 text-white shadow-sm",
-                                        "hover:bg-blue-600",
-                                        "active:scale-[0.97]"
-                                    )}
-                                >
-                                    <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
-                                    Tasdiqlash
-                                </button>
+                                {(product.stock === 0 || product.inStock === false || product.stock === 'Qolmagan') ? (
+                                    <div className="w-full h-[52px] bg-slate-100 text-slate-400 rounded-2xl font-bold text-[15px] flex items-center justify-center shadow-sm">
+                                        Sotuvda qolmagan
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleConfirm}
+                                        className={cn(
+                                            "w-full h-[52px] rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all duration-200 outline-none",
+                                            "bg-blue-500 text-white shadow-sm",
+                                            "hover:bg-blue-600",
+                                            "active:scale-[0.97]"
+                                        )}
+                                    >
+                                        <ShoppingCart className="w-5 h-5" strokeWidth={2.5} />
+                                        Tasdiqlash
+                                    </button>
+                                )}
                             </div>
                         )}
                     </motion.div>
