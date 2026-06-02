@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAuthContext } from "../context/AuthContext";
 import { useWishlist } from "../hooks/useWishlist";
 import { fetchProductById, fetchProductTypes } from "../services/api";
+import { useProductVariants } from "../hooks/useProductVariants";
 
 interface ProductCardProps {
     product: Product;
@@ -31,8 +32,8 @@ export function ProductCard({ product }: ProductCardProps) {
     const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
     const [productDetails, setProductDetails] = useState<Product | null>(null);
-    const [productTypes, setProductTypes] = useState<any[]>([]);
-    const hasVariants = (product.colors && product.colors.length > 0) || (product.sizes && product.sizes.length > 0);
+    const { data: variantsData = [], isLoading: isVariantsLoading } = useProductVariants(product.id);
+    const hasVariants = (variantsData && variantsData.length > 0) || isVariantsLoading;
 
     const primaryImageUrl = product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image;
 
@@ -169,7 +170,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     {/* Action Area */}
                     <div className="mt-3 h-10">
                         <AnimatePresence mode="wait" initial={false}>
-                            {quantity === 0 ? (
+                            {(quantity === 0 || hasVariants) ? (
                                 <motion.div
                                     key="add-btn"
                                     initial={{ opacity: 0 }}
