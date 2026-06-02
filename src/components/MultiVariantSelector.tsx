@@ -1,107 +1,175 @@
 import React, { useState } from "react";
-import { Plus, Minus, ShoppingBag, AlertCircle, Info, Sparkles } from "lucide-react";
+import { Plus, Minus, ShoppingBag, Sparkles, HelpCircle, Layers, CheckCircle } from "lucide-react";
 
-// 1. Definition of the Variant Interface
-export interface Variant {
-    id: string;
+// 1. Definition of the nested Variant Interfaces
+export interface SubTypeVariant {
+    id: string | number;
     name: string;
     stock: number;
-    priceExtra: number;      // Extra cost (e.g. +12,000 so'm)
-    colorCode?: string;      // Optional Hex code for beautiful visual chips
+    priceModifier?: string; // e.g. "+30 000 UZS"
+    priceExtra?: number;    // Numerical extra price
+    price?: number;         // Alternate price property
+}
+
+export interface ParentVariant {
+    id: string | number;
+    name: string;
+    stock: number;
+    priceExtra?: number;    // Numerical extra price
+    price?: number;         // Alternate price property
+    colorCode?: string;     // Optional Hex code for beautiful visual chips
+    children?: SubTypeVariant[];
+    subTypes?: SubTypeVariant[]; // Support both children and subTypes keys
 }
 
 interface MultiVariantSelectorProps {
     productId?: string;
     productName?: string;
     basePrice?: number;      // Product baseline price
-    variants?: Variant[];
-    onAddToCart?: (items: { variantId: string; quantity: number }[]) => void;
+    variants?: ParentVariant[];
+    onAddToCart?: (items: { type: "parent" | "subType"; id: string | number; parentId?: string | number; quantity: number; name: string; priceExtra: number }[]) => void;
 }
 
-// 2. Mock Data representing beautiful variants
-const DEFAULT_VARIANTS: Variant[] = [
-    { id: "var-purple", name: "Imperial Purple", stock: 5, priceExtra: 15000, colorCode: "#8B5CF6" },
-    { id: "var-red", name: "Crimson Red", stock: 3, priceExtra: 20000, colorCode: "#EF4444" },
-    { id: "var-blue", name: "Ocean Blue", stock: 10, priceExtra: 0, colorCode: "#3B82F6" },
-    { id: "var-green", name: "Emerald Green", stock: 0, priceExtra: 10000, colorCode: "#10B981" }, // Out of stock example
+// 2. High-fidelity Mock Data matching nested hierarchical parent-child structure
+const DEFAULT_NESTED_VARIANTS: ParentVariant[] = [
+    {
+        id: 1,
+        name: "Purple Variant",
+        stock: 40,
+        priceExtra: 0,
+        colorCode: "#8B5CF6",
+        subTypes: [
+            { id: 101, name: "Premium Test Sub-Type", stock: 10, priceModifier: "+30 000 UZS", priceExtra: 30000 },
+            { id: 102, name: "Standard Test Sub-Type", stock: 5, priceModifier: "+15 000 UZS", priceExtra: 15000 },
+        ]
+    },
+    {
+        id: 2,
+        name: "Red Variant",
+        stock: 15,
+        priceExtra: 10000,
+        colorCode: "#EF4444",
+        subTypes: [
+            { id: 201, name: "Glossy Finish", stock: 8, priceModifier: "+12 000 UZS", priceExtra: 12000 },
+            { id: 202, name: "Matte Tech Coating", stock: 0, priceModifier: "+25 000 UZS", priceExtra: 25000 }, // Out of stock example
+        ]
+    },
+    {
+        id: 3,
+        name: "Ocean Blue Variant",
+        stock: 25,
+        priceExtra: 0,
+        colorCode: "#3B82F6",
+        subTypes: [] // Flat parent variant with no children
+    }
 ];
 
 export function MultiVariantSelector({
     productId = "prod-99",
-    productName = "Premium Titanium Bracket",
-    basePrice = 120000, // 120,000 so'm base
-    variants = DEFAULT_VARIANTS,
+    productName = "Premium Medical Specimen Drawer",
+    basePrice = 150000, // 150,000 UZS baseline
+    variants = DEFAULT_NESTED_VARIANTS,
     onAddToCart,
 }: MultiVariantSelectorProps) {
-    // 3. State tracking chosen quantities: { [variantId]: quantity }
-    const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
+    // 3. State tracking chosen quantities for BOTH parents and sub-types: { "parent-1": 2, "sub-101": 1 }
+    const [quantities, setQuantities] = useState<Record<string, number>>({});
 
     // Increment Handler
-    const increment = (variantId: string, stock: number) => {
-        setSelectedQuantities((prev) => {
-            const currentQty = prev[variantId] || 0;
-            if (currentQty >= stock) return prev; // Cannot exceed stock limit
+    const increment = (type: "parent" | "sub", id: string | number, stock: number) => {
+        const key = `${type}-${id}`;
+        setQuantities((prev) => {
+            const currentQty = prev[key] || 0;
+            if (currentQty >= stock) return prev; // Cannot exceed specific stock limit
             return {
                 ...prev,
-                [variantId]: currentQty + 1,
+                [key]: currentQty + 1,
             };
         });
     };
 
     // Decrement Handler
-    const decrement = (variantId: string) => {
-        setSelectedQuantities((prev) => {
-            const currentQty = prev[variantId] || 0;
+    const decrement = (type: "parent" | "sub", id: string | number) => {
+        const key = `${type}-${id}`;
+        setQuantities((prev) => {
+            const currentQty = prev[key] || 0;
             if (currentQty <= 0) return prev;
             
-            const updated = { ...prev, [variantId]: currentQty - 1 };
+            const updated = { ...prev, [key]: currentQty - 1 };
             // Clean up 0 quantity keys to keep state light
-            if (updated[variantId] === 0) {
-                delete updated[variantId];
+            if (updated[key] === 0) {
+                delete updated[key];
             }
             return updated;
         });
     };
 
-    // Calculate aggregated information
-    const selectedItemsList = Object.entries(selectedQuantities).map(([variantId, qty]) => {
-        const variantObj = variants.find((v) => v.id === variantId);
-        return {
-            variantId,
-            quantity: qty,
-            priceEach: basePrice + (variantObj?.priceExtra || 0),
-            name: variantObj?.name || variantId,
-        };
-    });
+    // Parse selection details for listing and price aggregation
+    const selectedItemsList = React.useMemo(() => {
+        const list: {
+            type: "parent" | "subType";
+            id: string | number;
+            parentId?: string | number;
+            quantity: number;
+            name: string;
+            priceExtra: number;
+        }[] = [];
+
+        variants.forEach((parent) => {
+            const parentKey = `parent-${parent.id}`;
+            const parentQty = quantities[parentKey] || 0;
+            const parentPriceExtra = parent.priceExtra || parent.price || 0;
+
+            if (parentQty > 0) {
+                list.push({
+                    type: "parent",
+                    id: parent.id,
+                    quantity: parentQty,
+                    name: parent.name,
+                    priceExtra: parentPriceExtra
+                });
+            }
+
+            const childrenList = parent.children || parent.subTypes || [];
+            childrenList.forEach((child) => {
+                const childKey = `sub-${child.id}`;
+                const childQty = quantities[childKey] || 0;
+                const childPriceExtra = child.priceExtra || child.price || 0;
+
+                if (childQty > 0) {
+                    list.push({
+                        type: "subType",
+                        id: child.id,
+                        parentId: parent.id,
+                        quantity: childQty,
+                        name: `${parent.name} ➔ ${child.name}`,
+                        priceExtra: childPriceExtra
+                    });
+                }
+            });
+        });
+
+        return list;
+    }, [variants, quantities]);
 
     const totalSelectedQuantity = selectedItemsList.reduce((sum, item) => sum + item.quantity, 0);
     
-    const totalPrice = selectedItemsList.reduce(
-        (sum, item) => sum + item.priceEach * item.quantity,
+    const totalPricing = selectedItemsList.reduce(
+        (sum, item) => sum + (basePrice + item.priceExtra) * item.quantity,
         0
     );
 
-    // 4. Cart Submission Handler
+    // 4. Submit handler filtering out zero-quantity selections and returning formatted array
     const handleSubmit = () => {
-        // Filter out any 0 or invalid quantities (redundancy protection)
-        const finalSelection = Object.entries(selectedQuantities)
-            .filter(([_, qty]) => qty > 0)
-            .map(([variantId, qty]) => ({
-                variantId,
-                quantity: qty,
-            }));
+        if (selectedItemsList.length === 0) return;
 
-        console.log("🛒 [Cart Payload Generated]:", finalSelection);
+        console.log("🛒 [Nested Cart Payload Generated]:", selectedItemsList);
 
         if (onAddToCart) {
-            onAddToCart(finalSelection);
+            onAddToCart(selectedItemsList);
         } else {
             alert(
-                `Savatchaga qo'shildi:\n${finalSelection
-                    .map((item) => {
-                        const vName = variants.find((v) => v.id === item.variantId)?.name;
-                        return `- ${vName}: ${item.quantity} dona`;
-                    })
+                `Savatchaga qo'shildi:\n${selectedItemsList
+                    .map((item) => `- ${item.name} (${item.type === "parent" ? "Asosiy" : "Kichik tur"}): ${item.quantity} dona`)
                     .join("\n")}`
             );
         }
@@ -112,119 +180,193 @@ export function MultiVariantSelector({
     };
 
     return (
-        <div className="w-full max-w-md mx-auto bg-[#F8FAFC] border border-slate-200/80 rounded-3xl p-6 shadow-[0_15px_40px_rgba(0,0,0,0.03)] text-slate-800 space-y-6">
+        <div className="w-full max-w-md mx-auto bg-white border border-slate-200 rounded-3xl p-6 shadow-[0_15px_40px_rgba(0,0,0,0.03)] text-slate-800 space-y-6">
             
             {/* Header info */}
-            <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-xs font-black uppercase text-[#007AFF] tracking-wider">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Multi-Variant Tanlov
-                    </div>
-                    <h2 className="text-lg font-black text-slate-900 tracking-tight leading-snug">
-                        {productName}
-                    </h2>
-                    <p className="text-xs font-semibold text-slate-400">
-                        Baza narxi: <span className="text-slate-600 font-bold">{formatPrice(basePrice)}</span>
-                    </p>
+            <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-black uppercase text-[#007AFF] tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Ierarxik Variantlar Tanlovi
                 </div>
+                <h2 className="text-base font-black text-slate-900 tracking-tight leading-snug">
+                    {productName}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400">
+                    Baza narxi: <span className="text-slate-600 font-bold">{formatPrice(basePrice)}</span>
+                </p>
             </div>
 
-            {/* List of Variant Cards */}
-            <div className="space-y-3.5">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">
-                    Mavjud turlar (Variantlar)
-                </span>
+            {/* List of Hierarchical Variant Groups */}
+            <div className="space-y-4">
+                <div className="flex justify-between items-center px-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Mavjud modifikatsiyalar
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                        <Layers className="w-3 h-3 text-[#007AFF]" />
+                        Mustaqil hisoblagichlar
+                    </span>
+                </div>
                 
-                <div className="grid gap-3">
-                    {variants.map((variant) => {
-                        const qtySelected = selectedQuantities[variant.id] || 0;
-                        const isOutOfStock = variant.stock === 0;
-                        const isSelected = qtySelected > 0;
+                <div className="space-y-4">
+                    {variants.map((parent) => {
+                        const parentQty = quantities[`parent-${parent.id}`] || 0;
+                        const isParentOutOfStock = parent.stock === 0;
+                        const isParentSelected = parentQty > 0;
+                        const parentPriceExtra = parent.priceExtra || parent.price || 0;
+
+                        const childrenList = parent.children || parent.subTypes || [];
+                        const hasChildren = childrenList.length > 0;
 
                         return (
-                            <div
-                                key={variant.id}
-                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
-                                    isOutOfStock
-                                        ? "bg-slate-50/50 border-slate-100 opacity-55"
-                                        : isSelected
-                                        ? "border-[#007AFF] bg-[#007AFF]/[0.02] shadow-[0_4px_12px_rgba(0,122,255,0.03)]"
-                                        : "border-slate-200 bg-white hover:border-slate-300"
-                                }`}
-                            >
-                                {/* Variant Details */}
-                                <div className="flex items-center gap-3.5">
-                                    {variant.colorCode && (
-                                        <div
-                                            className="w-5 h-5 rounded-full border border-black/10 shrink-0 shadow-inner"
-                                            style={{ backgroundColor: variant.colorCode }}
-                                        />
-                                    )}
-                                    <div className="flex flex-col">
-                                        <span className={`text-sm font-bold leading-tight ${
-                                            isSelected ? "text-slate-900" : "text-slate-700"
-                                        }`}>
-                                            {variant.name}
-                                        </span>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[11px] font-bold text-slate-400">
-                                                {formatPrice(basePrice + variant.priceExtra)}
+                            <div key={parent.id} className="border border-slate-200/80 rounded-2xl p-4 space-y-3 bg-[#F8FAFC]/50 hover:bg-[#F8FAFC] transition-colors duration-300">
+                                
+                                {/* ── Parent Variant Row ────────────────── */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        {parent.colorCode ? (
+                                            <div
+                                                className="w-5 h-5 rounded-full border border-black/10 shrink-0 shadow-inner"
+                                                style={{ backgroundColor: parent.colorCode }}
+                                            />
+                                        ) : (
+                                            <div className="w-5 h-5 rounded-lg bg-[#007AFF]/10 border border-[#007AFF]/20 flex items-center justify-center text-[#007AFF] text-[9px] font-bold shrink-0">
+                                                ★
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col">
+                                            <span className={`text-sm font-extrabold leading-tight ${isParentSelected ? "text-[#007AFF]" : "text-slate-800"}`}>
+                                                {parent.name}
                                             </span>
-                                            {!isOutOfStock && (
-                                                <>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                                    <span className="text-[10px] font-semibold text-slate-400">
-                                                        Zaxira: {variant.stock} dona
-                                                    </span>
-                                                </>
-                                            )}
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-[11px] font-bold text-slate-400">
+                                                    {formatPrice(basePrice + parentPriceExtra)}
+                                                </span>
+                                                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                                <span className="text-[10px] font-semibold text-slate-400">
+                                                    Zaxira: {parent.stock} ta
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Parent Stepper */}
+                                    {isParentOutOfStock ? (
+                                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-400 text-[9px] font-bold uppercase tracking-wider">
+                                            Tugagan
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-center gap-2.5 bg-white border border-slate-200 p-0.5 rounded-xl shadow-sm">
+                                            <button
+                                                type="button"
+                                                onClick={() => decrement("parent", parent.id)}
+                                                disabled={parentQty === 0}
+                                                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                                                    parentQty > 0
+                                                        ? "text-slate-700 hover:bg-slate-100 active:scale-90"
+                                                        : "text-slate-300 cursor-not-allowed"
+                                                }`}
+                                            >
+                                                <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                            </button>
+                                            <span className={`w-5 text-center text-xs font-black ${parentQty > 0 ? "text-[#007AFF]" : "text-slate-400"}`}>
+                                                {parentQty}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => increment("parent", parent.id, parent.stock)}
+                                                disabled={parentQty >= parent.stock}
+                                                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                                                    parentQty < parent.stock
+                                                        ? "text-[#007AFF] hover:bg-[#007AFF]/10 active:scale-90"
+                                                        : "text-slate-300 cursor-not-allowed"
+                                                }`}
+                                            >
+                                                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Increment/Decrement controls */}
-                                {isOutOfStock ? (
-                                    <span className="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wider border border-red-100 flex items-center gap-1">
-                                        <AlertCircle className="w-3.5 h-3.5" />
-                                        Mavjud emas
-                                    </span>
-                                ) : (
-                                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200/60 p-1 rounded-xl">
-                                        {/* Minus button */}
-                                        <button
-                                            type="button"
-                                            onClick={() => decrement(variant.id)}
-                                            disabled={qtySelected === 0}
-                                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                                                qtySelected > 0
-                                                    ? "text-slate-700 hover:bg-slate-200/80 active:scale-90"
-                                                    : "text-slate-300 cursor-not-allowed"
-                                            }`}
-                                        >
-                                            <Minus className="w-4 h-4" strokeWidth={2.5} />
-                                        </button>
+                                {/* ── Sub-Types Indented Hierarchy Area ── */}
+                                {hasChildren && (
+                                    <div className="pl-4 ml-2 border-l-2 border-slate-200/80 pt-2.5 space-y-2.5">
+                                        {childrenList.map((child) => {
+                                            const childQty = quantities[`sub-${child.id}`] || 0;
+                                            const isChildOutOfStock = child.stock === 0;
+                                            const isChildSelected = childQty > 0;
+                                            const childPriceExtra = child.priceExtra || child.price || 0;
 
-                                        {/* Display selected count */}
-                                        <span className={`w-6 text-center text-xs font-black ${
-                                            isSelected ? "text-[#007AFF] text-sm" : "text-slate-400"
-                                        }`}>
-                                            {qtySelected}
-                                        </span>
+                                            return (
+                                                <div key={child.id} className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 ${
+                                                    isChildOutOfStock
+                                                        ? "bg-slate-50/50 border-slate-100 opacity-55"
+                                                        : isChildSelected
+                                                        ? "border-[#007AFF]/40 bg-[#007AFF]/[0.01] shadow-inner"
+                                                        : "border-slate-200 bg-white"
+                                                }`}>
+                                                    
+                                                    {/* Sub-type details */}
+                                                    <div className="flex flex-col pr-2">
+                                                        <span className={`text-[12px] font-bold leading-tight ${isChildSelected ? "text-slate-900 font-extrabold" : "text-slate-600"}`}>
+                                                            {child.name}
+                                                        </span>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            {child.priceModifier ? (
+                                                                <span className="text-[10px] font-bold text-slate-500">
+                                                                    {child.priceModifier}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-bold text-[#007AFF]">
+                                                                    +{formatPrice(childPriceExtra)}
+                                                                </span>
+                                                            )}
+                                                            <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                                            <span className="text-[9px] font-semibold text-slate-400">
+                                                                Zaxira: {child.stock} ta
+                                                            </span>
+                                                        </div>
+                                                    </div>
 
-                                        {/* Plus button */}
-                                        <button
-                                            type="button"
-                                            onClick={() => increment(variant.id, variant.stock)}
-                                            disabled={qtySelected >= variant.stock}
-                                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                                                qtySelected < variant.stock
-                                                    ? "text-[#007AFF] hover:bg-[#007AFF]/10 active:scale-90"
-                                                    : "text-slate-300 cursor-not-allowed"
-                                            }`}
-                                        >
-                                            <Plus className="w-4 h-4" strokeWidth={2.5} />
-                                        </button>
+                                                    {/* Sub-type Stepper */}
+                                                    {isChildOutOfStock ? (
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded">
+                                                            Tugagan
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 p-0.5 rounded-lg shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => decrement("sub", child.id)}
+                                                                disabled={childQty === 0}
+                                                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                                                                    childQty > 0
+                                                                        ? "text-slate-700 hover:bg-slate-200/60 active:scale-90"
+                                                                        : "text-slate-300 cursor-not-allowed"
+                                                                }`}
+                                                            >
+                                                                <Minus className="w-3 h-3" strokeWidth={2.5} />
+                                                            </button>
+                                                            <span className={`w-4 text-center text-[11px] font-extrabold ${childQty > 0 ? "text-[#007AFF]" : "text-slate-400"}`}>
+                                                                {childQty}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => increment("sub", child.id, child.stock)}
+                                                                disabled={childQty >= child.stock}
+                                                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                                                                    childQty < child.stock
+                                                                        ? "text-[#007AFF] hover:bg-[#007AFF]/10 active:scale-90"
+                                                                        : "text-slate-300 cursor-not-allowed"
+                                                                }`}
+                                                            >
+                                                                <Plus className="w-3 h-3" strokeWidth={2.5} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -233,31 +375,31 @@ export function MultiVariantSelector({
                 </div>
             </div>
 
-            {/* Selection Summary (Visible only if items are selected) */}
+            {/* Selection Summary */}
             {totalSelectedQuantity > 0 && (
-                <div className="bg-[#007AFF]/5 border border-[#007AFF]/10 rounded-2xl p-4.5 space-y-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-[#007AFF]/5 border border-[#007AFF]/10 rounded-2xl p-4 space-y-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="flex items-center gap-2 text-xs font-black text-[#007AFF] uppercase tracking-wider">
-                        <Info className="w-4 h-4" />
+                        <CheckCircle className="w-4 h-4" />
                         Tanlangan to'plam
                     </div>
                     
-                    <div className="space-y-1.5 max-h-24 overflow-y-auto divide-y divide-slate-100 pr-1.5">
-                        {selectedItemsList.map((item) => (
-                            <div key={item.variantId} className="flex justify-between items-center text-xs py-1.5 first:pt-0">
-                                <span className="font-bold text-slate-700">
-                                    {item.name} <span className="text-[#007AFF]">({item.quantity} dona)</span>
+                    <div className="space-y-1.5 max-h-28 overflow-y-auto divide-y divide-slate-100 pr-1.5">
+                        {selectedItemsList.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs py-1.5 first:pt-0">
+                                <span className="font-bold text-slate-700 truncate max-w-[240px]">
+                                    {item.name} <span className="text-[#007AFF]">({item.quantity} ta)</span>
                                 </span>
-                                <span className="font-bold text-slate-900">
-                                    {formatPrice(item.priceEach * item.quantity)}
+                                <span className="font-bold text-slate-900 shrink-0">
+                                    {formatPrice((basePrice + item.priceExtra) * item.quantity)}
                                 </span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200/50 flex justify-between items-center text-sm">
+                    <div className="pt-2.5 border-t border-slate-200/50 flex justify-between items-center text-sm">
                         <span className="font-black text-slate-500 uppercase text-[10px] tracking-wider">Tanlangan jami</span>
                         <span className="font-black text-[#007AFF] text-base">
-                            {formatPrice(totalPrice)}
+                            {formatPrice(totalPricing)}
                         </span>
                     </div>
                 </div>
@@ -270,7 +412,7 @@ export function MultiVariantSelector({
                 disabled={totalSelectedQuantity === 0}
                 className="w-full h-13 rounded-full font-black text-sm bg-[#007AFF] hover:bg-[#005bb5] text-white shadow-[0_8px_20px_rgba(0,122,255,0.15)] hover:shadow-[0_10px_25px_rgba(0,122,255,0.25)] transition-all flex items-center justify-center gap-2 disabled:opacity-55 disabled:cursor-not-allowed disabled:shadow-none"
             >
-                <ShoppingBag className="w-4.5 h-4.5" />
+                <ShoppingCart className="w-4.5 h-4.5" />
                 Savatga qo'shish ({totalSelectedQuantity} dona)
             </button>
         </div>

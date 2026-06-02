@@ -163,23 +163,7 @@ export function AddToCartDrawer({
                                     productId={String(product.id)}
                                     productName={product.nameUz}
                                     basePrice={product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice}
-                                    variants={variantsData.flatMap((parent: any) => {
-                                        const children = parent.children || parent.subTypes || [];
-                                        if (children.length > 0) {
-                                            return children.map((child: any) => ({
-                                                id: String(child.id),
-                                                name: `${parent.name} - ${child.name}`,
-                                                stock: child.stock ?? 0,
-                                                priceExtra: (parent.price || 0) + (child.price || 0),
-                                            }));
-                                        }
-                                        return {
-                                            id: String(parent.id),
-                                            name: parent.name,
-                                            stock: parent.stock ?? 0,
-                                            priceExtra: parent.price || 0,
-                                        };
-                                    })}
+                                    variants={variantsData}
                                     onAddToCart={(selectedItems) => {
                                         if (selectedItems.length === 0) return;
                                         
@@ -192,31 +176,12 @@ export function AddToCartDrawer({
                                         
                                         savedMap[String(product.id)] = {
                                             productTypeId: "multi",
-                                            selections: selectedItems.map(item => {
-                                                // Find variant details for name and price
-                                                let vName = item.variantId;
-                                                let priceExtra = 0;
-                                                variantsData.forEach((parent: any) => {
-                                                    const children = parent.children || parent.subTypes || [];
-                                                    if (children.length > 0) {
-                                                        const child = children.find((c: any) => String(c.id) === String(item.variantId));
-                                                        if (child) {
-                                                            vName = `${parent.name} - ${child.name}`;
-                                                            priceExtra = (parent.price || 0) + (child.price || 0);
-                                                        }
-                                                    } else if (String(parent.id) === String(item.variantId)) {
-                                                        vName = parent.name;
-                                                        priceExtra = parent.price || 0;
-                                                    }
-                                                });
-                                                
-                                                return {
-                                                    productTypeId: item.variantId,
-                                                    name: vName,
-                                                    priceExtra,
-                                                    quantity: item.quantity
-                                                };
-                                            })
+                                            selections: selectedItems.map(item => ({
+                                                productTypeId: item.id,
+                                                name: item.name,
+                                                priceExtra: item.priceExtra,
+                                                quantity: item.quantity
+                                            }))
                                         };
                                         
                                         localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
