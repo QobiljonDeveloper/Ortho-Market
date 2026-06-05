@@ -17,7 +17,7 @@ import { Textarea } from "./ui/textarea";
 import { CreditCard, Truck, User, Phone, MapPin, MessageSquare, ArrowLeft, Store, ShieldCheck, Package } from "lucide-react";
 import { AddressPopup } from "./AddressPopup";
 import { useAddress } from "../hooks/useAddress";
-import { api } from "../services/api";
+import { api, updateUserProfile } from "../services/api";
 import { toast } from "sonner";
 import { BtsDeliverySelector } from "./BtsDeliverySelector";
 
@@ -75,7 +75,8 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         window.addEventListener('variantSaved', handleVariantSaved);
         return () => window.removeEventListener('variantSaved', handleVariantSaved);
     }, []);
-    const { user, token } = useAuthContext();
+    const { user, token, setUser } = useAuthContext();
+    const [phoneError, setPhoneError] = useState<string | null>(null);
     const { addresses, isLoadingAddresses } = useAddress(user?.id);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -101,6 +102,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             setFullName(user?.fullName || "");
             setPhone(user?.phone || "+998");
             setCustomNote("");
+            setPhoneError(null);
             try {
                 const stored = sessionStorage.getItem('tg_buy_now_item');
                 if (stored) {
@@ -159,7 +161,8 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         if (open) {
             setFullName(user?.fullName || "");
             setPhone(user?.phone || "+998");
-            setCustomNote("");
+            setCustomNote("");
+            setPhoneError(null);
         }
     }, [open, user]);
 
@@ -179,7 +182,11 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         if (val.length > 13) {
             val = val.slice(0, 13);
         }
-        setPhone(val);
+        setPhone(val);
+        const cleanPhone = val.replace(/[^\d]/g, '');
+        if (val.trim() !== "" && val.trim() !== "+998" && cleanPhone !== "998" && val.length >= 13) {
+            setPhoneError(null);
+        }
     };
 
     const handleDeliveryChange = (value: string) => {
@@ -213,7 +220,24 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         }
     };
 
-    const handleConfirm = async () => {
+    const handleConfirm = async () => {
+        // Validate phone number
+        const cleanPhone = phone.replace(/[^\d]/g, '');
+        if (!phone.trim() || phone.trim() === "+998" || cleanPhone === "998") {
+            const errorMsg = "Iltimos, telefon raqamingizni kiriting. / Please enter your phone number.";
+            setPhoneError(errorMsg);
+            toast.error(errorMsg);
+            document.getElementById("phone")?.focus();
+            return;
+        } else if (phone.length < 13) {
+            const errorMsg = "Iltimos, telefon raqamni to'liq kiriting. / Please enter a complete phone number.";
+            setPhoneError(errorMsg);
+            toast.error(errorMsg);
+            document.getElementById("phone")?.focus();
+            return;
+        } else {
+            setPhoneError(null);
+        }
         if (!user?.id || !token) {
             toast.error("Iltimos, avval tizimga kiring.");
             return;
@@ -252,7 +276,24 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             return;
         }
 
-        setIsSubmitting(true);
+        setIsSubmitting(true);
+        // Update user profile if name or phone changed during checkout
+        if (user && (phone !== user.phone || fullName !== user.fullName)) {
+            try {
+                await updateUserProfile({
+                    telegramId: user.telegramId || "0",
+                    fullName: fullName || user.fullName || "",
+                    username: user.username || "",
+                    phone: phone,
+                    email: user.email || null,
+                    language: user.language || 0,
+                    photoUrl: user.photoUrl
+                });
+                setUser({ ...user, phone, fullName });
+            } catch (err) {
+                console.error("Failed to sync profile update on checkout:", err);
+            }
+        }
         try {
             // Build the final note combining user's custom note + variant info + BTS details
             const variantNote = buildVariantNote();
@@ -509,7 +550,9 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="phone" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Telefon raqam</Label>
+                                <Label htmlFor="phone" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+                                    Telefon raqam <span className="text-red-500 font-bold">*</span>
+                                </Label>
                                 <div className="relative">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                                         <Phone className="w-4 h-4" strokeWidth={2} />
@@ -520,9 +563,19 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                                         value={phone}
                                         onChange={handlePhoneChange}
                                         placeholder="+998"
-                                        className="h-12 rounded-xl border-slate-200 bg-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#007AFF]/20 focus-visible:border-[#007AFF] text-slate-900 font-bold placeholder:text-slate-400 shadow-sm pl-11 tracking-wide"
+                                        required
+                                        className={`h-12 rounded-xl bg-[#F8FAFC] focus-visible:ring-2 text-slate-900 font-bold placeholder:text-slate-400 shadow-sm pl-11 tracking-wide ${
+                                            phoneError 
+                                                ? "border-red-500 focus-visible:ring-red-500/20 focus-visible:border-red-500" 
+                                                : "border-slate-200 focus-visible:ring-[#007AFF]/20 focus-visible:border-[#007AFF]"
+                                        }`}
                                     />
-                                </div>
+                                </div>
+                                {phoneError && (
+                                    <p className="text-xs text-red-500 font-semibold mt-1 ml-1 animate-in fade-in slide-in-from-top-1">
+                                        {phoneError}
+                                    </p>
+                                )}
                             </div>
 
                             {deliveryMethod === "delivery" && (
