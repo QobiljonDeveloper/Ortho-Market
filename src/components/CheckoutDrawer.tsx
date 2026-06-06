@@ -331,6 +331,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 deliveryMethod: deliveryMethod === "pickup" ? 0 : 1, // Map pickup to 0, both delivery & BTS to 1 (standard delivery payload indicator)
                 subtotal: dynamicCartTotal,
                 totalPrice: dynamicCartTotal,
+                phoneNumber: phone,
                 items: cartItemsWithDynamicPrices.map((item: any) => {
                     const productTypeId = item.selectedChildType?.id || item.selectedParentType?.id || null;
                     return {
