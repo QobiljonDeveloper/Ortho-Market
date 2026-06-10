@@ -3,11 +3,7 @@ import { createRoot } from 'react-dom/client'
 import axios from 'axios'
 import './index.css'
 import App from './App.tsx'
-import VConsole from 'vconsole'
 
-if (typeof window !== 'undefined') {
-  new VConsole();
-}
 
 
 
