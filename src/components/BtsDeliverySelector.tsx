@@ -24,8 +24,8 @@ export interface RegionApi {
 }
 
 export interface CityApi {
-    cityCode: string;
-    nameUz: string;
+    code: string;
+    name: string;
     regionCode: string;
 }
 
@@ -252,24 +252,24 @@ const MOCK_REGIONS: RegionApi[] = [
 
 const MOCK_CITIES: Record<string, CityApi[]> = {
     "01": [
-        { cityCode: "tashkent-city", nameUz: "Toshkent shahri", regionCode: "01" }
+        { code: "tashkent-city", name: "Toshkent shahri", regionCode: "01" }
     ],
     "10": [
-        { cityCode: "angren-city", nameUz: "Angren shahri", regionCode: "10" },
-        { cityCode: "chirchik-city", nameUz: "Chirchiq shahri", regionCode: "10" }
+        { code: "angren-city", name: "Angren shahri", regionCode: "10" },
+        { code: "chirchik-city", name: "Chirchiq shahri", regionCode: "10" }
     ],
     "18": [
-        { cityCode: "samarkand-city", nameUz: "Samarqand shahri", regionCode: "18" },
-        { cityCode: "gagarin-city", nameUz: "Gagarin shahri", regionCode: "18" }
+        { code: "samarkand-city", name: "Samarqand shahri", regionCode: "18" },
+        { code: "gagarin-city", name: "Gagarin shahri", regionCode: "18" }
     ],
     "30": [
-        { cityCode: "fergana-city", nameUz: "Farg'ona shahri", regionCode: "30" },
-        { cityCode: "kokand-city", nameUz: "Qo'qon shahri", regionCode: "30" },
-        { cityCode: "margilan-city", nameUz: "Marg'ilon shahri", regionCode: "30" }
+        { code: "fergana-city", name: "Farg'ona shahri", regionCode: "30" },
+        { code: "kokand-city", name: "Qo'qon shahri", regionCode: "30" },
+        { code: "margilan-city", name: "Marg'ilon shahri", regionCode: "30" }
     ],
     "06": [
-        { cityCode: "bukhara-city", nameUz: "Buxoro shahri", regionCode: "06" },
-        { cityCode: "gijduvan-city", nameUz: "G'ijduvon tumani", regionCode: "06" }
+        { code: "bukhara-city", name: "Buxoro shahri", regionCode: "06" },
+        { code: "gijduvan-city", name: "G'ijduvon tumani", regionCode: "06" }
     ]
 };
 
@@ -313,6 +313,7 @@ const MOCK_BRANCHES: Record<string, BranchApi[]> = {
 export type DeliveryType = "delivery" | "pickup" | "bts";
 
 interface BtsDeliverySelectorProps {
+    token?: string | null;
     onChange?: (data: {
         method: DeliveryType;
         regionId: string | null;
@@ -324,8 +325,9 @@ interface BtsDeliverySelectorProps {
     }) => void;
 }
 
-export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
+export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliverySelectorProps) {
     const [deliveryMethod, setDeliveryMethod] = useState<DeliveryType>("delivery");
+    const token = propToken || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
 
     // Data states
     const [regions, setRegions] = useState<RegionApi[]>([]);
@@ -343,6 +345,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
     const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
 
     const activeRegion = regions.find((r) => r.code === selectedRegionCode);
+    const activeCity = cities.find((c) => c.code === selectedCityCode);
     const activeBranch = branches.find((b) => String(b.id) === selectedBranchId);
 
     // Propagate choices to parent Checkout Component
@@ -360,14 +363,22 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
         }
     }, [deliveryMethod, selectedRegionCode, selectedBranchId, activeRegion, activeBranch, onChange]);
 
+    // Helpers to build authorization headers dynamically
+    const getHeaders = () => {
+        return {
+            Authorization: token ? `Bearer ${token}` : undefined
+        };
+    };
+
     // Step 1: Fetch regions list on mount (immediately)
     useEffect(() => {
         const loadRegions = async () => {
             setLoadingRegions(true);
             try {
-                const res = await api.get(`${BASE_URL}/api/bts/regions`);
+                const res = await api.get(`${BASE_URL}/api/bts/regions`, {
+                    headers: getHeaders()
+                });
                 if (Array.isArray(res.data) && res.data.length > 0) {
-                    // Map response fields code/regionCode and name/nameUz dynamically, and clean name
                     const mapped = res.data.map((r: any) => {
                         const code = String(r.code !== undefined && r.code !== null ? r.code : (r.regionCode !== undefined && r.regionCode !== null ? r.regionCode : "")).trim();
                         const rawName = String(r.name || r.nameUz || "").trim();
@@ -382,7 +393,6 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                 }
             } catch (err) {
                 console.warn("Regions API failed, falling back to mock:", err);
-                // Map mock through translator just in case
                 const mappedMock = MOCK_REGIONS.map((r) => ({
                     code: r.code,
                     name: translateRegion(r.name)
@@ -393,7 +403,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
             }
         };
         loadRegions();
-    }, []);
+    }, [token]);
 
     // Step 2: Fetch cities list on selecting a region
     useEffect(() => {
@@ -403,18 +413,19 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                 setCities([]);
                 try {
                     const res = await api.get(`${BASE_URL}/api/bts/cities`, {
-                        params: { regionCode: selectedRegionCode }
+                        params: { regionCode: selectedRegionCode },
+                        headers: getHeaders()
                     });
                     if (Array.isArray(res.data) && res.data.length > 0) {
                         const mapped = res.data.map((c: any) => {
-                            const cityCode = String(c.code !== undefined && c.code !== null ? c.code : (c.cityCode !== undefined && c.cityCode !== null ? c.cityCode : "")).trim();
+                            const code = String(c.code !== undefined && c.code !== null ? c.code : (c.cityCode !== undefined && c.cityCode !== null ? c.cityCode : "")).trim();
                             const rawName = String(c.name || c.nameUz || "").trim();
                             return {
-                                cityCode,
-                                nameUz: cyrillicToLatin(rawName),
+                                code,
+                                name: cyrillicToLatin(rawName),
                                 regionCode: String(c.regionCode || "").trim()
                             };
-                        }).filter((c: any) => c.cityCode);
+                        }).filter((c: any) => c.code);
                         setCities(mapped);
                     } else {
                         throw new Error("Empty cities data");
@@ -423,8 +434,8 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                     console.warn("Cities API failed, falling back to mock:", err);
                     const mockSource = MOCK_CITIES[selectedRegionCode] || [];
                     const mappedMock = mockSource.map((c) => ({
-                        cityCode: c.cityCode,
-                        nameUz: cyrillicToLatin(c.nameUz),
+                        code: c.code,
+                        name: cyrillicToLatin(c.name),
                         regionCode: c.regionCode
                     }));
                     setCities(mappedMock);
@@ -436,7 +447,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
         } else {
             setCities([]);
         }
-    }, [selectedRegionCode]);
+    }, [selectedRegionCode, token]);
 
     // Step 3: Fetch branches list on selecting a city
     useEffect(() => {
@@ -446,7 +457,8 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                 setBranches([]);
                 try {
                     const res = await api.get(`${BASE_URL}/api/bts/branches`, {
-                        params: { regionCode: selectedRegionCode, cityCode: selectedCityCode }
+                        params: { regionCode: selectedRegionCode, cityCode: selectedCityCode },
+                        headers: getHeaders()
                     });
                     if (Array.isArray(res.data) && res.data.length > 0) {
                         const mapped = res.data.map((b: any) => {
@@ -486,7 +498,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
         } else {
             setBranches([]);
         }
-    }, [selectedRegionCode, selectedCityCode]);
+    }, [selectedRegionCode, selectedCityCode, token]);
 
     const handleMethodChange = (method: DeliveryType) => {
         setDeliveryMethod(method);
@@ -682,8 +694,8 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                                     <>
                                         <option value="" disabled className="text-slate-400 font-medium">Shaharni tanlang...</option>
                                         {cities.map((city) => (
-                                            <option key={city.cityCode} value={city.cityCode} className="text-slate-800 font-semibold">
-                                                {city.nameUz}
+                                            <option key={city.code} value={city.code} className="text-slate-800 font-semibold">
+                                                {city.name}
                                             </option>
                                         ))}
                                     </>

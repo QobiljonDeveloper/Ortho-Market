@@ -536,7 +536,8 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                         </div>
 
                         {/* Delivery Method Selector (Standard, Pickup, BTS Dependent Selector) */}
-                        <BtsDeliverySelector 
+                        <BtsDeliverySelector 
+                            token={token}
                             onChange={(data) => {
                                 setDeliveryMethod(data.method);
                                 setBtsRegionId(data.regionId);
