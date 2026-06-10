@@ -38,6 +38,209 @@ export interface BranchApi {
     regionCode: string;
 }
 
+// Transliteration Map: Uzbek Cyrillic to Uzbek Latin
+export function cyrillicToLatin(text: string): string {
+    if (!text) return "";
+    
+    const map: Record<string, string> = {
+        // Double-character mappings
+        "Ё": "Yo", "ё": "yo",
+        "Ц": "Ts", "ц": "ts",
+        "Ч": "Ch", "ч": "ch",
+        "Ш": "Sh", "ш": "sh",
+        "Щ": "Sh", "щ": "sh",
+        "Ю": "Yu", "ю": "yu",
+        "Я": "Ya", "я": "ya",
+        "Ў": "O'", "ў": "o'",
+        "Ғ": "G'", "ғ": "g'",
+        "Қ": "Q", "қ": "q",
+        "Ҳ": "H", "ҳ": "h",
+        
+        // Single characters
+        "А": "A", "а": "a",
+        "Б": "B", "б": "b",
+        "В": "V", "в": "v",
+        "Г": "G", "г": "g",
+        "Д": "D", "д": "d",
+        "Е": "E", "е": "e",
+        "Ж": "J", "ж": "j",
+        "З": "Z", "з": "z",
+        "И": "I", "и": "i",
+        "Й": "Y", "й": "y",
+        "К": "K", "к": "k",
+        "Л": "L", "л": "l",
+        "М": "M", "м": "m",
+        "Н": "N", "н": "n",
+        "О": "O", "о": "o",
+        "П": "P", "п": "p",
+        "Р": "R", "р": "r",
+        "С": "S", "с": "s",
+        "Т": "T", "т": "t",
+        "У": "U", "у": "u",
+        "Ф": "F", "ф": "f",
+        "Х": "X", "х": "x",
+        "Э": "E", "э": "e",
+        "Ы": "I", "ы": "i",
+        "Ъ": "'", "ъ": "'",
+        "Ь": "",  "ь": ""
+    };
+
+    let result = "";
+    const vowels = "АаЕеЁёИиОоУуЭэЮюЯяЎў";
+    
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        
+        // Handling the "Ye" / "ye" rule (at the beginning of words and after vowels)
+        if (char === "Е" || char === "е") {
+            const isStart = (i === 0);
+            const isAfterVowel = !isStart && vowels.includes(text[i - 1]);
+            if (isStart || isAfterVowel) {
+                result += (char === "Е") ? "Ye" : "ye";
+                continue;
+            }
+        }
+        
+        result += map[char] !== undefined ? map[char] : char;
+    }
+    
+    return result;
+}
+
+// 14 regions of Uzbekistan translation map (covers Russian and Cyrillic)
+const REGION_TRANSLATION_MAP: Record<string, string> = {
+    // Toshkent
+    "ташкент г.": "Toshkent shahri",
+    "г. ташкент": "Toshkent shahri",
+    "город ташкент": "Toshkent shahri",
+    "ташкент": "Toshkent shahri",
+    "тошкент": "Toshkent shahri",
+    "tashkent": "Toshkent shahri",
+    "tashkent city": "Toshkent shahri",
+    "ташкентская область": "Toshkent viloyati",
+    "ташкентская": "Toshkent viloyati",
+    "tashkent region": "Toshkent viloyati",
+    "tashkent viloyati": "Toshkent viloyati",
+    
+    // Samarqand
+    "самаркандская область": "Samarqand viloyati",
+    "самаркандская": "Samarqand viloyati",
+    "самарканд": "Samarqand viloyati",
+    "samarqand": "Samarqand viloyati",
+    "samarkand": "Samarqand viloyati",
+    "samarkand region": "Samarqand viloyati",
+    "samarqand viloyati": "Samarqand viloyati",
+    
+    // Farg'ona
+    "ферганская область": "Farg'ona viloyati",
+    "ферганская": "Farg'ona viloyati",
+    "фергана": "Farg'ona viloyati",
+    "farg'ona": "Farg'ona viloyati",
+    "fergana": "Farg'ona viloyati",
+    "fergana region": "Farg'ona viloyati",
+    "farg'ona viloyati": "Farg'ona viloyati",
+    
+    // Andijon
+    "андижанская область": "Andijon viloyati",
+    "андижанская": "Andijon viloyati",
+    "андижан": "Andijon viloyati",
+    "andijon": "Andijon viloyati",
+    "andijan": "Andijon viloyati",
+    "andijan region": "Andijon viloyati",
+    "andijon viloyati": "Andijon viloyati",
+    
+    // Namangan
+    "наманганская область": "Namangan viloyati",
+    "наманганская": "Namangan viloyati",
+    "наманган": "Namangan viloyati",
+    "namangan": "Namangan viloyati",
+    "namangan region": "Namangan viloyati",
+    "namangan viloyati": "Namangan viloyati",
+    
+    // Buxoro
+    "бухарская область": "Buxoro viloyati",
+    "бухарская": "Buxoro viloyati",
+    "бухара": "Buxoro viloyati",
+    "buxoro": "Buxoro viloyati",
+    "bukhara": "Buxoro viloyati",
+    "bukhara region": "Buxoro viloyati",
+    "buxoro viloyati": "Buxoro viloyati",
+    
+    // Xorazm
+    "хорезмская область": "Xorazm viloyati",
+    "хорезмская": "Xorazm viloyati",
+    "хорезм": "Xorazm viloyati",
+    "xorazm": "Xorazm viloyati",
+    "khorezm": "Xorazm viloyati",
+    "khorezm region": "Xorazm viloyati",
+    "xorazm viloyati": "Xorazm viloyati",
+    
+    // Navoiy
+    "навоийская область": "Navoiy viloyati",
+    "навоийская": "Navoiy viloyati",
+    "навои": "Navoiy viloyati",
+    "navoiy": "Navoiy viloyati",
+    "navoi": "Navoiy viloyati",
+    "navoi region": "Navoiy viloyati",
+    "navoiy viloyati": "Navoiy viloyati",
+    
+    // Qashqadaryo
+    "кашкадарьинская область": "Qashqadaryo viloyati",
+    "кашкадарьинская": "Qashqadaryo viloyati",
+    "кашкадарья": "Qashqadaryo viloyati",
+    "qashqadaryo": "Qashqadaryo viloyati",
+    "kashkadarya": "Qashqadaryo viloyati",
+    "kashkadarya region": "Qashqadaryo viloyati",
+    "qashqadaryo viloyati": "Qashqadaryo viloyati",
+    
+    // Surxondaryo
+    "сурхандарьинская область": "Surxondaryo viloyati",
+    "сурхандарьинская": "Surxondaryo viloyati",
+    "сурхандарья": "Surxondaryo viloyati",
+    "surxondaryo": "Surxondaryo viloyati",
+    "surkhandarya": "Surxondaryo viloyati",
+    "surkhandarya region": "Surxondaryo viloyati",
+    "surxondaryo viloyati": "Surxondaryo viloyati",
+    
+    // Jizzax
+    "джизакская область": "Jizzax viloyati",
+    "джизакская": "Jizzax viloyati",
+    "джизак": "Jizzax viloyati",
+    "jizzax": "Jizzax viloyati",
+    "djizzakh": "Jizzax viloyati",
+    "jizzakh": "Jizzax viloyati",
+    "jizzakh region": "Jizzax viloyati",
+    "jizzax viloyati": "Jizzax viloyati",
+    
+    // Sirdaryo
+    "сырдарьинская область": "Sirdaryo viloyati",
+    "сырдарьинская": "Sirdaryo viloyati",
+    "сырдарья": "Sirdaryo viloyati",
+    "sirdaryo": "Sirdaryo viloyati",
+    "syrdarya": "Sirdaryo viloyati",
+    "syrdarya region": "Sirdaryo viloyati",
+    "sirdaryo viloyati": "Sirdaryo viloyati",
+    
+    // Qoraqalpog'iston
+    "республика каракалпакстан": "Qoraqalpog'iston Respublikasi",
+    "каракалпакстан": "Qoraqalpog'iston Respublikasi",
+    "qoraqalpog'iston": "Qoraqalpog'iston Respublikasi",
+    "karakalpakstan": "Qoraqalpog'iston Respublikasi",
+    "karakalpakstan region": "Qoraqalpog'iston Respublikasi",
+    "qoraqalpog'iston respublikasi": "Qoraqalpog'iston Respublikasi"
+};
+
+export const translateRegion = (name: string): string => {
+    if (!name) return "";
+    const trimmed = name.trim();
+    const key = trimmed.toLowerCase();
+    if (REGION_TRANSLATION_MAP[key]) {
+        return REGION_TRANSLATION_MAP[key];
+    }
+    // Fallback: transliterate from Cyrillic to Latin
+    return cyrillicToLatin(trimmed);
+};
+
 // Rich Mock Fallbacks using string codes with leading zeros (e.g. '01')
 const MOCK_REGIONS: RegionApi[] = [
     { code: "01", name: "Toshkent shahri" },
@@ -164,18 +367,27 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
             try {
                 const res = await api.get(`${BASE_URL}/api/bts/regions`);
                 if (Array.isArray(res.data) && res.data.length > 0) {
-                    // Map response fields code/regionCode and name/nameUz dynamically
-                    const mapped = res.data.map((r: any) => ({
-                        code: String(r.code !== undefined && r.code !== null ? r.code : (r.regionCode !== undefined && r.regionCode !== null ? r.regionCode : "")).trim(),
-                        name: String(r.name || r.nameUz || "").trim()
-                    })).filter((r: any) => r.code);
+                    // Map response fields code/regionCode and name/nameUz dynamically, and clean name
+                    const mapped = res.data.map((r: any) => {
+                        const code = String(r.code !== undefined && r.code !== null ? r.code : (r.regionCode !== undefined && r.regionCode !== null ? r.regionCode : "")).trim();
+                        const rawName = String(r.name || r.nameUz || "").trim();
+                        return {
+                            code,
+                            name: translateRegion(rawName)
+                        };
+                    }).filter((r: any) => r.code);
                     setRegions(mapped);
                 } else {
                     throw new Error("Empty regions data");
                 }
             } catch (err) {
                 console.warn("Regions API failed, falling back to mock:", err);
-                setRegions(MOCK_REGIONS);
+                // Map mock through translator just in case
+                const mappedMock = MOCK_REGIONS.map((r) => ({
+                    code: r.code,
+                    name: translateRegion(r.name)
+                }));
+                setRegions(mappedMock);
             } finally {
                 setLoadingRegions(false);
             }
@@ -194,18 +406,28 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                         params: { regionCode: selectedRegionCode }
                     });
                     if (Array.isArray(res.data) && res.data.length > 0) {
-                        const mapped = res.data.map((c: any) => ({
-                            cityCode: String(c.code !== undefined && c.code !== null ? c.code : (c.cityCode !== undefined && c.cityCode !== null ? c.cityCode : "")).trim(),
-                            nameUz: String(c.name || c.nameUz || "").trim(),
-                            regionCode: String(c.regionCode || "").trim()
-                        })).filter((c: any) => c.cityCode);
+                        const mapped = res.data.map((c: any) => {
+                            const cityCode = String(c.code !== undefined && c.code !== null ? c.code : (c.cityCode !== undefined && c.cityCode !== null ? c.cityCode : "")).trim();
+                            const rawName = String(c.name || c.nameUz || "").trim();
+                            return {
+                                cityCode,
+                                nameUz: cyrillicToLatin(rawName),
+                                regionCode: String(c.regionCode || "").trim()
+                            };
+                        }).filter((c: any) => c.cityCode);
                         setCities(mapped);
                     } else {
                         throw new Error("Empty cities data");
                     }
                 } catch (err) {
                     console.warn("Cities API failed, falling back to mock:", err);
-                    setCities(MOCK_CITIES[selectedRegionCode] || []);
+                    const mockSource = MOCK_CITIES[selectedRegionCode] || [];
+                    const mappedMock = mockSource.map((c) => ({
+                        cityCode: c.cityCode,
+                        nameUz: cyrillicToLatin(c.nameUz),
+                        regionCode: c.regionCode
+                    }));
+                    setCities(mappedMock);
                 } finally {
                     setLoadingCities(false);
                 }
@@ -227,21 +449,35 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                         params: { regionCode: selectedRegionCode, cityCode: selectedCityCode }
                     });
                     if (Array.isArray(res.data) && res.data.length > 0) {
-                        const mapped = res.data.map((b: any) => ({
-                            id: String(b.id !== undefined && b.id !== null ? b.id : (b.branchCode !== undefined && b.branchCode !== null ? b.branchCode : "")).trim(),
-                            nameUz: String(b.name || b.nameUz || "").trim(),
-                            addressUz: String(b.address || b.addressUz || "").trim(),
-                            phone: String(b.phone || "").trim(),
-                            cityCode: String(b.cityCode || "").trim(),
-                            regionCode: String(b.regionCode || "").trim()
-                        })).filter((b: any) => b.id);
+                        const mapped = res.data.map((b: any) => {
+                            const id = String(b.id !== undefined && b.id !== null ? b.id : (b.branchCode !== undefined && b.branchCode !== null ? b.branchCode : "")).trim();
+                            const rawName = String(b.name || b.nameUz || "").trim();
+                            const rawAddress = String(b.address || b.addressUz || "").trim();
+                            return {
+                                id,
+                                nameUz: cyrillicToLatin(rawName),
+                                addressUz: cyrillicToLatin(rawAddress),
+                                phone: String(b.phone || "").trim(),
+                                cityCode: String(b.cityCode || "").trim(),
+                                regionCode: String(b.regionCode || "").trim()
+                            };
+                        }).filter((b: any) => b.id);
                         setBranches(mapped);
                     } else {
                         throw new Error("Empty branches data");
                     }
                 } catch (err) {
                     console.warn("Branches API failed, falling back to mock:", err);
-                    setBranches(MOCK_BRANCHES[selectedCityCode] || []);
+                    const mockSource = MOCK_BRANCHES[selectedCityCode] || [];
+                    const mappedMock = mockSource.map((b) => ({
+                        id: b.id,
+                        nameUz: cyrillicToLatin(b.nameUz),
+                        addressUz: cyrillicToLatin(b.addressUz),
+                        phone: b.phone,
+                        cityCode: b.cityCode,
+                        regionCode: b.regionCode
+                    }));
+                    setBranches(mappedMock);
                 } finally {
                     setLoadingBranches(false);
                 }
