@@ -1,8 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import axios from 'axios'
+import VConsole from 'vconsole'
 import './index.css'
 import App from './App.tsx'
+
+// Initialize vConsole for mobile debugging in development or when ?debug=true is passed
+if (import.meta.env.MODE === 'development' || window.location.search.includes('debug=true')) {
+  new VConsole();
+}
 
 
 
