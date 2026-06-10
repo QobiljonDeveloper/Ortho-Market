@@ -30,9 +30,9 @@ export interface CityApi {
 }
 
 export interface BranchApi {
-    id: string | number;
-    nameUz: string;
-    addressUz: string;
+    code: string;
+    name: string;
+    address: string;
     phone: string;
     cityCode: string;
     regionCode: string;
@@ -105,6 +105,25 @@ export function cyrillicToLatin(text: string): string {
     }
     
     return result;
+}
+
+// Format Name to: Cyrillic to Latin, and Capitalize Words ("Gurlan", "Mirobod Tumani")
+export function formatDisplayName(text: string): string {
+    if (!text) return "";
+    
+    // 1. Transliterate if it contains Cyrillic characters
+    let converted = cyrillicToLatin(text);
+    
+    // 2. Capitalize: First letter uppercase, rest lowercase for each word
+    return converted
+        .toLowerCase()
+        .split(/\s+/)
+        .map(word => {
+            if (!word) return "";
+            return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .filter(Boolean)
+        .join(" ");
 }
 
 // 14 regions of Uzbekistan translation map (covers Russian and Cyrillic)
@@ -237,8 +256,8 @@ export const translateRegion = (name: string): string => {
     if (REGION_TRANSLATION_MAP[key]) {
         return REGION_TRANSLATION_MAP[key];
     }
-    // Fallback: transliterate from Cyrillic to Latin
-    return cyrillicToLatin(trimmed);
+    // Fallback: format name properly
+    return formatDisplayName(trimmed);
 };
 
 // Rich Mock Fallbacks using string codes with leading zeros (e.g. '01')
@@ -275,37 +294,37 @@ const MOCK_CITIES: Record<string, CityApi[]> = {
 
 const MOCK_BRANCHES: Record<string, BranchApi[]> = {
     "tashkent-city": [
-        { id: "bts-tashkent-1", nameUz: "BTS Yunusobod filiali", addressUz: "Yunusobod tumani, 19-kvartal, 4-uy", phone: "+998 71 207-00-50", cityCode: "tashkent-city", regionCode: "01" },
-        { id: "bts-tashkent-2", nameUz: "BTS Chilonzor filiali", addressUz: "Chilonzor tumani, Qatortol ko'chasi, 24-uy", phone: "+998 71 207-00-51", cityCode: "tashkent-city", regionCode: "01" },
-        { id: "bts-tashkent-3", nameUz: "BTS Mirobod (Bosh ofis)", addressUz: "Mirobod tumani, Taras Shevchenko ko'chasi, 38-uy", phone: "+998 71 207-00-52", cityCode: "tashkent-city", regionCode: "01" }
+        { code: "bts-tashkent-1", name: "BTS Yunusobod filiali", address: "Yunusobod tumani, 19-kvartal, 4-uy", phone: "+998 71 207-00-50", cityCode: "tashkent-city", regionCode: "01" },
+        { code: "bts-tashkent-2", name: "BTS Chilonzor filiali", address: "Chilonzor tumani, Qatortol ko'chasi, 24-uy", phone: "+998 71 207-00-51", cityCode: "tashkent-city", regionCode: "01" },
+        { code: "bts-tashkent-3", name: "BTS Mirobod (Bosh ofis)", address: "Mirobod tumani, Taras Shevchenko ko'chasi, 38-uy", phone: "+998 71 207-00-52", cityCode: "tashkent-city", regionCode: "01" }
     ],
     "angren-city": [
-        { id: "bts-angren-1", nameUz: "BTS Angren filiali", addressUz: "Angren shahri, Mustaqillik ko'chasi, 12-uy", phone: "+998 71 207-00-60", cityCode: "angren-city", regionCode: "10" }
+        { code: "bts-angren-1", name: "BTS Angren filiali", address: "Angren shahri, Mustaqillik ko'chasi, 12-uy", phone: "+998 71 207-00-60", cityCode: "angren-city", regionCode: "10" }
     ],
     "chirchik-city": [
-        { id: "bts-chirchik-1", nameUz: "BTS Chirchiq filiali", addressUz: "Chirchiq shahri, Alisher Navoiy ko'chasi, 45-uy", phone: "+998 71 207-00-70", cityCode: "chirchik-city", regionCode: "10" }
+        { code: "bts-chirchik-1", name: "BTS Chirchiq filiali", address: "Chirchiq shahri, Alisher Navoiy ko'chasi, 45-uy", phone: "+998 71 207-00-70", cityCode: "chirchik-city", regionCode: "10" }
     ],
     "samarkand-city": [
-        { id: "bts-sam-1", nameUz: "BTS Samarqand markaziy filiali", addressUz: "Samarqand shahri, Gagarin ko'chasi, 85-uy", phone: "+998 66 233-00-50", cityCode: "samarkand-city", regionCode: "18" },
-        { id: "bts-sam-2", nameUz: "BTS Registon filiali", addressUz: "Samarqand shahri, Registon ko'chasi, 12-uy", phone: "+998 66 233-00-51", cityCode: "samarkand-city", regionCode: "18" }
+        { code: "bts-sam-1", name: "BTS Samarqand markaziy filiali", address: "Samarqand shahri, Gagarin ko'chasi, 85-uy", phone: "+998 66 233-00-50", cityCode: "samarkand-city", regionCode: "18" },
+        { code: "bts-sam-2", name: "BTS Registon filiali", address: "Registon ko'chasi, 12-uy", phone: "+998 66 233-00-51", cityCode: "samarkand-city", regionCode: "18" }
     ],
     "gagarin-city": [
-        { id: "bts-sam-3", nameUz: "BTS Gagarin filiali", addressUz: "Gagarin shahri, Sharof Rashidov ko'chasi, 15-uy", phone: "+998 66 233-00-52", cityCode: "gagarin-city", regionCode: "18" }
+        { code: "bts-sam-3", name: "BTS Gagarin filiali", address: "Gagarin shahri, Sharof Rashidov ko'chasi, 15-uy", phone: "+998 66 233-00-52", cityCode: "gagarin-city", regionCode: "18" }
     ],
     "fergana-city": [
-        { id: "bts-fer-1", nameUz: "BTS Farg'ona shahar filiali", addressUz: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 45-uy", phone: "+998 73 244-00-50", cityCode: "fergana-city", regionCode: "30" }
+        { code: "bts-fer-1", name: "BTS Farg'ona shahar filiali", address: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 45-uy", phone: "+998 73 244-00-50", cityCode: "fergana-city", regionCode: "30" }
     ],
     "kokand-city": [
-        { id: "bts-fer-2", nameUz: "BTS Qo'qon filiali", addressUz: "Qo'qon shahri, Turon ko'chasi, 110-uy", phone: "+998 73 542-00-51", cityCode: "kokand-city", regionCode: "30" }
+        { code: "bts-fer-2", name: "BTS Qo'qon filiali", address: "Qo'qon shahri, Turon ko'chasi, 110-uy", phone: "+998 73 542-00-51", cityCode: "kokand-city", regionCode: "30" }
     ],
     "margilan-city": [
-        { id: "bts-fer-3", nameUz: "BTS Marg'ilon filiali", addressUz: "Marg'ilon shahri, Mustaqillik ko'chasi, 5-uy", phone: "+998 73 237-00-52", cityCode: "margilan-city", regionCode: "30" }
+        { code: "bts-fer-3", name: "BTS Marg'ilon filiali", address: "Marg'ilon shahri, Mustaqillik ko'chasi, 5-uy", phone: "+998 73 237-00-52", cityCode: "margilan-city", regionCode: "30" }
     ],
     "bukhara-city": [
-        { id: "bts-bux-1", nameUz: "BTS Buxoro markaziy filiali", addressUz: "Buxoro shahri, Navoiy shoh ko'chasi, 18-uy", phone: "+998 65 221-00-50", cityCode: "bukhara-city", regionCode: "06" }
+        { code: "bts-bux-1", name: "BTS Buxoro markaziy filiali", address: "Buxoro shahri, Navoiy shoh ko'chasi, 18-uy", phone: "+998 65 221-00-50", cityCode: "bukhara-city", regionCode: "06" }
     ],
     "gijduvan-city": [
-        { id: "bts-bux-2", nameUz: "BTS G'ijduvon filiali", addressUz: "G'ijduvon tumani, Yusuf Hamadoniy ko'chasi, 3-uy", phone: "+998 65 572-00-51", cityCode: "gijduvan-city", regionCode: "06" }
+        { code: "bts-bux-2", name: "BTS G'ijduvon filiali", address: "G'ijduvon tumani, Yusuf Hamadoniy ko'chasi, 3-uy", phone: "+998 65 572-00-51", cityCode: "gijduvan-city", regionCode: "06" }
     ]
 };
 
@@ -345,8 +364,7 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
     const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
 
     const activeRegion = regions.find((r) => r.code === selectedRegionCode);
-    const activeCity = cities.find((c) => c.code === selectedCityCode);
-    const activeBranch = branches.find((b) => String(b.id) === selectedBranchId);
+    const activeBranch = branches.find((b) => b.code === selectedBranchId);
 
     // Propagate choices to parent Checkout Component
     useEffect(() => {
@@ -356,8 +374,8 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
                 regionId: deliveryMethod === "bts" ? (selectedRegionCode || null) : null,
                 branchId: deliveryMethod === "bts" ? (selectedBranchId || null) : null,
                 regionName: deliveryMethod === "bts" && activeRegion ? activeRegion.name : null,
-                branchName: deliveryMethod === "bts" && activeBranch ? activeBranch.nameUz : null,
-                branchAddress: deliveryMethod === "bts" && activeBranch ? activeBranch.addressUz : null,
+                branchName: deliveryMethod === "bts" && activeBranch ? activeBranch.name : null,
+                branchAddress: deliveryMethod === "bts" && activeBranch ? activeBranch.address : null,
                 branchPhone: deliveryMethod === "bts" && activeBranch ? activeBranch.phone : null,
             });
         }
@@ -422,7 +440,7 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
                             const rawName = String(c.name || c.nameUz || "").trim();
                             return {
                                 code,
-                                name: cyrillicToLatin(rawName),
+                                name: formatDisplayName(rawName),
                                 regionCode: String(c.regionCode || "").trim()
                             };
                         }).filter((c: any) => c.code);
@@ -435,7 +453,7 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
                     const mockSource = MOCK_CITIES[selectedRegionCode] || [];
                     const mappedMock = mockSource.map((c) => ({
                         code: c.code,
-                        name: cyrillicToLatin(c.name),
+                        name: formatDisplayName(c.name),
                         regionCode: c.regionCode
                     }));
                     setCities(mappedMock);
@@ -462,18 +480,18 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
                     });
                     if (Array.isArray(res.data) && res.data.length > 0) {
                         const mapped = res.data.map((b: any) => {
-                            const id = String(b.id !== undefined && b.id !== null ? b.id : (b.branchCode !== undefined && b.branchCode !== null ? b.branchCode : "")).trim();
+                            const code = String(b.code !== undefined && b.code !== null ? b.code : (b.branchCode !== undefined && b.branchCode !== null ? b.branchCode : "")).trim();
                             const rawName = String(b.name || b.nameUz || "").trim();
                             const rawAddress = String(b.address || b.addressUz || "").trim();
                             return {
-                                id,
-                                nameUz: cyrillicToLatin(rawName),
-                                addressUz: cyrillicToLatin(rawAddress),
+                                code,
+                                name: formatDisplayName(rawName),
+                                address: formatDisplayName(rawAddress),
                                 phone: String(b.phone || "").trim(),
                                 cityCode: String(b.cityCode || "").trim(),
                                 regionCode: String(b.regionCode || "").trim()
                             };
-                        }).filter((b: any) => b.id);
+                        }).filter((b: any) => b.code);
                         setBranches(mapped);
                     } else {
                         throw new Error("Empty branches data");
@@ -482,9 +500,9 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
                     console.warn("Branches API failed, falling back to mock:", err);
                     const mockSource = MOCK_BRANCHES[selectedCityCode] || [];
                     const mappedMock = mockSource.map((b) => ({
-                        id: b.id,
-                        nameUz: cyrillicToLatin(b.nameUz),
-                        addressUz: cyrillicToLatin(b.addressUz),
+                        code: b.code,
+                        name: formatDisplayName(b.name),
+                        address: formatDisplayName(b.address),
                         phone: b.phone,
                         cityCode: b.cityCode,
                         regionCode: b.regionCode
@@ -728,8 +746,8 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
                                     <>
                                         <option value="" disabled className="text-slate-400 font-medium">Filialni tanlang...</option>
                                         {branches.map((branch) => (
-                                            <option key={String(branch.id)} value={String(branch.id)} className="text-slate-800 font-semibold">
-                                                {branch.nameUz}
+                                            <option key={branch.code} value={branch.code} className="text-slate-800 font-semibold">
+                                                {branch.name}
                                             </option>
                                         ))}
                                     </>
@@ -752,7 +770,7 @@ export function BtsDeliverySelector({ token: propToken, onChange }: BtsDeliveryS
                                     Tanlangan filial ma'lumotlari:
                                 </span>
                                 <span className="text-xs font-bold text-slate-700 leading-relaxed break-words">
-                                    📍 Manzil: {activeBranch.addressUz}
+                                    📍 Manzil: {activeBranch.address}
                                 </span>
                                 <span className="text-[11px] font-bold text-emerald-700 mt-1">
                                     📞 Aloqa: {activeBranch.phone}
