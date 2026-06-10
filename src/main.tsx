@@ -5,10 +5,8 @@ import VConsole from 'vconsole'
 import './index.css'
 import App from './App.tsx'
 
-// Initialize vConsole for mobile debugging in development mode only
-if (import.meta.env.DEV) {
-  new VConsole();
-}
+// Initialize vConsole for mobile debugging unconditionally
+const vConsole = new VConsole();
 
 
 
