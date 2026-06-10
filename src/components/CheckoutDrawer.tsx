@@ -83,7 +83,11 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     const [paymentMethod, setPaymentMethod] = useState("online");
     const [deliveryMethod, setDeliveryMethod] = useState("delivery");
     const [btsRegionId, setBtsRegionId] = useState<string | null>(null);
-    const [btsBranchId, setBtsBranchId] = useState<string | null>(null);
+    const [btsBranchId, setBtsBranchId] = useState<string | null>(null);
+    const [btsRegionName, setBtsRegionName] = useState<string | null>(null);
+    const [btsBranchName, setBtsBranchName] = useState<string | null>(null);
+    const [btsBranchAddress, setBtsBranchAddress] = useState<string | null>(null);
+    const [btsBranchPhone, setBtsBranchPhone] = useState<string | null>(null);
 
     // Address UI State
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -103,6 +107,13 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             setPhone(user?.phone || "+998");
             setCustomNote("");
             setPhoneError(null);
+            setDeliveryMethod("delivery");
+            setBtsRegionId(null);
+            setBtsBranchId(null);
+            setBtsRegionName(null);
+            setBtsBranchName(null);
+            setBtsBranchAddress(null);
+            setBtsBranchPhone(null);
             try {
                 const stored = sessionStorage.getItem('tg_buy_now_item');
                 if (stored) {
@@ -300,8 +311,12 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             
             let btsNote = null;
             if (deliveryMethod === "bts" && btsRegionId && btsBranchId) {
-                const regionName = BTS_REGIONS_MAP[btsRegionId] || btsRegionId;
-                const branchObj = BTS_BRANCHES_MAP[btsBranchId];
+                const regionName = btsRegionName || BTS_REGIONS_MAP[btsRegionId] || btsRegionId;
+                const branchObj = btsBranchName ? {
+                    name: btsBranchName,
+                    address: btsBranchAddress || "",
+                    phone: btsBranchPhone || ""
+                } : BTS_BRANCHES_MAP[btsBranchId];
                 if (branchObj) {
                     btsNote = `--- BTS Yetkazib Berish ---\n📍 Viloyat: ${regionName}\n🏦 Filial: ${branchObj.name}\n🏠 Manzil: ${branchObj.address}\n📞 Aloqa: ${branchObj.phone}`;
                 }
@@ -525,7 +540,11 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                             onChange={(data) => {
                                 setDeliveryMethod(data.method);
                                 setBtsRegionId(data.regionId);
-                                setBtsBranchId(data.branchId);
+                                setBtsBranchId(data.branchId);
+                                setBtsRegionName(data.regionName || null);
+                                setBtsBranchName(data.branchName || null);
+                                setBtsBranchAddress(data.branchAddress || null);
+                                setBtsBranchPhone(data.branchPhone || null);
                                 if (data.method === "delivery" && addresses.length === 0) {
                                     setIsAddressPopupOpen(true);
                                 }

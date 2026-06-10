@@ -1,56 +1,99 @@
 import React, { useState, useEffect } from "react";
-import { Truck, MapPin, Store, ChevronDown, Check, Building2 } from "lucide-react";
+import { Truck, MapPin, Store, ChevronDown, Building2 } from "lucide-react";
+import { api } from "../services/api";
 
-// 1. Mock Data Structures in Uzbek
-export interface BtsBranch {
-    id: string;
-    name: string;
-    address: string;
+// API URL Fallback
+const BASE_URL = (() => {
+    try {
+        const globalProcess = typeof globalThis !== "undefined" ? (globalThis as any).process : undefined;
+        if (globalProcess?.env?.NEXT_PUBLIC_API_URL) {
+            return globalProcess.env.NEXT_PUBLIC_API_URL;
+        }
+    } catch (e) {}
+    try {
+        if (import.meta.env && import.meta.env.VITE_API_URL) {
+            return import.meta.env.VITE_API_URL;
+        }
+    } catch (e) {}
+    return "https://ortadant-markert-api.kubesec.uz";
+})();
+
+export interface RegionApi {
+    regionCode: string;
+    nameUz: string;
+}
+
+export interface CityApi {
+    cityCode: string;
+    nameUz: string;
+    regionCode: string;
+}
+
+export interface BranchApi {
+    id: string | number;
+    nameUz: string;
+    addressUz: string;
     phone: string;
+    cityCode: string;
+    regionCode: string;
 }
 
-export interface Region {
-    id: string;
-    name: string;
-    branches: BtsBranch[];
-}
-
-const REGIONS_DATA: Region[] = [
-    {
-        id: "tashkent",
-        name: "Toshkent shahri",
-        branches: [
-            { id: "bts-tashkent-1", name: "BTS Yunusobod filiali", address: "Yunusobod tumani, 19-kvartal, 4-uy", phone: "+998 71 207-00-50" },
-            { id: "bts-tashkent-2", name: "BTS Chilonzor filiali", address: "Chilonzor tumani, Qatortol ko'chasi, 24-uy", phone: "+998 71 207-00-51" },
-            { id: "bts-tashkent-3", name: "BTS Mirobod (Bosh ofis)", address: "Mirobod tumani, Taras Shevchenko ko'chasi, 38-uy", phone: "+998 71 207-00-52" }
-        ]
-    },
-    {
-        id: "samarkand",
-        name: "Samarqand viloyati",
-        branches: [
-            { id: "bts-sam-1", name: "BTS Samarqand markaziy filiali", address: "Samarqand shahri, Gagarin ko'chasi, 85-uy", phone: "+998 66 233-00-50" },
-            { id: "bts-sam-2", name: "BTS Registon filiali", address: "Samarqand shahri, Registon ko'chasi, 12-uy", phone: "+998 66 233-00-51" }
-        ]
-    },
-    {
-        id: "fergana",
-        name: "Farg'ona viloyati",
-        branches: [
-            { id: "bts-fer-1", name: "BTS Farg'ona shahar filiali", address: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 45-uy", phone: "+998 73 244-00-50" },
-            { id: "bts-fer-2", name: "BTS Qo'qon filiali", address: "Qo'qon shahri, Turon ko'chasi, 110-uy", phone: "+998 73 542-00-51" },
-            { id: "bts-fer-3", name: "BTS Marg'ilon filiali", address: "Marg'ilon shahri, Mustaqillik ko'chasi, 5-uy", phone: "+998 73 237-00-52" }
-        ]
-    },
-    {
-        id: "bukhara",
-        name: "Buxoro viloyati",
-        branches: [
-            { id: "bts-bux-1", name: "BTS Buxoro markaziy filiali", address: "Buxoro shahri, Navoiy shoh ko'chasi, 18-uy", phone: "+998 65 221-00-50" },
-            { id: "bts-bux-2", name: "BTS G'ijduvon filiali", address: "G'ijduvon tumani, Yusuf Hamadoniy ko'chasi, 3-uy", phone: "+998 65 572-00-51" }
-        ]
-    }
+// Rich Mock Fallbacks
+const MOCK_REGIONS: RegionApi[] = [
+    { regionCode: "tashkent", nameUz: "Toshkent shahri" },
+    { regionCode: "samarkand", nameUz: "Samarqand viloyati" },
+    { regionCode: "fergana", nameUz: "Farg'ona viloyati" },
+    { regionCode: "bukhara", nameUz: "Buxoro viloyati" }
 ];
+
+const MOCK_CITIES: Record<string, CityApi[]> = {
+    tashkent: [
+        { cityCode: "tashkent-city", nameUz: "Toshkent shahri", regionCode: "tashkent" }
+    ],
+    samarkand: [
+        { cityCode: "samarkand-city", nameUz: "Samarqand shahri", regionCode: "samarkand" },
+        { cityCode: "gagarin-city", nameUz: "Gagarin shahri", regionCode: "samarkand" }
+    ],
+    fergana: [
+        { cityCode: "fergana-city", nameUz: "Farg'ona shahri", regionCode: "fergana" },
+        { cityCode: "kokand-city", nameUz: "Qo'qon shahri", regionCode: "fergana" },
+        { cityCode: "margilan-city", nameUz: "Marg'ilon shahri", regionCode: "fergana" }
+    ],
+    bukhara: [
+        { cityCode: "bukhara-city", nameUz: "Buxoro shahri", regionCode: "bukhara" },
+        { cityCode: "gijduvan-city", nameUz: "G'ijduvon tumani", regionCode: "bukhara" }
+    ]
+};
+
+const MOCK_BRANCHES: Record<string, BranchApi[]> = {
+    "tashkent-city": [
+        { id: "bts-tashkent-1", nameUz: "BTS Yunusobod filiali", addressUz: "Yunusobod tumani, 19-kvartal, 4-uy", phone: "+998 71 207-00-50", cityCode: "tashkent-city", regionCode: "tashkent" },
+        { id: "bts-tashkent-2", nameUz: "BTS Chilonzor filiali", addressUz: "Chilonzor tumani, Qatortol ko'chasi, 24-uy", phone: "+998 71 207-00-51", cityCode: "tashkent-city", regionCode: "tashkent" },
+        { id: "bts-tashkent-3", nameUz: "BTS Mirobod (Bosh ofis)", addressUz: "Mirobod tumani, Taras Shevchenko ko'chasi, 38-uy", phone: "+998 71 207-00-52", cityCode: "tashkent-city", regionCode: "tashkent" }
+    ],
+    "samarkand-city": [
+        { id: "bts-sam-1", nameUz: "BTS Samarqand markaziy filiali", addressUz: "Samarqand shahri, Gagarin ko'chasi, 85-uy", phone: "+998 66 233-00-50", cityCode: "samarkand-city", regionCode: "samarkand" },
+        { id: "bts-sam-2", nameUz: "BTS Registon filiali", addressUz: "Samarqand shahri, Registon ko'chasi, 12-uy", phone: "+998 66 233-00-51", cityCode: "samarkand-city", regionCode: "samarkand" }
+    ],
+    "gagarin-city": [
+        { id: "bts-sam-3", nameUz: "BTS Gagarin filiali", addressUz: "Gagarin shahri, Sharof Rashidov ko'chasi, 15-uy", phone: "+998 66 233-00-52", cityCode: "gagarin-city", regionCode: "samarkand" }
+    ],
+    "fergana-city": [
+        { id: "bts-fer-1", nameUz: "BTS Farg'ona shahar filiali", addressUz: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 45-uy", phone: "+998 73 244-00-50", cityCode: "fergana-city", regionCode: "fergana" }
+    ],
+    "kokand-city": [
+        { id: "bts-fer-2", nameUz: "BTS Qo'qon filiali", addressUz: "Qo'qon shahri, Turon ko'chasi, 110-uy", phone: "+998 73 542-00-51", cityCode: "kokand-city", regionCode: "fergana" }
+    ],
+    "margilan-city": [
+        { id: "bts-fer-3", nameUz: "BTS Marg'ilon filiali", addressUz: "Marg'ilon shahri, Mustaqillik ko'chasi, 5-uy", phone: "+998 73 237-00-52", cityCode: "margilan-city", regionCode: "fergana" }
+    ],
+    "bukhara-city": [
+        { id: "bts-bux-1", nameUz: "BTS Buxoro markaziy filiali", addressUz: "Buxoro shahri, Navoiy shoh ko'chasi, 18-uy", phone: "+998 65 221-00-50", cityCode: "bukhara-city", regionCode: "bukhara" }
+    ],
+    "gijduvan-city": [
+        { id: "bts-bux-2", nameUz: "BTS G'ijduvon filiali", addressUz: "G'ijduvon tumani, Yusuf Hamadoniy ko'chasi, 3-uy", phone: "+998 65 572-00-51", cityCode: "gijduvan-city", regionCode: "bukhara" }
+    ]
+};
 
 // Delivery options definition
 export type DeliveryType = "delivery" | "pickup" | "bts";
@@ -60,46 +103,154 @@ interface BtsDeliverySelectorProps {
         method: DeliveryType;
         regionId: string | null;
         branchId: string | null;
+        regionName?: string | null;
+        branchName?: string | null;
+        branchAddress?: string | null;
+        branchPhone?: string | null;
     }) => void;
 }
 
 export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
     const [deliveryMethod, setDeliveryMethod] = useState<DeliveryType>("delivery");
-    const [selectedRegionId, setSelectedRegionId] = useState<string>("");
+
+    // Data states
+    const [regions, setRegions] = useState<RegionApi[]>([]);
+    const [cities, setCities] = useState<CityApi[]>([]);
+    const [branches, setBranches] = useState<BranchApi[]>([]);
+
+    // Selection states
+    const [selectedRegionCode, setSelectedRegionCode] = useState<string>("");
+    const [selectedCityCode, setSelectedCityCode] = useState<string>("");
     const [selectedBranchId, setSelectedBranchId] = useState<string>("");
 
-    // Trigger parent callback when any selection changes
+    // Loading states
+    const [loadingRegions, setLoadingRegions] = useState<boolean>(false);
+    const [loadingCities, setLoadingCities] = useState<boolean>(false);
+    const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
+
+    const activeRegion = regions.find((r) => r.regionCode === selectedRegionCode);
+    const activeBranch = branches.find((b) => String(b.id) === selectedBranchId);
+
+    // Propagate choices to parent Checkout Component
     useEffect(() => {
         if (onChange) {
             onChange({
                 method: deliveryMethod,
-                regionId: deliveryMethod === "bts" ? (selectedRegionId || null) : null,
+                regionId: deliveryMethod === "bts" ? (selectedRegionCode || null) : null,
                 branchId: deliveryMethod === "bts" ? (selectedBranchId || null) : null,
+                regionName: deliveryMethod === "bts" && activeRegion ? activeRegion.nameUz : null,
+                branchName: deliveryMethod === "bts" && activeBranch ? activeBranch.nameUz : null,
+                branchAddress: deliveryMethod === "bts" && activeBranch ? activeBranch.addressUz : null,
+                branchPhone: deliveryMethod === "bts" && activeBranch ? activeBranch.phone : null,
             });
         }
-    }, [deliveryMethod, selectedRegionId, selectedBranchId, onChange]);
+    }, [deliveryMethod, selectedRegionCode, selectedBranchId, activeRegion, activeBranch, onChange]);
 
-    // Clear branch selection if region changes
-    const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedRegionId(e.target.value);
-        setSelectedBranchId(""); // Critical clearing logic
-    };
+    // Step 1: Fetch regions list on selecting BTS Pochta
+    useEffect(() => {
+        if (deliveryMethod === "bts" && regions.length === 0) {
+            const loadRegions = async () => {
+                setLoadingRegions(true);
+                try {
+                    const res = await api.get(`${BASE_URL}/api/bts/regions`);
+                    if (Array.isArray(res.data) && res.data.length > 0) {
+                        setRegions(res.data);
+                    } else {
+                        throw new Error("Empty regions data");
+                    }
+                } catch (err) {
+                    console.warn("Regions API failed, falling back to mock:", err);
+                    setRegions(MOCK_REGIONS);
+                } finally {
+                    setLoadingRegions(false);
+                }
+            };
+            loadRegions();
+        }
+    }, [deliveryMethod, regions.length]);
+
+    // Step 2: Fetch cities list on selecting a region
+    useEffect(() => {
+        if (selectedRegionCode) {
+            const loadCities = async () => {
+                setLoadingCities(true);
+                setCities([]);
+                try {
+                    const res = await api.get(`${BASE_URL}/api/bts/cities`, {
+                        params: { regionCode: selectedRegionCode }
+                    });
+                    if (Array.isArray(res.data) && res.data.length > 0) {
+                        setCities(res.data);
+                    } else {
+                        throw new Error("Empty cities data");
+                    }
+                } catch (err) {
+                    console.warn("Cities API failed, falling back to mock:", err);
+                    setCities(MOCK_CITIES[selectedRegionCode] || []);
+                } finally {
+                    setLoadingCities(false);
+                }
+            };
+            loadCities();
+        } else {
+            setCities([]);
+        }
+    }, [selectedRegionCode]);
+
+    // Step 3: Fetch branches list on selecting a city
+    useEffect(() => {
+        if (selectedRegionCode && selectedCityCode) {
+            const loadBranches = async () => {
+                setLoadingBranches(true);
+                setBranches([]);
+                try {
+                    const res = await api.get(`${BASE_URL}/api/bts/branches`, {
+                        params: { regionCode: selectedRegionCode, cityCode: selectedCityCode }
+                    });
+                    if (Array.isArray(res.data) && res.data.length > 0) {
+                        setBranches(res.data);
+                    } else {
+                        throw new Error("Empty branches data");
+                    }
+                } catch (err) {
+                    console.warn("Branches API failed, falling back to mock:", err);
+                    setBranches(MOCK_BRANCHES[selectedCityCode] || []);
+                } finally {
+                    setLoadingBranches(false);
+                }
+            };
+            loadBranches();
+        } else {
+            setBranches([]);
+        }
+    }, [selectedRegionCode, selectedCityCode]);
 
     const handleMethodChange = (method: DeliveryType) => {
         setDeliveryMethod(method);
         if (method !== "bts") {
-            setSelectedRegionId("");
+            setSelectedRegionCode("");
+            setSelectedCityCode("");
             setSelectedBranchId("");
         }
     };
 
-    // Find active branches for the selected region
-    const activeRegion = REGIONS_DATA.find((r) => r.id === selectedRegionId);
-    const availableBranches = activeRegion ? activeRegion.branches : [];
-    const activeBranch = availableBranches.find((b) => b.id === selectedBranchId);
+    const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedRegionCode(e.target.value);
+        setSelectedCityCode("");
+        setSelectedBranchId("");
+    };
+
+    const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedCityCode(e.target.value);
+        setSelectedBranchId("");
+    };
+
+    const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedBranchId(e.target.value);
+    };
 
     return (
-        <div className="space-y-6 w-full max-w-md mx-auto bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_10px_35px_rgba(0,0,0,0.03)] text-slate-800">
+        <div className="space-y-6 w-full max-w-md mx-auto bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_10px_35px_rgba(0,0,0,0.03)] text-slate-800 animate-in fade-in slide-in-from-top-1 duration-200">
             {/* Header / Delivery Method Selector */}
             <div className="space-y-3">
                 <div className="flex items-center gap-2.5 mb-1.5 ml-0.5">
@@ -176,7 +327,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                         </div>
                     </div>
 
-                    {/* BTS Courier (Courier service with dependent logic) */}
+                    {/* BTS Pochta Option */}
                     <div 
                         onClick={() => handleMethodChange("bts")}
                         className={`group relative flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 cursor-pointer shadow-sm ${
@@ -211,55 +362,107 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                 </div>
             </div>
 
-            {/* Dynamic Step 2: Region Selection (Appears only if BTS is chosen) */}
+            {/* Dynamic Step 2: Region, City, Branch Selector (Appears only if BTS is chosen) */}
             {deliveryMethod === "bts" && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label htmlFor="region-select" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                        Viloyatni tanlang
-                    </label>
-                    <div className="relative">
-                        <select
-                            id="region-select"
-                            value={selectedRegionId}
-                            onChange={handleRegionChange}
-                            className="w-full h-12 pl-4 pr-10 rounded-xl border border-slate-200 bg-[#F8FAFC] text-slate-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all appearance-none"
-                        >
-                            <option value="" disabled className="text-slate-400 font-medium">Viloyatni tanlang...</option>
-                            {REGIONS_DATA.map((region) => (
-                                <option key={region.id} value={region.id} className="text-slate-800 font-semibold">
-                                    {region.name}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
-                            <ChevronDown className="w-5 h-5" />
+                <div className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                    
+                    {/* 1. Viloyat (Region) Dropdown */}
+                    <div className="space-y-1.5">
+                        <label htmlFor="region-select" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                            Viloyatni tanlang
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="region-select"
+                                value={selectedRegionCode}
+                                onChange={handleRegionChange}
+                                disabled={loadingRegions}
+                                className="w-full h-12 pl-4 pr-10 rounded-xl border border-slate-200 bg-[#F8FAFC] text-slate-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loadingRegions ? (
+                                    <option value="" disabled>Yuklanmoqda...</option>
+                                ) : (
+                                    <>
+                                        <option value="" disabled className="text-slate-400 font-medium">Viloyatni tanlang...</option>
+                                        {regions.map((region) => (
+                                            <option key={region.regionCode} value={region.regionCode} className="text-slate-800 font-semibold">
+                                                {region.nameUz}
+                                            </option>
+                                        ))}
+                                    </>
+                                )}
+                            </select>
+                            <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+                                <ChevronDown className="w-5 h-5" />
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
 
-            {/* Dynamic Step 3: Branch Selection (Appears only if Region is selected and BTS is chosen) */}
-            {deliveryMethod === "bts" && selectedRegionId && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label htmlFor="branch-select" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                        BTS Filialini tanlang
-                    </label>
-                    <div className="relative">
-                        <select
-                            id="branch-select"
-                            value={selectedBranchId}
-                            onChange={(e) => setSelectedBranchId(e.target.value)}
-                            className="w-full h-12 pl-4 pr-10 rounded-xl border border-slate-200 bg-[#F8FAFC] text-slate-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all appearance-none"
-                        >
-                            <option value="" disabled className="text-slate-400 font-medium">Filialni tanlang...</option>
-                            {availableBranches.map((branch) => (
-                                <option key={branch.id} value={branch.id} className="text-slate-800 font-semibold">
-                                    {branch.name}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
-                            <ChevronDown className="w-5 h-5" />
+                    {/* 2. Shahar (City) Dropdown */}
+                    <div className="space-y-1.5">
+                        <label htmlFor="city-select" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                            Shaharni tanlang
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="city-select"
+                                value={selectedCityCode}
+                                onChange={handleCityChange}
+                                disabled={!selectedRegionCode || loadingCities}
+                                className="w-full h-12 pl-4 pr-10 rounded-xl border border-slate-200 bg-[#F8FAFC] text-slate-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loadingCities ? (
+                                    <option value="" disabled>Yuklanmoqda...</option>
+                                ) : !selectedRegionCode ? (
+                                    <option value="" disabled>Avval viloyatni tanlang</option>
+                                ) : (
+                                    <>
+                                        <option value="" disabled className="text-slate-400 font-medium">Shaharni tanlang...</option>
+                                        {cities.map((city) => (
+                                            <option key={city.cityCode} value={city.cityCode} className="text-slate-800 font-semibold">
+                                                {city.nameUz}
+                                            </option>
+                                        ))}
+                                    </>
+                                )}
+                            </select>
+                            <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+                                <ChevronDown className="w-5 h-5" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Filial (Branch) Dropdown */}
+                    <div className="space-y-1.5">
+                        <label htmlFor="branch-select" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                            BTS Filialini tanlang
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="branch-select"
+                                value={selectedBranchId}
+                                onChange={handleBranchChange}
+                                disabled={!selectedCityCode || loadingBranches}
+                                className="w-full h-12 pl-4 pr-10 rounded-xl border border-slate-200 bg-[#F8FAFC] text-slate-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loadingBranches ? (
+                                    <option value="" disabled>Yuklanmoqda...</option>
+                                ) : !selectedCityCode ? (
+                                    <option value="" disabled>Avval shaharni tanlang</option>
+                                ) : (
+                                    <>
+                                        <option value="" disabled className="text-slate-400 font-medium">Filialni tanlang...</option>
+                                        {branches.map((branch) => (
+                                            <option key={String(branch.id)} value={String(branch.id)} className="text-slate-800 font-semibold">
+                                                {branch.nameUz}
+                                            </option>
+                                        ))}
+                                    </>
+                                )}
+                            </select>
+                            <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+                                <ChevronDown className="w-5 h-5" />
+                            </div>
                         </div>
                     </div>
 
@@ -274,7 +477,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                                     Tanlangan filial ma'lumotlari:
                                 </span>
                                 <span className="text-xs font-bold text-slate-700 leading-relaxed break-words">
-                                    📍 Manzil: {activeBranch.address}
+                                    📍 Manzil: {activeBranch.addressUz}
                                 </span>
                                 <span className="text-[11px] font-bold text-emerald-700 mt-1">
                                     📞 Aloqa: {activeBranch.phone}
