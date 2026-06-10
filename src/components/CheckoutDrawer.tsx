@@ -197,98 +197,69 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
         const cleanPhone = val.replace(/[^\d]/g, '');
         if (val.trim() !== "" && val.trim() !== "+998" && cleanPhone !== "998" && val.length >= 13) {
             setPhoneError(null);
-        }
-    };
-
-    const handleDeliveryChange = (value: string) => {
-        setDeliveryMethod(value);
-        if (value === "delivery" && addresses.length === 0) {
-            setIsAddressPopupOpen(true);
-        }
-    };
-
-    const formatPrice = (price: number) => {
-        return price.toLocaleString() + " so'm";
-    };
-
-    /**
-     * Build a dynamic note string from variant selections directly from variantMap.
-     * Format: "[Product: {cartItem.name} | Variant: {parentName} -> {childName}]"
-     */
-    const buildVariantNote = (): string | null => {
-        try {
-            const variantNotes = cartItemsWithDynamicPrices
-                .filter((item: any) => item.selectedParentType || item.selectedChildType)
-                .map((item: any) => {
-                    const parentPart = item.selectedParentType?.name || '';
-                    const childPart = item.selectedChildType?.name ? ` -> ${item.selectedChildType.name}` : '';
-                    return `[Product: ${item.productNameUz} | Variant: ${parentPart}${childPart}]`.trim();
-                });
-
-            return variantNotes.length > 0 ? variantNotes.join('\n') : null;
-        } catch {
-            return null;
-        }
-    };
-
+        }
+    };
+
+    const handleDeliveryChange = (value: string) => {
+        setDeliveryMethod(value);
+        if (value === "delivery" && addresses.length === 0) {
+            setIsAddressPopupOpen(true);
+        }
+    };
+
+    const formatPrice = (price: number) => {
+        return price.toLocaleString() + " so'm";
+    };
+
     const handleConfirm = async () => {
-        // Validate phone number
         const cleanPhone = phone.replace(/[^\d]/g, '');
         if (!phone.trim() || phone.trim() === "+998" || cleanPhone === "998") {
-            const errorMsg = "Iltimos, telefon raqamingizni kiriting. / Please enter your phone number.";
-            setPhoneError(errorMsg);
-            toast.error(errorMsg);
-            document.getElementById("phone")?.focus();
-            return;
-        } else if (phone.length < 13) {
-            const errorMsg = "Iltimos, telefon raqamni to'liq kiriting. / Please enter a complete phone number.";
+            const errorMsg = "Iltimos, telefon raqamingizni kiriting.";
             setPhoneError(errorMsg);
             toast.error(errorMsg);
             document.getElementById("phone")?.focus();
             return;
         } else {
             setPhoneError(null);
-        }
-        if (!user?.id || !token) {
-            toast.error("Iltimos, avval tizimga kiring.");
-            return;
-        }
-        if (deliveryMethod === "delivery" && !selectedAddressId) {
-            toast.error("Iltimos, yetkazib berish manzilini tanlang.");
-            return;
-        }
-        if (deliveryMethod === "bts") {
-            if (!btsRegionId) {
-                toast.error("Iltimos, BTS yetkazib berish viloyatini tanlang.");
-                return;
-            }
-            if (!btsBranchId) {
-                toast.error("Iltimos, BTS filialini tanlang.");
-                return;
-            }
-        }
-        if (!activeCartItems || activeCartItems.length === 0) {
-            toast.error("Savatingiz bo'sh.");
-            return;
-        }
-
-        const storedVariants = variantMap;
-
-        const invalidItem = activeCartItems.find((item: any) => {
-            const types = productTypesMap[item.productId];
-            const requiresVariant = types && types.length > 0;
-            const hasSelectedVariant = storedVariants[String(item.productId)];
-            return requiresVariant && !hasSelectedVariant;
-        });
-
-        if (invalidItem) {
-            toast.error('Iltimos, mahsulot turini tanlang: ' + invalidItem.productNameUz);
-            if (onRequireVariant) onRequireVariant(invalidItem.productId);
-            return;
-        }
-
+        }
+        if (!user?.id || !token) {
+            toast.error("Iltimos, avval tizimga kiring.");
+            return;
+        }
+        if (deliveryMethod === "delivery" && !selectedAddressId) {
+            toast.error("Iltimos, yetkazib berish manzilini tanlang.");
+            return;
+        }
+        if (deliveryMethod === "bts") {
+            if (!btsRegionId) {
+                toast.error("Iltimos, BTS yetkazib berish viloyatini tanlang.");
+                return;
+            }
+            if (!btsBranchId) {
+                toast.error("Iltimos, BTS filialini tanlang.");
+                return;
+            }
+        }
+        if (!activeCartItems || activeCartItems.length === 0) {
+            toast.error("Savatingiz bo'sh.");
+            return;
+        }
+
+        const storedVariants = variantMap;
+        const invalidItem = activeCartItems.find((item: any) => {
+            const types = productTypesMap[item.productId];
+            const requiresVariant = types && types.length > 0;
+            const hasSelectedVariant = storedVariants[String(item.productId)];
+            return requiresVariant && !hasSelectedVariant;
+        });
+
+        if (invalidItem) {
+            toast.error('Iltimos, mahsulot turini tanlang: ' + invalidItem.productNameUz);
+            if (onRequireVariant) onRequireVariant(invalidItem.productId);
+            return;
+        }
+
         setIsSubmitting(true);
-        // Update user profile if name or phone changed during checkout
         if (user && (phone !== user.phone || fullName !== user.fullName)) {
             try {
                 await updateUserProfile({
@@ -304,76 +275,62 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
             } catch (err) {
                 console.error("Failed to sync profile update on checkout:", err);
             }
-        }
-        try {
-            // Build the final note combining user's custom note + variant info + BTS details
-            const variantNote = buildVariantNote();
-            
-            let btsNote = null;
-            if (deliveryMethod === "bts" && btsRegionId && btsBranchId) {
-                const regionName = btsRegionName || BTS_REGIONS_MAP[btsRegionId] || btsRegionId;
+        }
+        try {
+            let btsNote = null;
+            if (deliveryMethod === "bts" && btsRegionId && btsBranchId) {
+                const regionName = btsRegionName || BTS_REGIONS_MAP[btsRegionId] || btsRegionId;
                 const branchObj = btsBranchName ? {
                     name: btsBranchName,
                     address: btsBranchAddress || "",
                     phone: btsBranchPhone || ""
-                } : BTS_BRANCHES_MAP[btsBranchId];
-                if (branchObj) {
-                    btsNote = `--- BTS Yetkazib Berish ---\n📍 Viloyat: ${regionName}\n🏦 Filial: ${branchObj.name}\n🏠 Manzil: ${branchObj.address}\n📞 Aloqa: ${branchObj.phone}`;
-                }
-            }
-
-            let finalNote = null;
-            const noteParts = [];
-            if (customNote.trim()) {
-                noteParts.push(customNote.trim());
-            }
-            if (variantNote) {
-                noteParts.push(`--- Selected Variants ---\n${variantNote}`);
-            }
-            if (btsNote) {
-                noteParts.push(btsNote);
-            }
-
-            if (noteParts.length > 0) {
-                finalNote = noteParts.join("\n\n");
-            }
-
-            const payload: any = {
-                userId: user.id,
-                telegramId: (user as any).telegramId || "",
-                addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
-                paymentMethod: 1, // Card/Onlayn-o'tkazma
-                deliveryMethod: deliveryMethod === "pickup" ? 0 : 1, // Map pickup to 0, both delivery & BTS to 1 (standard delivery payload indicator)
-                subtotal: dynamicCartTotal,
-                totalPrice: dynamicCartTotal,
-                phoneNumber: phone,
-                items: cartItemsWithDynamicPrices.map((item: any) => {
-                    const productTypeId = item.selectedChildType?.id || item.selectedParentType?.id || null;
-                    return {
-                        productId: item.productId,
-                        productTypeId: productTypeId ? Number(productTypeId) : null,
-                        quantity: item.quantity,
-                        unitPrice: item.displayPrice,
-                        totalPrice: item.itemTotal
-                    };
-                })
-            };
-
-            console.log("DEBUG_ORDER_PAYLOAD:", JSON.stringify(payload, null, 2));
-
-            // Include note only if there is content
-            if (finalNote) {
-                payload.note = finalNote;
-            }
-
-            const res = await api.post("/api/orders", payload, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {})
-                }
-            });
-
-            // 4. Cleanup: ONLY AFTER a successful 200/201 API response for order creation
+                } : BTS_BRANCHES_MAP[btsBranchId];
+                if (branchObj) {
+                    btsNote = `--- BTS Yetkazib Berish ---\n📍 Viloyat: ${regionName}\n🏦 Filial: ${branchObj.name}\n🏠 Manzil: ${branchObj.address}\n📞 Aloqa: ${branchObj.phone}`;
+                }
+            }
+
+            let finalNote = null;
+            const noteParts = [];
+            if (customNote.trim()) {
+                noteParts.push(customNote.trim());
+            }
+            if (btsNote) {
+                noteParts.push(btsNote);
+            }
+
+            if (noteParts.length > 0) {
+                finalNote = noteParts.join("\n\n");
+            }
+
+            const payload: any = {
+                userId: user.id,
+                addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
+                deliveryMethod: deliveryMethod === "pickup" ? "Pickup" : (deliveryMethod === "bts" ? "Bts" : "Courier"),
+                paymentMethod: paymentMethod === "online" ? "Card" : "Cash",
+                promoCode: null,
+                items: cartItemsWithDynamicPrices.map((item: any) => {
+                    const productTypeId = item.selectedChildType?.id || item.selectedParentType?.id || null;
+                    return {
+                        productId: item.productId,
+                        productTypeId: productTypeId ? (isNaN(Number(productTypeId)) ? productTypeId : Number(productTypeId)) : null,
+                        quantity: item.quantity
+                    };
+                }),
+                phoneNumber: phone
+            };
+
+            if (finalNote) {
+                payload.note = finalNote;
+            }
+
+            const res = await api.post("/api/orders", payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
             if (buyNowItems.length === 0) {
                 localStorage.removeItem(VARIANTS_STORAGE_KEY);
                 try {
