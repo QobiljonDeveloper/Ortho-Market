@@ -19,8 +19,8 @@ const BASE_URL = (() => {
 })();
 
 export interface RegionApi {
-    regionCode: string;
-    nameUz: string;
+    code: string;
+    name: string;
 }
 
 export interface CityApi {
@@ -38,60 +38,71 @@ export interface BranchApi {
     regionCode: string;
 }
 
-// Rich Mock Fallbacks
+// Rich Mock Fallbacks using string codes with leading zeros (e.g. '01')
 const MOCK_REGIONS: RegionApi[] = [
-    { regionCode: "tashkent", nameUz: "Toshkent shahri" },
-    { regionCode: "samarkand", nameUz: "Samarqand viloyati" },
-    { regionCode: "fergana", nameUz: "Farg'ona viloyati" },
-    { regionCode: "bukhara", nameUz: "Buxoro viloyati" }
+    { code: "01", name: "Toshkent shahri" },
+    { code: "10", name: "Toshkent viloyati" },
+    { code: "18", name: "Samarqand viloyati" },
+    { code: "30", name: "Farg'ona viloyati" },
+    { code: "06", name: "Buxoro viloyati" }
 ];
 
 const MOCK_CITIES: Record<string, CityApi[]> = {
-    tashkent: [
-        { cityCode: "tashkent-city", nameUz: "Toshkent shahri", regionCode: "tashkent" }
+    "01": [
+        { cityCode: "tashkent-city", nameUz: "Toshkent shahri", regionCode: "01" }
     ],
-    samarkand: [
-        { cityCode: "samarkand-city", nameUz: "Samarqand shahri", regionCode: "samarkand" },
-        { cityCode: "gagarin-city", nameUz: "Gagarin shahri", regionCode: "samarkand" }
+    "10": [
+        { cityCode: "angren-city", nameUz: "Angren shahri", regionCode: "10" },
+        { cityCode: "chirchik-city", nameUz: "Chirchiq shahri", regionCode: "10" }
     ],
-    fergana: [
-        { cityCode: "fergana-city", nameUz: "Farg'ona shahri", regionCode: "fergana" },
-        { cityCode: "kokand-city", nameUz: "Qo'qon shahri", regionCode: "fergana" },
-        { cityCode: "margilan-city", nameUz: "Marg'ilon shahri", regionCode: "fergana" }
+    "18": [
+        { cityCode: "samarkand-city", nameUz: "Samarqand shahri", regionCode: "18" },
+        { cityCode: "gagarin-city", nameUz: "Gagarin shahri", regionCode: "18" }
     ],
-    bukhara: [
-        { cityCode: "bukhara-city", nameUz: "Buxoro shahri", regionCode: "bukhara" },
-        { cityCode: "gijduvan-city", nameUz: "G'ijduvon tumani", regionCode: "bukhara" }
+    "30": [
+        { cityCode: "fergana-city", nameUz: "Farg'ona shahri", regionCode: "30" },
+        { cityCode: "kokand-city", nameUz: "Qo'qon shahri", regionCode: "30" },
+        { cityCode: "margilan-city", nameUz: "Marg'ilon shahri", regionCode: "30" }
+    ],
+    "06": [
+        { cityCode: "bukhara-city", nameUz: "Buxoro shahri", regionCode: "06" },
+        { cityCode: "gijduvan-city", nameUz: "G'ijduvon tumani", regionCode: "06" }
     ]
 };
 
 const MOCK_BRANCHES: Record<string, BranchApi[]> = {
     "tashkent-city": [
-        { id: "bts-tashkent-1", nameUz: "BTS Yunusobod filiali", addressUz: "Yunusobod tumani, 19-kvartal, 4-uy", phone: "+998 71 207-00-50", cityCode: "tashkent-city", regionCode: "tashkent" },
-        { id: "bts-tashkent-2", nameUz: "BTS Chilonzor filiali", addressUz: "Chilonzor tumani, Qatortol ko'chasi, 24-uy", phone: "+998 71 207-00-51", cityCode: "tashkent-city", regionCode: "tashkent" },
-        { id: "bts-tashkent-3", nameUz: "BTS Mirobod (Bosh ofis)", addressUz: "Mirobod tumani, Taras Shevchenko ko'chasi, 38-uy", phone: "+998 71 207-00-52", cityCode: "tashkent-city", regionCode: "tashkent" }
+        { id: "bts-tashkent-1", nameUz: "BTS Yunusobod filiali", addressUz: "Yunusobod tumani, 19-kvartal, 4-uy", phone: "+998 71 207-00-50", cityCode: "tashkent-city", regionCode: "01" },
+        { id: "bts-tashkent-2", nameUz: "BTS Chilonzor filiali", addressUz: "Chilonzor tumani, Qatortol ko'chasi, 24-uy", phone: "+998 71 207-00-51", cityCode: "tashkent-city", regionCode: "01" },
+        { id: "bts-tashkent-3", nameUz: "BTS Mirobod (Bosh ofis)", addressUz: "Mirobod tumani, Taras Shevchenko ko'chasi, 38-uy", phone: "+998 71 207-00-52", cityCode: "tashkent-city", regionCode: "01" }
+    ],
+    "angren-city": [
+        { id: "bts-angren-1", nameUz: "BTS Angren filiali", addressUz: "Angren shahri, Mustaqillik ko'chasi, 12-uy", phone: "+998 71 207-00-60", cityCode: "angren-city", regionCode: "10" }
+    ],
+    "chirchik-city": [
+        { id: "bts-chirchik-1", nameUz: "BTS Chirchiq filiali", addressUz: "Chirchiq shahri, Alisher Navoiy ko'chasi, 45-uy", phone: "+998 71 207-00-70", cityCode: "chirchik-city", regionCode: "10" }
     ],
     "samarkand-city": [
-        { id: "bts-sam-1", nameUz: "BTS Samarqand markaziy filiali", addressUz: "Samarqand shahri, Gagarin ko'chasi, 85-uy", phone: "+998 66 233-00-50", cityCode: "samarkand-city", regionCode: "samarkand" },
-        { id: "bts-sam-2", nameUz: "BTS Registon filiali", addressUz: "Samarqand shahri, Registon ko'chasi, 12-uy", phone: "+998 66 233-00-51", cityCode: "samarkand-city", regionCode: "samarkand" }
+        { id: "bts-sam-1", nameUz: "BTS Samarqand markaziy filiali", addressUz: "Samarqand shahri, Gagarin ko'chasi, 85-uy", phone: "+998 66 233-00-50", cityCode: "samarkand-city", regionCode: "18" },
+        { id: "bts-sam-2", nameUz: "BTS Registon filiali", addressUz: "Samarqand shahri, Registon ko'chasi, 12-uy", phone: "+998 66 233-00-51", cityCode: "samarkand-city", regionCode: "18" }
     ],
     "gagarin-city": [
-        { id: "bts-sam-3", nameUz: "BTS Gagarin filiali", addressUz: "Gagarin shahri, Sharof Rashidov ko'chasi, 15-uy", phone: "+998 66 233-00-52", cityCode: "gagarin-city", regionCode: "samarkand" }
+        { id: "bts-sam-3", nameUz: "BTS Gagarin filiali", addressUz: "Gagarin shahri, Sharof Rashidov ko'chasi, 15-uy", phone: "+998 66 233-00-52", cityCode: "gagarin-city", regionCode: "18" }
     ],
     "fergana-city": [
-        { id: "bts-fer-1", nameUz: "BTS Farg'ona shahar filiali", addressUz: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 45-uy", phone: "+998 73 244-00-50", cityCode: "fergana-city", regionCode: "fergana" }
+        { id: "bts-fer-1", nameUz: "BTS Farg'ona shahar filiali", addressUz: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 45-uy", phone: "+998 73 244-00-50", cityCode: "fergana-city", regionCode: "30" }
     ],
     "kokand-city": [
-        { id: "bts-fer-2", nameUz: "BTS Qo'qon filiali", addressUz: "Qo'qon shahri, Turon ko'chasi, 110-uy", phone: "+998 73 542-00-51", cityCode: "kokand-city", regionCode: "fergana" }
+        { id: "bts-fer-2", nameUz: "BTS Qo'qon filiali", addressUz: "Qo'qon shahri, Turon ko'chasi, 110-uy", phone: "+998 73 542-00-51", cityCode: "kokand-city", regionCode: "30" }
     ],
     "margilan-city": [
-        { id: "bts-fer-3", nameUz: "BTS Marg'ilon filiali", addressUz: "Marg'ilon shahri, Mustaqillik ko'chasi, 5-uy", phone: "+998 73 237-00-52", cityCode: "margilan-city", regionCode: "fergana" }
+        { id: "bts-fer-3", nameUz: "BTS Marg'ilon filiali", addressUz: "Marg'ilon shahri, Mustaqillik ko'chasi, 5-uy", phone: "+998 73 237-00-52", cityCode: "margilan-city", regionCode: "30" }
     ],
     "bukhara-city": [
-        { id: "bts-bux-1", nameUz: "BTS Buxoro markaziy filiali", addressUz: "Buxoro shahri, Navoiy shoh ko'chasi, 18-uy", phone: "+998 65 221-00-50", cityCode: "bukhara-city", regionCode: "bukhara" }
+        { id: "bts-bux-1", nameUz: "BTS Buxoro markaziy filiali", addressUz: "Buxoro shahri, Navoiy shoh ko'chasi, 18-uy", phone: "+998 65 221-00-50", cityCode: "bukhara-city", regionCode: "06" }
     ],
     "gijduvan-city": [
-        { id: "bts-bux-2", nameUz: "BTS G'ijduvon filiali", addressUz: "G'ijduvon tumani, Yusuf Hamadoniy ko'chasi, 3-uy", phone: "+998 65 572-00-51", cityCode: "gijduvan-city", regionCode: "bukhara" }
+        { id: "bts-bux-2", nameUz: "BTS G'ijduvon filiali", addressUz: "G'ijduvon tumani, Yusuf Hamadoniy ko'chasi, 3-uy", phone: "+998 65 572-00-51", cityCode: "gijduvan-city", regionCode: "06" }
     ]
 };
 
@@ -128,7 +139,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
     const [loadingCities, setLoadingCities] = useState<boolean>(false);
     const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
 
-    const activeRegion = regions.find((r) => r.regionCode === selectedRegionCode);
+    const activeRegion = regions.find((r) => r.code === selectedRegionCode);
     const activeBranch = branches.find((b) => String(b.id) === selectedBranchId);
 
     // Propagate choices to parent Checkout Component
@@ -138,7 +149,7 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                 method: deliveryMethod,
                 regionId: deliveryMethod === "bts" ? (selectedRegionCode || null) : null,
                 branchId: deliveryMethod === "bts" ? (selectedBranchId || null) : null,
-                regionName: deliveryMethod === "bts" && activeRegion ? activeRegion.nameUz : null,
+                regionName: deliveryMethod === "bts" && activeRegion ? activeRegion.name : null,
                 branchName: deliveryMethod === "bts" && activeBranch ? activeBranch.nameUz : null,
                 branchAddress: deliveryMethod === "bts" && activeBranch ? activeBranch.addressUz : null,
                 branchPhone: deliveryMethod === "bts" && activeBranch ? activeBranch.phone : null,
@@ -146,28 +157,31 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
         }
     }, [deliveryMethod, selectedRegionCode, selectedBranchId, activeRegion, activeBranch, onChange]);
 
-    // Step 1: Fetch regions list on selecting BTS Pochta
+    // Step 1: Fetch regions list on mount (immediately)
     useEffect(() => {
-        if (deliveryMethod === "bts" && regions.length === 0) {
-            const loadRegions = async () => {
-                setLoadingRegions(true);
-                try {
-                    const res = await api.get(`${BASE_URL}/api/bts/regions`);
-                    if (Array.isArray(res.data) && res.data.length > 0) {
-                        setRegions(res.data);
-                    } else {
-                        throw new Error("Empty regions data");
-                    }
-                } catch (err) {
-                    console.warn("Regions API failed, falling back to mock:", err);
-                    setRegions(MOCK_REGIONS);
-                } finally {
-                    setLoadingRegions(false);
+        const loadRegions = async () => {
+            setLoadingRegions(true);
+            try {
+                const res = await api.get(`${BASE_URL}/api/bts/regions`);
+                if (Array.isArray(res.data) && res.data.length > 0) {
+                    // Map response fields code/regionCode and name/nameUz dynamically
+                    const mapped = res.data.map((r: any) => ({
+                        code: String(r.code !== undefined && r.code !== null ? r.code : (r.regionCode !== undefined && r.regionCode !== null ? r.regionCode : "")).trim(),
+                        name: String(r.name || r.nameUz || "").trim()
+                    })).filter((r: any) => r.code);
+                    setRegions(mapped);
+                } else {
+                    throw new Error("Empty regions data");
                 }
-            };
-            loadRegions();
-        }
-    }, [deliveryMethod, regions.length]);
+            } catch (err) {
+                console.warn("Regions API failed, falling back to mock:", err);
+                setRegions(MOCK_REGIONS);
+            } finally {
+                setLoadingRegions(false);
+            }
+        };
+        loadRegions();
+    }, []);
 
     // Step 2: Fetch cities list on selecting a region
     useEffect(() => {
@@ -180,7 +194,12 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                         params: { regionCode: selectedRegionCode }
                     });
                     if (Array.isArray(res.data) && res.data.length > 0) {
-                        setCities(res.data);
+                        const mapped = res.data.map((c: any) => ({
+                            cityCode: String(c.code !== undefined && c.code !== null ? c.code : (c.cityCode !== undefined && c.cityCode !== null ? c.cityCode : "")).trim(),
+                            nameUz: String(c.name || c.nameUz || "").trim(),
+                            regionCode: String(c.regionCode || "").trim()
+                        })).filter((c: any) => c.cityCode);
+                        setCities(mapped);
                     } else {
                         throw new Error("Empty cities data");
                     }
@@ -208,7 +227,15 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                         params: { regionCode: selectedRegionCode, cityCode: selectedCityCode }
                     });
                     if (Array.isArray(res.data) && res.data.length > 0) {
-                        setBranches(res.data);
+                        const mapped = res.data.map((b: any) => ({
+                            id: String(b.id !== undefined && b.id !== null ? b.id : (b.branchCode !== undefined && b.branchCode !== null ? b.branchCode : "")).trim(),
+                            nameUz: String(b.name || b.nameUz || "").trim(),
+                            addressUz: String(b.address || b.addressUz || "").trim(),
+                            phone: String(b.phone || "").trim(),
+                            cityCode: String(b.cityCode || "").trim(),
+                            regionCode: String(b.regionCode || "").trim()
+                        })).filter((b: any) => b.id);
+                        setBranches(mapped);
                     } else {
                         throw new Error("Empty branches data");
                     }
@@ -385,8 +412,8 @@ export function BtsDeliverySelector({ onChange }: BtsDeliverySelectorProps) {
                                     <>
                                         <option value="" disabled className="text-slate-400 font-medium">Viloyatni tanlang...</option>
                                         {regions.map((region) => (
-                                            <option key={region.regionCode} value={region.regionCode} className="text-slate-800 font-semibold">
-                                                {region.nameUz}
+                                            <option key={region.code} value={region.code} className="text-slate-800 font-semibold">
+                                                {region.name}
                                             </option>
                                         ))}
                                     </>
