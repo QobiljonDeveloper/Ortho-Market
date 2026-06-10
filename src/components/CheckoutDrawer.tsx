@@ -58,6 +58,24 @@ const REGION_MAP: Record<number, string> = {
     13: "Qoraqalpog'iston"
 };
 
+interface OrderItemPayload {
+    productId: string;
+    productTypeId: string | null;
+    quantity: number;
+}
+
+interface CreateOrderRequest {
+    userId: string;
+    addressId: string | null;
+    paymentMethod: number;
+    deliveryMethod: number;
+    note: string;
+    phoneNumber: string;
+    telegramId: number;
+    items: OrderItemPayload[];
+    promoCode: string | null;
+}
+
 interface CheckoutDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -290,7 +308,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 }
             }
 
-            let finalNote = null;
+            let finalNote = "";
             const noteParts = [];
             if (customNote.trim()) {
                 noteParts.push(customNote.trim());
@@ -303,26 +321,24 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 finalNote = noteParts.join("\n\n");
             }
 
-            const payload: any = {
+            const payload: CreateOrderRequest = {
                 userId: user.id,
                 addressId: deliveryMethod === "delivery" ? selectedAddressId : null,
-                deliveryMethod: deliveryMethod === "pickup" ? "Pickup" : (deliveryMethod === "bts" ? "Bts" : "Courier"),
-                paymentMethod: paymentMethod === "online" ? "Card" : "Cash",
+                deliveryMethod: deliveryMethod === "pickup" ? 0 : (deliveryMethod === "bts" ? 2 : 1),
+                paymentMethod: paymentMethod === "online" ? 1 : 0,
                 promoCode: null,
                 items: cartItemsWithDynamicPrices.map((item: any) => {
                     const productTypeId = item.selectedChildType?.id || item.selectedParentType?.id || null;
                     return {
-                        productId: item.productId,
-                        productTypeId: productTypeId ? (isNaN(Number(productTypeId)) ? productTypeId : Number(productTypeId)) : null,
-                        quantity: item.quantity
+                        productId: String(item.productId),
+                        productTypeId: productTypeId ? String(productTypeId) : null,
+                        quantity: Number(item.quantity)
                     };
                 }),
-                phoneNumber: phone
+                phoneNumber: phone,
+                note: finalNote,
+                telegramId: user.telegramId && !isNaN(Number(user.telegramId)) ? Number(user.telegramId) : 0
             };
-
-            if (finalNote) {
-                payload.note = finalNote;
-            }
 
             const res = await api.post("/api/orders", payload, {
                 headers: {
