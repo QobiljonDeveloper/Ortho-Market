@@ -110,6 +110,83 @@ export function AddToCartDrawer({
         }, 200);
     };
 
+    const handleBuyNow = (selectedItems: any[]) => {
+        // Validation logic is same as handleAddToCart
+        const hasVariantsActual = variantsData && variantsData.length > 0;
+        if (hasVariantsActual) {
+            const totalQty = selectedItems ? selectedItems.reduce((sum, item) => sum + item.quantity, 0) : 0;
+            if (!selectedItems || selectedItems.length === 0 || totalQty === 0) {
+                toast.error("Iltimos, mahsulot turini tanlang");
+                return;
+            }
+            for (const parent of variantsData) {
+                const parentSelection = selectedItems.find(item => item.type === "parent" && String(item.id) === String(parent.id));
+                const parentQty = parentSelection ? parentSelection.quantity : 0;
+                const childrenList = parent.children || parent.subTypes || [];
+                const hasChildren = childrenList.length > 0;
+                if (parentQty > 0 && hasChildren) {
+                    const selectedChildren = selectedItems.filter(item => 
+                        item.type === "subType" && 
+                        String(item.parentId) === String(parent.id)
+                    );
+                    const childQty = selectedChildren.reduce((sum, item) => sum + item.quantity, 0);
+                    if (selectedChildren.length === 0 || childQty === 0) {
+                        toast.error(`Iltimos, "${parent.name}" uchun kichik turni tanlang.`);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // --- Safe dispatch to cart as well ---
+        const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+        const saved = localStorage.getItem('tg_cart_variants');
+        const savedMap = saved ? JSON.parse(saved) : {};
+        savedMap[String(product.id)] = {
+            productTypeId: "multi",
+            selections: selectedItems.map(item => ({
+                productTypeId: item.id,
+                parentId: item.parentId,
+                name: item.name,
+                priceExtra: item.priceExtra,
+                quantity: item.quantity
+            }))
+        };
+        localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
+        addToCart(product);
+        updateQuantity(product.id, totalQuantity);
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('variantSaved'));
+
+        // Construct buyNowItem payload
+        const buyNowItems = selectedItems.map(item => {
+            const isSub = item.type === 'subType';
+            const parent = isSub ? variantsData.find(p => p.id === item.parentId) : variantsData.find(p => p.id === item.id);
+            const child = isSub ? (parent?.children || parent?.subTypes || []).find((c: any) => c.id === item.id) : null;
+            
+            return {
+                id: `${product.id}-${item.id}-`,
+                productId: String(product.id),
+                productNameUz: product.nameUz,
+                quantity: item.quantity,
+                unitPrice: product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice,
+                basePrice: product.basePrice,
+                discountPrice: product.discountPrice,
+                primaryImageUrl: product.images?.find(img => img.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
+                selectedParentType: parent ? { id: String(parent.id), name: parent.name, price: parent.priceExtra || parent.price || 0 } : null,
+                selectedChildType: child ? { id: String(child.id), name: child.name, price: child.priceExtra || child.price || 0 } : null,
+            };
+        });
+
+        // Close the drawer FIRST, then dispatch after a short delay so the
+        // CheckoutDrawer event listener in CartDrawer has time to receive it
+        // without the Sheet unmount animation interfering.
+        onOpenChange(false);
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('openCheckout', { detail: { buyNowItem: buyNowItems } }));
+        }, 80);
+    };
+
     // Reset state on open
     useEffect(() => {
         if (open) {
@@ -249,6 +326,7 @@ export function AddToCartDrawer({
                                     basePrice={product.discountPrice !== undefined && product.discountPrice < product.basePrice ? product.discountPrice : product.basePrice}
                                     variants={variantsData}
                                     onAddToCart={handleAddToCart}
+                                    onBuyNow={handleBuyNow}
                                 />
                             ) : (
                                 <ProductVariants

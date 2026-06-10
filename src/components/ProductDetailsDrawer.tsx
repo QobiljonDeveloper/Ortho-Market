@@ -131,6 +131,26 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
             }
         }
 
+        // --- Safe dispatch to cart as well ---
+        const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+        const saved = localStorage.getItem('tg_cart_variants');
+        const savedMap = saved ? JSON.parse(saved) : {};
+        savedMap[String(product.id)] = {
+            productTypeId: "multi",
+            selections: selectedItems.map(item => ({
+                productTypeId: item.id,
+                parentId: item.parentId,
+                name: item.name,
+                priceExtra: item.priceExtra,
+                quantity: item.quantity
+            }))
+        };
+        localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
+        addToCart(product);
+        updateQuantity(product.id, totalQuantity);
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('variantSaved'));
+
         // Construct buyNowItem payload
         const buyNowItems = selectedItems.map(item => {
             const isSub = item.type === 'subType';

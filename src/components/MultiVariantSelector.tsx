@@ -491,7 +491,8 @@ export function MultiVariantSelector({
                     <button
                         type="button"
                         onClick={() => handleSubmit("buynow")}
-                        className="w-full h-12 rounded-full font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center justify-center gap-2 border border-slate-200"
+                        disabled={totalSelectedQuantity === 0}
+                        className="w-full h-12 rounded-full font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center justify-center gap-2 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <ShoppingBag className="w-4.5 h-4.5" />
                         1 klikda xarid qilish
