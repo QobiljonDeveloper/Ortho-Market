@@ -7,10 +7,10 @@ export const cartService = {
         return data;
     },
 
-    addToCart: async (userId: string, productId: string) => {
+    addToCart: async (userId: string, productId: string, quantity: number = 1) => {
         const { data } = await api.post(`/api/cart/${userId}/items`, {
             productId,
-            quantity: 1
+            quantity
         });
         return data;
     },

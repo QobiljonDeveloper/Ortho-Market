@@ -27,17 +27,17 @@ export const useCartApi = (userId: string | undefined | null) => {
 
     // Add to cart mutation
     const addToCartMutation = useMutation({
-        mutationFn: async (product: Product) => {
+        mutationFn: async ({ product, quantity }: { product: Product; quantity: number }) => {
             if (!safeUserId) throw new Error("User not logged in");
             try {
-                const data = await cartService.addToCart(safeUserId, product.id);
+                const data = await cartService.addToCart(safeUserId, product.id, quantity);
                 return data;
             } catch (error: any) {
                 console.error("Error adding product to cart:", error);
                 throw error;
             }
         },
-        onMutate: async (product: Product) => {
+        onMutate: async ({ product, quantity }: { product: Product; quantity: number }) => {
             await queryClient.cancelQueries({ queryKey: ['cart', safeUserId] });
             const previousData = queryClient.getQueryData<any>(['cart', safeUserId]);
             const previousCart: CartItem[] = Array.isArray(previousData) ? previousData : (previousData?.items || []);
@@ -47,7 +47,7 @@ export const useCartApi = (userId: string | undefined | null) => {
                 queryClient.setQueryData<CartItem[]>(['cart', safeUserId],
                     previousCart.map(item =>
                         item?.productId === product.id
-                            ? { ...item, quantity: (item.quantity || 0) + 1 }
+                            ? { ...item, quantity: (item.quantity || 0) + quantity }
                             : item
                     )
                 );
@@ -63,13 +63,13 @@ export const useCartApi = (userId: string | undefined | null) => {
                     basePrice: product.basePrice || 0,
                     discountPrice: product.discountPrice,
                     primaryImageUrl: product.primaryImageUrl || product.images?.find(i => i.isPrimary)?.url || product.images?.[0]?.url || product.image || null,
-                    quantity: 1
+                    quantity: quantity
                 };
                 queryClient.setQueryData<CartItem[]>(['cart', safeUserId], [...previousCart, newItem]);
             }
             return { previousCart: previousData };
         },
-        onError: (err: any, _product, context) => {
+        onError: (err: any, _vars, context) => {
             console.error("=== CART DEBUG: Add to Cart ERROR ===", err?.response?.data || err);
             if (context?.previousCart) {
                 queryClient.setQueryData(['cart', safeUserId], context.previousCart);

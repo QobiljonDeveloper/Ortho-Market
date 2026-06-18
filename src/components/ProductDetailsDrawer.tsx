@@ -94,13 +94,10 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
         
         localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
         
-        addToCart(product);
-        setTimeout(() => {
-            updateQuantity(product.id, totalQuantity);
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new Event('variantSaved'));
-            onOpenChange(false);
-        }, 200);
+        addToCart(product, undefined, undefined, totalQuantity);
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('variantSaved'));
+        onOpenChange(false);
     };
 
     const handleBuyNow = (selectedItems: any[]) => {
@@ -146,8 +143,7 @@ export function ProductDetailsDrawer({ open, onOpenChange, product, isLoading }:
             }))
         };
         localStorage.setItem('tg_cart_variants', JSON.stringify(savedMap));
-        addToCart(product);
-        updateQuantity(product.id, totalQuantity);
+        addToCart(product, undefined, undefined, totalQuantity);
         window.dispatchEvent(new Event('storage'));
         window.dispatchEvent(new Event('variantSaved'));
 

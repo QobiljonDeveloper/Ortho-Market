@@ -62,7 +62,9 @@ interface CartContextType {
 
         selectedParentType?: SelectedTypeDetail | null,
 
-        selectedChildType?: SelectedTypeDetail | null
+        selectedChildType?: SelectedTypeDetail | null,
+
+        quantity?: number
 
     ) => void;
 
@@ -729,7 +731,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         selectedParentType?: SelectedTypeDetail | null,
 
-        selectedChildType?: SelectedTypeDetail | null
+        selectedChildType?: SelectedTypeDetail | null,
+
+        quantity: number = 1
 
     ) => {
 
@@ -979,7 +983,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
                         ...nextCart[existingIdx],
 
-                        quantity: nextCart[existingIdx].quantity + 1
+                        quantity: nextCart[existingIdx].quantity + quantity
 
                     };
 
@@ -993,7 +997,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
                         productNameUz: product.nameUz || product.name || '',
 
-                        quantity: 1,
+                        quantity: quantity,
 
                         unitPrice: unitPrice,
 
@@ -1039,7 +1043,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
             if (addToCartMutation && typeof addToCartMutation.mutate === 'function') {
 
-                addToCartMutation.mutate(product);
+                addToCartMutation.mutate({ product, quantity });
 
             }
 
