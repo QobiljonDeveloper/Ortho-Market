@@ -122,13 +122,15 @@ export function calculateCartItemTotal(item: CartItem, variantMap?: Record<strin
 
     if (variant?.productTypeId === "multi" && Array.isArray(variant.selections)) {
 
-        const selectionsTotal = variant.selections.reduce((sum: number, s: any) => {
+        // Each selection already carries its own quantity — do NOT multiply
+
+        // by item.quantity again, as that would double-count.
+
+        return variant.selections.reduce((sum: number, s: any) => {
 
             return sum + (s.quantity * (basePrice + (s.priceExtra || 0)));
 
         }, 0);
-
-        return selectionsTotal * (item.quantity || 0);
 
     }
 
@@ -645,27 +647,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         return clientCart.reduce((total, item) => {
 
-            const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
+            // Delegate to the shared pure function so multi-variant
 
-                ? item.discountPrice
+            // items are calculated consistently without double-counting.
 
-                : (item.basePrice || item.unitPrice || 0);
-
-            
-
-            const parentPrice = item.selectedParentType?.price || 0;
-
-            const childPrice = item.selectedChildType?.price || 0;
-
-            
-
-            const unitPrice = basePrice + parentPrice + childPrice;
-
-            return total + (unitPrice * item.quantity);
+            return total + calculateCartItemTotal(item, variantMap);
 
         }, 0);
 
-    }, [clientCart]);
+    }, [clientCart, variantMap]);
 
 
 
