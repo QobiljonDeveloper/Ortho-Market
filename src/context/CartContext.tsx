@@ -106,46 +106,16 @@ export const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
 
 
-export function calculateCartItemTotal(item: CartItem, variantMap?: Record<string, any>): number {
-
+export function calculateCartItemTotal(item: CartItem): number {
     const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
-
         ? item.discountPrice
-
         : (item.basePrice || item.unitPrice || 0);
 
-
-
-    const variant = variantMap ? variantMap[String(item.productId)] : null;
-
-
-
-    if (variant?.productTypeId === "multi" && Array.isArray(variant.selections)) {
-
-        // Each selection already carries its own quantity — do NOT multiply
-
-        // by item.quantity again, as that would double-count.
-
-        return variant.selections.reduce((sum: number, s: any) => {
-
-            return sum + (s.quantity * (basePrice + (s.priceExtra || 0)));
-
-        }, 0);
-
-    }
-
-
-
     const parentPrice = item.selectedParentType?.price || 0;
-
     const childPrice = item.selectedChildType?.price || 0;
 
-
-
     const unitPrice = basePrice + parentPrice + childPrice;
-
     return unitPrice * item.quantity;
-
 }
 
 
@@ -644,18 +614,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 
     const cartTotal = useMemo(() => {
-
         return clientCart.reduce((total, item) => {
-
             // Delegate to the shared pure function so multi-variant
-
             // items are calculated consistently without double-counting.
-
-            return total + calculateCartItemTotal(item, variantMap);
-
+            return total + calculateCartItemTotal(item);
         }, 0);
-
-    }, [clientCart, variantMap]);
+    }, [clientCart]);
 
 
 
