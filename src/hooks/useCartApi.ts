@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cartService } from '../services/cartService';
 import { Product, CartItem } from '../types';
 import { toast } from 'sonner';
+import { getEffectivePrice } from '../utils/calculateTotal';
 
 export const useCartApi = (userId: string | undefined | null) => {
     const queryClient = useQueryClient();
@@ -52,8 +53,7 @@ export const useCartApi = (userId: string | undefined | null) => {
                     )
                 );
             } else {
-                const hasDiscount = product.discountPrice !== undefined && product.discountPrice < product.basePrice;
-                const activePrice = hasDiscount ? product.discountPrice! : product.basePrice;
+                const activePrice = getEffectivePrice(product.discountPrice, product.basePrice);
 
                 const newItem: CartItem = {
                     id: `temp-${Date.now()}`,

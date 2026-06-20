@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode, useCallback, useState, useEffect, useMemo } from "react";
 
 import type { Product, CartItem, SelectedTypeDetail } from "../types";
+import { calcCartItemTotal, calcCartItemUnitPrice, getEffectivePrice } from "../utils/calculateTotal";
 
 import { useAuthContext } from "./AuthContext";
 
@@ -106,16 +107,12 @@ export const VARIANTS_STORAGE_KEY = 'tg_cart_variants';
 
 
 
+/**
+ * @deprecated Use `calcCartItemTotal` from utils/calculateTotal instead.
+ * Kept as a thin wrapper for backward-compatibility with CheckoutDrawer imports.
+ */
 export function calculateCartItemTotal(item: CartItem): number {
-    const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
-        ? item.discountPrice
-        : (item.basePrice || item.unitPrice || 0);
-
-    const parentPrice = item.selectedParentType?.price || 0;
-    const childPrice = item.selectedChildType?.price || 0;
-
-    const unitPrice = basePrice + parentPrice + childPrice;
-    return unitPrice * item.quantity;
+    return calcCartItemTotal(item);
 }
 
 
@@ -591,23 +588,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         if (items.length === 0) return 0;
 
-        
-
-        const item = items[0];
-
-        const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
-
-            ? item.discountPrice
-
-            : (item.basePrice || item.unitPrice || 0);
-
-
-
-        const parentPrice = item.selectedParentType?.price || 0;
-
-        const childPrice = item.selectedChildType?.price || 0;
-
-        return basePrice + parentPrice + childPrice;
+        // Delegate to centralized utility — discountPrice IS the final price.
+        return calcCartItemUnitPrice(items[0]);
 
     }, [clientCart]);
 
@@ -615,9 +597,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const cartTotal = useMemo(() => {
         return clientCart.reduce((total, item) => {
-            // Delegate to the shared pure function so multi-variant
-            // items are calculated consistently without double-counting.
-            return total + calculateCartItemTotal(item);
+            // Delegate to the centralized pure utility — discountPrice IS the final price.
+            return total + calcCartItemTotal(item);
         }, 0);
     }, [clientCart]);
 
@@ -709,11 +690,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 
 
-        const basePrice = product.discountPrice !== undefined && product.discountPrice !== null && product.discountPrice < product.basePrice
-
-            ? product.discountPrice
-
-            : product.basePrice;
+        // discountPrice IS the final adjusted price — use it directly if present.
+        const basePrice = getEffectivePrice(product.discountPrice, product.basePrice);
 
 
 
@@ -1100,181 +1078,75 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 
     const updateQuantity = useCallback((keyOrId: string, quantity: number) => {
-
         if (!user?.id || !keyOrId) return;
 
-
-
         setClientCart(prev => {
-
-            const nextCart = [...prev];
-
-            let idx = nextCart.findIndex(item => item.id === keyOrId);
-
+            const newQty = Math.max(0, quantity);
+            let nextCart: CartItem[] = [];
             
+            // Strictly match item by unique ID
+            const exactItem = prev.find(item => item.id === keyOrId);
+            let targetProductId = "";
 
-            if (idx === -1) {
-
-                const items = nextCart.filter(i => i.productId === keyOrId);
-
+            if (exactItem) {
+                targetProductId = exactItem.productId;
+                if (newQty === 0) {
+                    // Immutably remove item
+                    nextCart = prev.filter(item => item.id !== keyOrId);
+                } else {
+                    // Immutably update quantity
+                    nextCart = prev.map(item => 
+                        item.id === keyOrId ? { ...item, quantity: newQty } : item
+                    );
+                }
+            } else {
+                // Fallback: match by productId (used heavily by product detail components that pass productId instead of composite ID)
+                const items = prev.filter(i => i.productId === keyOrId);
                 if (items.length > 0) {
-
+                    targetProductId = keyOrId;
                     const currentSum = items.reduce((sum, i) => sum + i.quantity, 0);
-
-                    if (currentSum === quantity) {
-
-                        return prev;
-
-                    }
+                    if (currentSum === newQty) return prev;
 
                     const firstItem = items[0];
-
-                    const firstIdx = nextCart.findIndex(i => i.id === firstItem.id);
-
                     const otherQty = items.slice(1).reduce((sum, i) => sum + i.quantity, 0);
-
-                    const newFirstQty = Math.max(0, quantity - otherQty);
-
-                    
+                    const newFirstQty = Math.max(0, newQty - otherQty);
 
                     if (newFirstQty === 0) {
-
-                        nextCart.splice(firstIdx, 1);
-
+                        nextCart = prev.filter(item => item.id !== firstItem.id);
                     } else {
-
-                        nextCart[firstIdx] = {
-
-                            ...firstItem,
-
-                            quantity: newFirstQty
-
-                        };
-
+                        nextCart = prev.map(item => 
+                            item.id === firstItem.id ? { ...item, quantity: newFirstQty } : item
+                        );
                     }
-
-                    
-
-                    const remainingQty = nextCart
-
-                        .filter(i => i.productId === keyOrId)
-
-                        .reduce((sum, i) => sum + i.quantity, 0);
-
-
-
-                    const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
-
-                    const apiItem = safeApiCart.find((i: any) => i.productId === keyOrId);
-
-
-
-                    if (apiItem) {
-
-                        if (remainingQty === 0) {
-
-                            removeCartItemMutation.mutate(apiItem.id);
-
-                        } else {
-
-                            updateQuantityMutation.mutate({ cartItemId: apiItem.id, quantity: remainingQty });
-
-                        }
-
-                    }
-
-                    
-
-                    try {
-
-                        localStorage.setItem('tg_cart_client_items', JSON.stringify(nextCart));
-
-                    } catch (err) {
-
-                        console.error("Failed to save updated cart to localStorage:", err);
-
-                    }
-
-                    return nextCart;
-
+                } else {
+                    return prev;
                 }
-
-                return prev;
-
             }
-
-
-
-            const item = nextCart[idx];
-
-            const newQty = Math.max(0, quantity);
-
-
-
-            if (newQty === 0) {
-
-                nextCart.splice(idx, 1);
-
-            } else {
-
-                nextCart[idx] = {
-
-                    ...item,
-
-                    quantity: newQty
-
-                };
-
-            }
-
-
 
             try {
-
                 localStorage.setItem('tg_cart_client_items', JSON.stringify(nextCart));
-
             } catch (err) {
-
                 console.error("Failed to save updated cart to localStorage:", err);
-
             }
 
-
-
+            // Sync with backend API
             const remainingQty = nextCart
-
-                .filter(i => i.productId === item.productId)
-
+                .filter(i => i.productId === targetProductId)
                 .reduce((sum, i) => sum + i.quantity, 0);
 
-
-
             const safeApiCart = Array.isArray(apiCart) ? apiCart : (apiCart as any)?.items || [];
-
-            const apiItem = safeApiCart.find((i: any) => i.productId === item.productId);
-
-
+            const apiItem = safeApiCart.find((i: any) => i.productId === targetProductId);
 
             if (apiItem) {
-
                 if (remainingQty === 0) {
-
                     removeCartItemMutation.mutate(apiItem.id);
-
                 } else {
-
                     updateQuantityMutation.mutate({ cartItemId: apiItem.id, quantity: remainingQty });
-
                 }
-
             }
 
-
-
             return nextCart;
-
         });
-
     }, [apiCart, user?.id, removeCartItemMutation, updateQuantityMutation]);
 
 

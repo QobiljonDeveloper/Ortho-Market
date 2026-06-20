@@ -1,16 +1,17 @@
 import { X, Package, Clock, CheckCircle2, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
-
-interface OrderHistoryProps {
-    open: boolean;
-    onClose: () => void;
-}
+import { calcOrderItemUnitPrice, calcOrderTotal } from '../utils/calculateTotal';
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { fetchProductById } from '../services/api';
 import { useAuthContext } from '../context/AuthContext';
+
+interface OrderHistoryProps {
+    open: boolean;
+    onClose: () => void;
+}
 
 export function OrderHistory({ open, onClose }: OrderHistoryProps) {
     const { user } = useAuthContext();
@@ -59,20 +60,10 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
         fetchAll();
     }, [orders]);
 
-    // Helper: reconstruct full price using fetched product data
+    // Helper: reconstruct full price using fetched product data.
+    // discountPrice IS the final adjusted price — not a discount amount to subtract.
     const getFullPrice = (item: any) => {
-        const rawPrice = item.unitPrice || 0;
-        const hasVariant = !!(item.productTypeId || item.typeId);
-        if (!hasVariant) return rawPrice;
-
-        const product = productsMap[item.productId];
-        if (!product) return rawPrice;
-
-        const prodBase = product.basePrice || 0;
-        const prodDiscount = product.discountPrice;
-        const activePrice = (prodDiscount !== undefined && prodDiscount < prodBase)
-            ? prodDiscount : prodBase;
-        return rawPrice + activePrice;
+        return calcOrderItemUnitPrice(item, productsMap);
     };
 
     useEffect(() => {
@@ -124,10 +115,8 @@ export function OrderHistory({ open, onClose }: OrderHistoryProps) {
                                 const isDelivered = order.status === 3 || order.status === "DELIVERED" || order.status === "Yetkazib berildi";
                                 const statusText = order.status === 0 ? "Qabul qilindi" : order.status === 1 ? "Tayyorlanmoqda" : order.status === 2 ? "Yo'lda" : order.status === 3 ? "Yetkazib berildi" : order.status || "Tasdiqlanmoqda";
                                 const formattedDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' }) : "Bugun";
-                                // Use getFullPrice helper (fetched product data from productsMap)
-                                const actualTotal = order.items?.reduce((sum: number, item: any) => {
-                                    return sum + (getFullPrice(item) * (item.quantity || 1));
-                                }, 0) || 0;
+                                // Use calcOrderTotal utility — discountPrice IS the final adjusted price.
+                                const actualTotal = calcOrderTotal(order.items || [], productsMap);
                                 const totalStr = actualTotal > 0 ? `${actualTotal.toLocaleString()} so'm` : "Hisoblanmoqda >";
 
                                 const paymentStatus = order.paymentStatus || 0;

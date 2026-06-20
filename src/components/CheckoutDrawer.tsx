@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
-import { useCart, calculateCartItemTotal } from "../context/CartContext";
+import { useState, useEffect, useMemo } from "react";
+import { useCart, calculateCartItemTotal } from "../context/CartContext";
+import { getEffectivePrice, calcCartItemTotal, formatSom } from "../utils/calculateTotal";
 import { useAuthContext } from "../context/AuthContext";
 import { Button } from "./ui/button";
 import {
@@ -157,19 +158,27 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
     const cartItemsWithDynamicPrices = useMemo(() => {
         return activeCartItems.map((item: any) => {
-            const basePrice = item.discountPrice !== undefined && item.discountPrice !== null && item.discountPrice < (item.basePrice || 0)
-                ? item.discountPrice
-                : (item.basePrice || item.unitPrice || 0);
+            // discountPrice IS the final adjusted price — use it directly if present.
+            const activePrice = getEffectivePrice(
+                item.discountPrice,
+                item.basePrice,
+                item.unitPrice
+            );
 
             const parentPrice = item.selectedParentType?.price || 0;
             const childPrice = item.selectedChildType?.price || 0;
 
-            const finalUnitPrice = basePrice + parentPrice + childPrice;
+            const finalUnitPrice = activePrice + parentPrice + childPrice;
+            // For strikethrough display: the original (pre-discount) base price
             const finalBasePrice = (item.basePrice || 0) + parentPrice + childPrice;
-            const hasDiscount = basePrice < (item.basePrice || 0);
+            // Only show discount UI if discountPrice is set AND less than basePrice
+            const hasDiscount =
+                item.discountPrice != null &&
+                item.basePrice != null &&
+                item.discountPrice < item.basePrice;
 
-            const itemTotal = finalUnitPrice * item.quantity;
-            const originalTotal = finalBasePrice * item.quantity;
+            const itemTotal = calcCartItemTotal(item);
+            const originalTotal = finalBasePrice * (item.quantity || 1);
 
             return {
                 ...item,
@@ -226,7 +235,7 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
     };
 
     const formatPrice = (price: number) => {
-        return price.toLocaleString() + " so'm";
+        return formatSom(price);
     };
 
     const handleConfirm = async () => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, MapPin, CreditCard, Package } from 'lucide-react';
 import { fetchProductById } from '../services/api';
+import { calcOrderItemUnitPrice, calcOrderTotal, formatSom } from '../utils/calculateTotal';
 
 const REGION_MAP: Record<number, string> = {
     0: "Toshkent",
@@ -64,7 +65,7 @@ export function OrderDetails() {
     if (!order) return null;
 
     const formatPrice = (price: number) => {
-        return (price || 0).toLocaleString() + " so'm";
+        return formatSom(price || 0);
     };
 
     const isDelivery = order.deliveryMethod === 1;
@@ -86,24 +87,13 @@ export function OrderDetails() {
         paymentBadge = <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1 inline-block">Qaytarilgan</span>;
     }
 
-    // Helper: reconstruct full item price using fetched productsMap
-    // Backend saves only variant (type) price as unitPrice (e.g. 12,500)
-    // Real price = variant price + product's discountPrice or basePrice (e.g. 12,500 + 2,000 = 14,500)
+    // Helper: reconstruct full item price using fetched productsMap.
+    // discountPrice IS the final adjusted price — not a discount amount to subtract.
     const getFullItemPrice = (item: any) => {
-        const rawPrice = item.unitPrice || 0;
-        const hasVariant = !!(item.productTypeId || item.typeId);
-        if (!hasVariant) return rawPrice;
-
-        const product = productsMap[item.productId];
-        if (!product) return rawPrice;
-
-        const prodBase = product.basePrice || 0;
-        const prodDiscount = product.discountPrice;
-        const activeProductPrice = (prodDiscount !== undefined && prodDiscount < prodBase)
-            ? prodDiscount : prodBase;
-        return rawPrice + activeProductPrice;
+        return calcOrderItemUnitPrice(item, productsMap);
     };
 
+    // For strikethrough display: reconstruct the original (pre-discount) base price.
     const getFullBasePrice = (item: any) => {
         const rawPrice = item.unitPrice || 0;
         const hasVariant = !!(item.productTypeId || item.typeId);
@@ -115,7 +105,7 @@ export function OrderDetails() {
         return rawPrice + product.basePrice;
     };
 
-    const subTotal = order.items?.reduce((ttl: number, i: any) => ttl + ((i.quantity || 1) * getFullItemPrice(i)), 0) || order.totalAmount || 0;
+    const subTotal = calcOrderTotal(order.items || [], productsMap) || order.totalAmount || 0;
     const finalTotal = subTotal;
 
     return (

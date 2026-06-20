@@ -16,6 +16,7 @@ import { ProductDetailsDrawer } from "./ProductDetailsDrawer";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchProductById } from "../services/api";
 import type { Product } from "../types";
+import { calcCartItemUnitPrice, formatSom } from "../utils/calculateTotal";
 
 interface CartDrawerProps {
     open: boolean;
@@ -24,18 +25,17 @@ interface CartDrawerProps {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Thin wrapper so CartDrawer internals can call getUnitPrice(row) without
+ * large-scale rename changes. Delegates to the centralized utility.
+ * discountPrice IS the final adjusted price — not a discount amount.
+ */
 function getUnitPrice(item: any): number {
-    const base =
-        item.discountPrice !== undefined &&
-        item.discountPrice !== null &&
-        item.discountPrice < (item.basePrice || 0)
-            ? item.discountPrice
-            : item.basePrice || item.unitPrice || 0;
-    return base + (item.selectedParentType?.price || 0) + (item.selectedChildType?.price || 0);
+    return calcCartItemUnitPrice(item);
 }
 
 function formatPrice(price: number) {
-    return price.toLocaleString() + " so'm";
+    return formatSom(price);
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
