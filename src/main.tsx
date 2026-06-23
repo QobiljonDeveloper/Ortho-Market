@@ -1,17 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import axios from 'axios'
+import VConsole from 'vconsole'
 import './index.css'
 import App from './App.tsx'
 
-// Conditionally initialize vconsole in development environment only
-// In production builds, Vite statically replaces import.meta.env.DEV with false,
-// allowing dead-code elimination to completely exclude vconsole from the final bundle.
-if (import.meta.env.DEV) {
-  import('vconsole').then(({ default: VConsole }) => {
-    new VConsole();
-  });
-}
+// Initialize VConsole unconditionally for mobile/Telegram WebApp debugging
+new VConsole();
 
 
 
