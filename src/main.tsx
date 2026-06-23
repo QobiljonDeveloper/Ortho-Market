@@ -4,6 +4,15 @@ import axios from 'axios'
 import './index.css'
 import App from './App.tsx'
 
+// Conditionally initialize vconsole in development environment only
+// In production builds, Vite statically replaces import.meta.env.DEV with false,
+// allowing dead-code elimination to completely exclude vconsole from the final bundle.
+if (import.meta.env.DEV) {
+  import('vconsole').then(({ default: VConsole }) => {
+    new VConsole();
+  });
+}
+
 
 
 

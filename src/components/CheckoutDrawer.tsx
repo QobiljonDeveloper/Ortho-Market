@@ -356,6 +356,13 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
                 }
             });
 
+            // Log the exact response immediately after request resolves successfully
+            const successResponse = res.data;
+            console.log('\n========================================');
+            console.log('🛍️ ORDER CREATE RESPONSE:');
+            console.log(JSON.stringify(successResponse, null, 2));
+            console.log('========================================\n');
+
             if (buyNowItems.length === 0) {
                 localStorage.removeItem(VARIANTS_STORAGE_KEY);
                 try {
@@ -387,7 +394,13 @@ export function CheckoutDrawer({ open, onOpenChange, onRequireVariant }: Checkou
 
 
             window.dispatchEvent(new CustomEvent('open-order-details', { detail: res?.data || payload }));
-        } catch (error: any) {
+        } catch (error: any) {
+            // Log the exact error response immediately if the request fails
+            const errorResponse = error?.response?.data || { message: error?.message || String(error) };
+            console.log('\n========================================');
+            console.log('🛍️ ORDER CREATE RESPONSE:');
+            console.log(JSON.stringify(errorResponse, null, 2));
+            console.log('========================================\n');
             console.error("Order submission failed:", error);
             const errMsgs = error?.response?.data?.message || "Buyurtmani rasmiylashtirishda xatolik yuz berdi.";
             toast.error(typeof errMsgs === 'string' ? errMsgs : errMsgs[0] || "Xatolik yuz berdi");
